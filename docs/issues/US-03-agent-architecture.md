@@ -4,13 +4,15 @@
   - #T-03-1
   - #T-03-2
   - #T-03-3
+  - #T-03-4
+  - #T-03-5
 
 /label ~UserStory
 /milestone %ProductBacklog
 
 # Story
 
-*"As a user, I want to interact with an intelligent agent that guides me through choosing the right approach (RAG vs. Fine-Tuning) and provides expert recommendations."*
+*"As a user, I want to interact with an intelligent agent that guides me through choosing the right LLM specialization approach and provides expert recommendations with structured reasoning."*
 
 # Description
 
@@ -19,8 +21,9 @@ The agent is the heart of Soofi Trainer. It guides users through a structured co
 1. **Understand the goal**: What does the user want to achieve?
 2. **Gather context**: What data is available? What are the constraints?
 3. **Retrieve knowledge**: Search the knowledge base for relevant information
-4. **Recommend approach**: RAG or Fine-Tuning with reasoning
-5. **Explain next steps**: How to proceed with the chosen approach
+4. **Search datasets**: Find suitable datasets on HuggingFace if needed (via US-05)
+5. **Apply decision logic**: Use structured decision tree and multi-criteria evaluation (T-03-4)
+6. **Generate recommendation**: Create structured report with primary recommendation, alternatives, and next steps (T-03-5)
 
 ## Architecture
 
@@ -47,7 +50,8 @@ The agent uses:
 
 - [ ] Agent conducts structured conversation
 - [ ] Agent retrieves relevant knowledge via Vector MCP
-- [ ] RAG vs. Fine-Tuning recommendation works with reasoning
+- [ ] Agent uses decision logic to recommend appropriate method (T-03-4)
+- [ ] Agent generates structured recommendation reports (T-03-5)
 - [ ] Conversation state is maintained
 - [ ] German prompts are understandable and professional
 - [ ] Starter prompts available for Open WebUI

@@ -3,13 +3,14 @@
 - tasks:
   - #T-02-1
   - #T-02-2
+  - #T-02-3
 
 /label ~UserStory
 /milestone %ProductBacklog
 
 # Story
 
-*"As a user, I want the agent to have expert knowledge about RAG and Fine-Tuning, so that it can give me well-founded recommendations."*
+*"As a user, I want the agent to have expert knowledge about RAG, Fine-Tuning, and all LLM specialization methods, so that it can give me well-founded recommendations."*
 
 # Description
 
@@ -24,6 +25,16 @@ The agent should know about:
 - Common pitfalls and how to avoid them
 - Cost and resource considerations
 - Example use cases
+- **All LLM Specialization Methods** (see T-02-3):
+  - Continued Pretraining
+  - Supervised Fine-Tuning (SFT)
+  - LoRA (Low-Rank Adaptation)
+  - QLoRA (Quantized LoRA)
+  - Prefix Tuning / P-Tuning
+  - Instruction Tuning
+  - RLHF (Reinforcement Learning from Human Feedback)
+  - DPO (Direct Preference Optimization)
+  - Knowledge Distillation
 
 ## Architecture
 
@@ -42,5 +53,6 @@ The Vector MCP server (`dfkibasys/aas-vector-mcp`) provides:
 
 - [ ] Weaviate collection "SoofiKnowledge" exists
 - [ ] At least 10 documents about RAG/Fine-Tuning ingested
+- [ ] Knowledge about all 10 specialization methods ingested (T-02-3)
 - [ ] Agent can retrieve relevant knowledge via Vector MCP
 - [ ] Search results are relevant to user queries
