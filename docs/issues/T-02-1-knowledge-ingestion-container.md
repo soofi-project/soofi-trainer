@@ -13,6 +13,8 @@
 
 A Docker container that automatically creates the Weaviate collection and ingests all knowledge documents on `docker-compose up`. Uses file hashing for change detection so only modified files are re-ingested.
 
+The ingestion container service is added to `docker-compose.yml` as part of this task.
+
 ## Container Behavior
 
 1. Wait for Weaviate to be healthy
@@ -36,13 +38,11 @@ A Docker container that automatically creates the Weaviate collection and ingest
 
 ## Embedding
 
-Use the same embedding model as configured in Vector MCP (default: `text-embedding-3-small`).
+Use the same embedding model as configured in Vector MCP (default: `text-embedding-3-large`).
 
 ## Chunking Strategy
 
-- Split by `##` headings (each H2 section becomes one chunk)
-- If a section exceeds a reasonable size, split further by paragraphs
-- Each chunk inherits metadata from the file path (folder → topic, filename → category)
+Use an existing markdown chunker (e.g. LangChain `MarkdownHeaderTextSplitter`) that splits by headings and preserves section hierarchy. Each chunk inherits metadata from the file path (folder → topic, filename → category).
 
 ## Change Detection
 

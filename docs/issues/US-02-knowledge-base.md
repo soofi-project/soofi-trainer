@@ -35,6 +35,7 @@ The agent should know about:
   - Instruction Tuning
   - RLHF (Reinforcement Learning from Human Feedback)
   - DPO (Direct Preference Optimization)
+  - RAG (Retrieval-Augmented Generation)
   - Knowledge Distillation
 
 ## Architecture
@@ -48,8 +49,8 @@ The agent should know about:
 └──────────────┘    └───────────────────┘    └──────┬───────┘
                                                     │
 ┌──────────────┐    ┌───────────────────┐           │
-│    Agent     │───▶│   Vector MCP      │───────────┘
-│  (LangGraph) │    │ (search_documents)│
+│  Agent (n8n  │───▶│   Vector MCP      │───────────┘
+│  / LangGraph)│    │ (search_documents)│
 └──────────────┘    └───────────────────┘
 ```
 
