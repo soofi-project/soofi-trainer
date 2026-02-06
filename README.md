@@ -1,93 +1,154 @@
 # Soofi Trainer
 
+Ein agentisches System, das Benutzer durch den LLM-Training-Prozess führt.
 
+## Features
 
-## Getting started
+- **Interaktive Beratung**: Der Agent analysiert deinen Anwendungsfall und empfiehlt den besten Ansatz
+- **RAG vs. Fine-Tuning**: Intelligente Empfehlung basierend auf deinen Anforderungen
+- **Training Pipeline**: Orchestrierung des gesamten Training-Prozesses (gemockt)
+- **Zwei Phasen**:
+  - Phase 1 (Prototyping): n8n für schnelle Iteration
+  - Phase 2 (Production): LangGraph State-Machine
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
-
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-* [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+## Architektur
 
 ```
-cd existing_repo
-git remote add origin https://mrk40.dfki.de/soofi/soofi-trainer.git
-git branch -M main
-git push -uf origin main
+┌─────────────────┐     ┌─────────────────┐     ┌──────────────┐
+│   Open WebUI    │────▶│  n8n / Agent    │────▶│  MCP Tools   │
+│  (Chat UI)      │     │  (Orchestrator) │     │  (Pipeline)  │
+└─────────────────┘     └─────────────────┘     └──────────────┘
+                                                       │
+                                                ┌──────────────┐
+                                                │ MCP Inspector│
+                                                │  (Debugging) │
+                                                └──────────────┘
 ```
 
-## Integrate with your tools
+## Quick Start
 
-* [Set up project integrations](https://mrk40.dfki.de/soofi/soofi-trainer/-/settings/integrations)
+### Voraussetzungen
 
-## Collaborate with your team
+- Docker und Docker Compose
+- OpenAI API Key
 
-* [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+### Installation
 
-## Test and Deploy
+1. Repository klonen:
+   ```bash
+   git clone https://mrk40.dfki.de/soofi/soofi-trainer.git
+   cd soofi-trainer
+   ```
 
-Use the built-in continuous integration in GitLab.
+2. Environment-Datei erstellen:
+   ```bash
+   cp .env.example .env
+   # Editiere .env und füge deinen OPENAI_API_KEY ein
+   ```
 
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+3. Stack starten:
+   ```bash
+   ./up.sh
+   ```
 
-***
+4. Services aufrufen:
+   - **Open WebUI**: http://localhost:3000
+   - **n8n**: http://localhost:5678
+   - **MCP Server**: http://localhost:8000
+   - **MCP Inspector**: http://localhost:5173
+   - **Agent API**: http://localhost:8001
 
-# Editing this README
+### Stack stoppen
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+```bash
+./down.sh
+```
 
-## Suggestions for a good README
+Mit Daten löschen:
+```bash
+./down.sh --clean
+```
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+## Komponenten
 
-## Name
-Choose a self-explaining name for your project.
+### MCP Server (Port 8000)
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+Stellt die Training-Pipeline Tools bereit:
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+| Tool | Beschreibung |
+|------|-------------|
+| `check_dataset_availability` | HuggingFace Datasets prüfen |
+| `analyze_use_case` | Anwendungsfall analysieren |
+| `recommend_approach` | RAG vs. Fine-Tuning empfehlen |
+| `configure_training` | Training-Parameter konfigurieren |
+| `start_training_pipeline` | Pipeline starten |
+| `get_training_status` | Status abfragen |
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+### n8n (Port 5678)
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+Workflow-Automation für Prototyping:
+- Webhook-basierte Integration
+- Visuelle Flow-Erstellung
+- Einfache MCP-Tool-Aufrufe
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+### LangGraph Agent (Port 8001)
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+State-Machine basierter Agent für Production:
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+```
+GREETING → ANALYSIS → RECOMMENDATION → CONFIGURATION → EXECUTION → MONITORING → COMPLETED
+```
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+### Open WebUI (Port 3000)
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+Chat-Interface für Benutzerinteraktion.
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+## API Beispiele
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+### Chat mit dem Agent
 
-## License
-For open source projects, say how it is licensed.
+```bash
+curl -X POST http://localhost:8001/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Ich möchte einen Chatbot für Kundenservice erstellen",
+    "session_id": "user123"
+  }'
+```
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+### MCP Tool aufrufen
+
+```bash
+curl -X POST http://localhost:8000/tools/analyze_use_case \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_input": "Ich möchte einen Chatbot für technischen Support",
+    "session_id": "test"
+  }'
+```
+
+## Entwicklung
+
+### Projektstruktur
+
+```
+soofi-trainer/
+├── agent/                 # LangGraph Agent (Phase 2)
+│   ├── graph.py          # State-Machine Definition
+│   ├── prompts.py        # Agent Prompts
+│   ├── state.py          # State Definitionen
+│   ├── tools.py          # LangChain Tools
+│   └── server.py         # FastAPI Server
+├── mcp-server/           # MCP Tools Server
+│   └── main.py           # FastAPI + Tools
+├── n8n/                  # n8n Workflows (Phase 1)
+│   └── workflows/        # Workflow JSON Dateien
+├── docker-compose.yml    # Service Orchestration
+├── up.sh                 # Stack starten
+├── down.sh               # Stack stoppen
+└── .env.example          # Environment Template
+```
+
+## Lizenz
+
+MIT License - siehe [LICENSE](LICENSE)

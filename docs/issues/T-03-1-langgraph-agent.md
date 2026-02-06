@@ -11,7 +11,7 @@
 
 **Implement LangGraph Agent**
 
-Create the agent using LangGraph with Vector MCP integration.
+Create the agent using LangGraph with Vector MCP integration. The agent replaces the temporary n8n chatbot (T-01-3) and provides the full conversation and recommendation flow. Open WebUI connects to the LangGraph agent as its backend.
 
 ## Agent Responsibilities
 
@@ -30,8 +30,8 @@ Create the agent using LangGraph with Vector MCP integration.
 
 ## Integration
 
+- Open WebUI connects to the LangGraph agent as its backend (replaces n8n)
 - The agent connects to the Vector MCP server to search the knowledge base
-- The agent is accessible from Open WebUI (via API endpoint or pipeline)
 - The agent runs as a Docker container within the stack
 
 ## Acceptance Criteria
@@ -39,7 +39,7 @@ Create the agent using LangGraph with Vector MCP integration.
 - [ ] LangGraph agent is implemented and runnable
 - [ ] Agent retrieves knowledge from Vector MCP on relevant queries
 - [ ] Agent maintains conversation state across turns
-- [ ] Agent is accessible from Open WebUI
+- [ ] Open WebUI connects to the agent as backend
 - [ ] Agent runs as a container in the Docker stack
 
 # Branches

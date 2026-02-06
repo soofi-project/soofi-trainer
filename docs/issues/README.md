@@ -4,6 +4,28 @@ Overview of all user stories and tasks for Phase 1 (MVP).
 
 ## Architecture Overview
 
+### Sprint 1 (MVP)
+
+n8n serves as a temporary agent backend for initial testing. Open WebUI connects to n8n which runs a simple chatbot workflow.
+
+```
+┌─────────────┐     ┌─────────────┐
+│  Open WebUI │────▶│     n8n     │
+│  (Chat UI)  │     │  (Chatbot)  │
+└─────────────┘     └─────────────┘
+     :3000
+
+┌─────────────────┐     ┌─────────────┐     ┌──────────────┐
+│   Ingestion     │────▶│ Vector MCP  │────▶│   Weaviate   │
+│   Container     │     │ (RAG Search)│     │ (Knowledge)  │
+└─────────────────┘     └─────────────┘     └──────────────┘
+                             :8113               :8070
+```
+
+### Target Architecture
+
+n8n is replaced by a LangGraph agent that handles the full conversation flow including knowledge retrieval and dataset search.
+
 ```
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌──────────────┐
 │  Open WebUI │────▶│   Agent     │────▶│ Vector MCP  │────▶│   Weaviate   │
@@ -23,7 +45,7 @@ Overview of all user stories and tasks for Phase 1 (MVP).
 
 | ID | Title | Tasks | Description |
 |----|-------|-------|-------------|
-| US-01 | [Infrastructure](US-01-infrastructure.md) | 4 | Docker stack with Weaviate, Vector MCP, Open WebUI |
+| US-01 | [Infrastructure](US-01-infrastructure.md) | 3 | Docker stack with Weaviate, Vector MCP, Open WebUI, n8n |
 | US-02 | [Knowledge Base](US-02-knowledge-base.md) | 2 | Expert knowledge for all LLM specialization methods |
 | US-03 | [Agent Architecture](US-03-agent-architecture.md) | 5 | LangGraph agent with decision logic and recommendation reports |
 | US-04 | [Integration](US-04-integration.md) | 1 | End-to-end testing and documentation |
@@ -35,10 +57,9 @@ Overview of all user stories and tasks for Phase 1 (MVP).
 
 | ID | Title | Description |
 |----|-------|-------------|
-| T-01-1 | [Docker-Compose Foundation](T-01-1-docker-compose-foundation.md) | Weaviate, Vector MCP, MCP Inspector |
-| T-01-2 | [Open WebUI Setup](T-01-2-open-webui-setup.md) | Chat interface configuration |
-| T-01-3 | [Stack Management Scripts](T-01-3-stack-management-scripts.md) | up.sh, down.sh |
-| T-01-4 | [GitLab CI](T-01-4-gitlab-ci.md) | CI/CD pipeline for builds and tests |
+| T-01-1 | [Docker-Compose Foundation](T-01-1-docker-compose-foundation.md) | Weaviate, Vector MCP, MCP Inspector, Open WebUI |
+| T-01-2 | [Stack Management Scripts](T-01-2-stack-management-scripts.md) | up.sh, down.sh |
+| T-01-3 | [n8n Chatbot](T-01-3-n8n-chatbot.md) | n8n setup with dummy chatbot and Open WebUI connection |
 
 ### US-02: Knowledge Base
 
@@ -95,4 +116,4 @@ The agent provides recommendations for these methods:
 | RAG | Dynamic knowledge, no training |
 | Knowledge Distillation | Deployment constraints |
 
-## Total: 5 User Stories, 14 Tasks
+## Total: 5 User Stories, 13 Tasks

@@ -4,7 +4,6 @@
   - #T-01-1
   - #T-01-2
   - #T-01-3
-  - #T-01-4
 
 /label ~UserStory
 /milestone %ProductBacklog
@@ -21,6 +20,9 @@ The infrastructure forms the foundation for the entire Soofi Trainer project. It
 - **Vector MCP Server**: MCP endpoint for semantic search (`dfkibasys/aas-vector-mcp`)
 - **MCP Inspector**: Debugging tool for MCP tools
 - **Open WebUI**: Chat interface for user interaction
+- **n8n**: Workflow automation platform used as the agent backend
+
+Open WebUI connects to n8n as its backend. n8n provides a simple chatbot workflow that receives user messages from Open WebUI and returns a response. This serves as the initial integration test to verify the end-to-end connection before implementing the full LangGraph agent.
 
 The infrastructure enables starting the complete development environment with a single command (`./up.sh`).
 
@@ -33,4 +35,6 @@ The infrastructure enables starting the complete development environment with a 
 - [ ] Vector MCP Server accessible at localhost:8113
 - [ ] MCP Inspector accessible and shows tools
 - [ ] Open WebUI accessible at localhost:3000
-- [ ] GitLab CI pipeline runs on push/MR
+- [ ] n8n accessible and running
+- [ ] Open WebUI connects to n8n as backend
+- [ ] A simple chatbot interaction works end-to-end (question via Open WebUI → response via n8n)
