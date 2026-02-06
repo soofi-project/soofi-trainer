@@ -9,9 +9,9 @@
 
 # Description
 
-**Develop Agent Prompts**
+**Agent Prompts & Starter Prompts**
 
-Create the prompts that define the agent's behavior. The agent communicates in German, so the actual prompts are in German while the documentation here is in English.
+Create the prompts that define the agent's behavior and the starter prompts for Open WebUI. The agent communicates in German, so the actual prompts are in German while the documentation here is in English.
 
 ## System Prompt
 
@@ -54,6 +54,29 @@ The agent transparently shows where its knowledge comes from:
 - List of sources at the end when multiple are used
 - This increases credibility and demonstrates that RAG is working
 
+## Starter Prompts
+
+Conversation starter prompts displayed in Open WebUI as quick-start options:
+
+### Use Case Discovery
+- "Ich möchte einen Chatbot für meinen Kundenservice erstellen. Was empfiehlst du?"
+- "Wir haben eine große Dokumentensammlung und wollen diese durchsuchbar machen."
+- "Ich will ein Modell trainieren, das in unserem Firmenstil schreibt."
+
+### Comparison Questions
+- "Was ist der Unterschied zwischen RAG und Fine-Tuning?"
+- "Wann sollte ich RAG verwenden und wann Fine-Tuning?"
+
+### Specific Scenarios
+- "Ich habe 500 FAQ-Paare. Soll ich RAG oder Fine-Tuning nutzen?"
+- "Meine Wissensbasis ändert sich täglich. Welcher Ansatz ist besser?"
+
+### Technical Questions
+- "Wie viele Trainingsdaten brauche ich für Fine-Tuning?"
+- "Was kostet Fine-Tuning im Vergleich zu RAG?"
+
+Starter prompts are configured in Open WebUI via Admin Settings or a configuration file.
+
 ## Acceptance Criteria
 
 - [ ] System prompt defines agent personality and behavior
@@ -61,6 +84,8 @@ The agent transparently shows where its knowledge comes from:
 - [ ] Agent cites knowledge base sources transparently
 - [ ] Prompts are in German and understandable
 - [ ] Communication style is friendly and professional
+- [ ] At least 4 starter prompts defined (one per category)
+- [ ] Starter prompts are configured in Open WebUI
 
 # Branches
 

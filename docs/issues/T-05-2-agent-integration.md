@@ -52,7 +52,7 @@ The agent selects the best dataset based on weighted criteria:
 
 ## Integration in Recommendation Report
 
-The recommended dataset is included in the recommendation report (T-03-5) with:
+The recommended dataset is included in the recommendation report (T-03-3) with:
 - Why this dataset fits
 - Size and suitability for the recommended method
 - License implications

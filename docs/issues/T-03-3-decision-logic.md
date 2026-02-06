@@ -9,9 +9,9 @@
 
 # Description
 
-**Decision Logic for Method Selection**
+**Decision Logic & Recommendation Report**
 
-Implement a decision tree and multi-criteria evaluation for selecting the optimal LLM specialization method based on the user's situation.
+Implement the decision tree and multi-criteria evaluation for selecting the optimal LLM specialization method, and generate a structured recommendation report.
 
 ## Decision Tree
 
@@ -39,12 +39,27 @@ For each candidate method, a score is calculated based on weighted criteria:
 | Expertise Requirement | 0.15 | Does the required expertise match the team? |
 | Success Probability | 0.15 | How likely is success given the constraints? |
 
-## Output
+## Recommendation Report
 
-The agent outputs the **top 3 recommendations** with:
-- Method name and total score
-- Reasoning per criterion
-- Specific hints for the user's use case
+The agent generates a structured output with:
+
+### 1. Primary Recommendation
+- **Method name** and why it is optimal for the use case
+- **Estimated resources**: hardware, training time, approximate cost
+- **Recommended dataset** (if HuggingFace search was performed)
+
+### 2. Alternatives
+- 1–2 alternative methods
+- When each alternative would be more suitable (e.g. if constraints change)
+- Trade-offs compared to the primary recommendation
+
+### 3. Next Steps
+- **Prepare data**: specific instructions for data format and quality
+- **Set up infrastructure**: hardware and software recommendations
+- **Start training**: recommended approach and monitoring tips
+- **Evaluation**: relevant metrics and benchmark recommendations
+
+The report is output as well-formatted Markdown in the chat.
 
 ## Acceptance Criteria
 
@@ -52,6 +67,11 @@ The agent outputs the **top 3 recommendations** with:
 - [ ] Multi-criteria evaluation scores candidate methods
 - [ ] Agent outputs top 3 recommendations with reasoning
 - [ ] Reasoning is comprehensible and use-case-specific
+- [ ] Report contains primary recommendation with reasoning
+- [ ] Estimated resources (hardware, time, cost) are included
+- [ ] 1–2 alternatives are listed with trade-offs
+- [ ] Next steps are concrete and actionable
+- [ ] Dataset recommendation is included when a HuggingFace search was performed
 - [ ] Unit tests cover decision logic
 
 # Branches

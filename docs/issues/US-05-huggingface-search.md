@@ -63,4 +63,4 @@ The agent presents found datasets with:
 - [ ] Agent can trigger dataset search
 - [ ] Search results are filtered meaningfully
 - [ ] Agent explains why datasets fit
-- [ ] Dataset recommendation included in report (T-03-5)
+- [ ] Dataset recommendation included in report (T-03-3)

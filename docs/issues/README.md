@@ -47,7 +47,7 @@ n8n is replaced by a LangGraph agent that handles the full conversation flow inc
 |----|-------|-------|-------------|
 | US-01 | [Infrastructure](US-01-infrastructure.md) | 3 | Docker stack with Weaviate, Vector MCP, Open WebUI, n8n |
 | US-02 | [Knowledge Base](US-02-knowledge-base.md) | 2 | Expert knowledge for all LLM specialization methods |
-| US-03 | [Agent Architecture](US-03-agent-architecture.md) | 5 | LangGraph agent with decision logic and recommendation reports |
+| US-03 | [Agent Architecture](US-03-agent-architecture.md) | 4 | LangGraph agent with decision logic and recommendation reports |
 | US-04 | [Integration](US-04-integration.md) | 1 | End-to-end testing and documentation |
 | US-05 | [HuggingFace Search](US-05-huggingface-search.md) | 2 | Dataset search on HuggingFace Hub |
 
@@ -73,10 +73,9 @@ n8n is replaced by a LangGraph agent that handles the full conversation flow inc
 | ID | Title | Description |
 |----|-------|-------------|
 | T-03-1 | [LangGraph Agent](T-03-1-langgraph-agent.md) | Agent with Vector MCP integration |
-| T-03-2 | [Agent Prompts](T-03-2-agent-prompts.md) | German prompts with structured interview |
-| T-03-3 | [Starter Prompts](T-03-3-starter-prompts.md) | Quick-start prompts for Open WebUI |
-| T-03-4 | [Decision Logic](T-03-4-decision-logic.md) | Decision tree and multi-criteria evaluation |
-| T-03-5 | [Recommendation Report](T-03-5-recommendation-report.md) | Structured recommendation output |
+| T-03-2 | [Agent Prompts & Starter Prompts](T-03-2-agent-prompts.md) | German prompts, structured interview, and Open WebUI starter prompts |
+| T-03-3 | [Decision Logic & Recommendation Report](T-03-3-decision-logic.md) | Decision tree, multi-criteria evaluation, and structured report output |
+| T-03-4 | [CI Pipeline](T-03-4-ci-pipeline.md) | CI pipeline for unit tests and linting |
 
 ### US-04: Integration
 
@@ -116,4 +115,5 @@ The agent provides recommendations for these methods:
 | RAG | Dynamic knowledge, no training |
 | Knowledge Distillation | Deployment constraints |
 
-## Total: 5 User Stories, 13 Tasks
+## Total: 5 User Stories, 12 Tasks
+
