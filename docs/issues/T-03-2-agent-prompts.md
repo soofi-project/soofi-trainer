@@ -41,11 +41,16 @@ The agent conducts a structured interview to gather all relevant information:
 - Important metrics (Accuracy, F1, BLEU, ROUGE, Perplexity)
 - Minimum acceptable performance
 
-### 4. Constraints
+### 4. Technical Requirements
+- Preferred base model (e.g. LLaMA, Mistral, Falcon, Phi) or no preference
+- Model size preference (e.g. 7B, 13B, 70B) or "as needed"
+- Available hardware (GPU type, VRAM)
+- Deployment target (Cloud, On-Premise, Edge)
+
+### 5. Constraints
 - Budget for compute costs
 - Project timeline
 - Compliance requirements (GDPR, HIPAA, etc.)
-- Available hardware (GPU type, VRAM)
 
 ## Source Citations
 
@@ -80,7 +85,7 @@ Starter prompts are configured in Open WebUI via Admin Settings or a configurati
 ## Acceptance Criteria
 
 - [ ] System prompt defines agent personality and behavior
-- [ ] Structured interview questions cover all four areas
+- [ ] Structured interview questions cover all five areas
 - [ ] Agent cites knowledge base sources transparently
 - [ ] Prompts are in German and understandable
 - [ ] Communication style is friendly and professional

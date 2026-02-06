@@ -1,7 +1,7 @@
 # User Story
 
 - tasks:
-  - #T-04-1
+  - #T-05-1
 
 /label ~UserStory
 /milestone %ProductBacklog
@@ -15,6 +15,7 @@
 The integration ensures that all components work together seamlessly:
 
 - Open WebUI → Agent → Vector MCP → Weaviate
+- Open WebUI → Agent → HuggingFace MCP → HuggingFace Hub
 - Knowledge retrieval returns relevant results
 - Agent provides coherent recommendations
 - Error handling works properly
@@ -25,15 +26,17 @@ The integration ensures that all components work together seamlessly:
 2. User describes their use case
 3. Agent asks clarifying questions
 4. Agent retrieves relevant knowledge
-5. Agent provides recommendation with reasoning
-6. User can ask follow-up questions
+5. Agent searches for datasets on HuggingFace if needed
+6. Agent provides recommendation with reasoning
+7. User can ask follow-up questions
 
-# Acceptance Criterion
+# Acceptance Criteria
 
 - [ ] All services start without errors (`./up.sh`)
 - [ ] Open WebUI shows chat interface
 - [ ] Agent responds in German
 - [ ] Knowledge retrieval works (check Vector MCP logs)
+- [ ] HuggingFace dataset search works
 - [ ] Recommendation includes reasoning from knowledge base
 - [ ] `./down.sh` stops everything cleanly
 - [ ] Documentation is complete

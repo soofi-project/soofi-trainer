@@ -45,6 +45,7 @@ The agent generates a structured output with:
 
 ### 1. Primary Recommendation
 - **Method name** and why it is optimal for the use case
+- **Suggested base model**: concrete model recommendation (e.g. "Llama-3.1-8B-Instruct") based on user's preferences, task, and hardware constraints
 - **Estimated resources**: hardware, training time, approximate cost
 - **Recommended dataset** (if HuggingFace search was performed)
 
@@ -68,6 +69,7 @@ The report is output as well-formatted Markdown in the chat.
 - [ ] Agent outputs top 3 recommendations with reasoning
 - [ ] Reasoning is comprehensible and use-case-specific
 - [ ] Report contains primary recommendation with reasoning
+- [ ] Report includes a concrete base model suggestion
 - [ ] Estimated resources (hardware, time, cost) are included
 - [ ] 1–2 alternatives are listed with trade-offs
 - [ ] Next steps are concrete and actionable

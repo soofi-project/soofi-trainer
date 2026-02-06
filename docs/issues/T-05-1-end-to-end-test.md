@@ -1,8 +1,8 @@
 # Task
 
-- user story: #US-04
+- user story: #US-05
 
-/label ~UserStory_US-04
+/label ~UserStory_US-05
 /label ~Task
 /label ~ToDo
 /milestone %Sprint1
@@ -47,4 +47,4 @@ Based on the example conversation from the agent specification:
 
 # Branches
 
-- feature/US-04-integration
+- feature/US-05-integration

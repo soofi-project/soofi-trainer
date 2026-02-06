@@ -1,8 +1,8 @@
 # Task
 
-- user story: #US-05
+- user story: #US-04
 
-/label ~UserStory_US-05
+/label ~UserStory_US-04
 /label ~Task
 /label ~ToDo
 /milestone %Sprint1
@@ -82,4 +82,4 @@ Implement an MCP server endpoint for searching datasets on HuggingFace Hub.
 
 # Branches
 
-- feature/US-05-huggingface-search
+- feature/US-04-huggingface-search

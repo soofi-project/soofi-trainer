@@ -48,8 +48,8 @@ n8n is replaced by a LangGraph agent that handles the full conversation flow inc
 | US-01 | [Infrastructure](US-01-infrastructure.md) | 3 | Docker stack with Weaviate, Vector MCP, Open WebUI, n8n |
 | US-02 | [Knowledge Base](US-02-knowledge-base.md) | 2 | Expert knowledge for all LLM specialization methods |
 | US-03 | [Agent Architecture](US-03-agent-architecture.md) | 4 | LangGraph agent with decision logic and recommendation reports |
-| US-04 | [Integration](US-04-integration.md) | 1 | End-to-end testing and documentation |
-| US-05 | [HuggingFace Search](US-05-huggingface-search.md) | 2 | Dataset search on HuggingFace Hub |
+| US-04 | [HuggingFace Search](US-04-huggingface-search.md) | 2 | Dataset search on HuggingFace Hub |
+| US-05 | [Integration](US-05-integration.md) | 1 | End-to-end testing and documentation |
 
 ## Tasks
 
@@ -77,26 +77,26 @@ n8n is replaced by a LangGraph agent that handles the full conversation flow inc
 | T-03-3 | [Decision Logic & Recommendation Report](T-03-3-decision-logic.md) | Decision tree, multi-criteria evaluation, and structured report output |
 | T-03-4 | [CI Pipeline](T-03-4-ci-pipeline.md) | CI pipeline for unit tests and linting |
 
-### US-04: Integration
+### US-04: HuggingFace Search
 
 | ID | Title | Description |
 |----|-------|-------------|
-| T-04-1 | [End-to-End Test](T-04-1-end-to-end-test.md) | Test complete flow |
+| T-04-1 | [HuggingFace MCP](T-04-1-huggingface-mcp.md) | MCP endpoint for dataset search |
+| T-04-2 | [Agent Integration](T-04-2-agent-integration.md) | Agent integration with HuggingFace search |
 
-### US-05: HuggingFace Search
+### US-05: Integration
 
 | ID | Title | Description |
 |----|-------|-------------|
-| T-05-1 | [HuggingFace MCP](T-05-1-huggingface-mcp.md) | MCP endpoint for dataset search |
-| T-05-2 | [Agent Integration](T-05-2-agent-integration.md) | Agent integration with HuggingFace search |
+| T-05-1 | [End-to-End Test](T-05-1-end-to-end-test.md) | End-to-end test and documentation |
 
 ## Recommended Order
 
 1. **US-01** - Infrastructure (must be first)
 2. **US-02** - Knowledge Base (can start parallel with US-03)
 3. **US-03** - Agent Architecture
-4. **US-05** - HuggingFace Search (can start parallel with US-03)
-5. **US-04** - Integration & Testing
+4. **US-04** - HuggingFace Search (can start parallel with US-03)
+5. **US-05** - Integration & Testing
 
 ## LLM Specialization Methods (Knowledge Scope)
 

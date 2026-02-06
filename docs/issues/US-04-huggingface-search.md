@@ -1,8 +1,8 @@
 # User Story
 
 - tasks:
-  - #T-05-1
-  - #T-05-2
+  - #T-04-1
+  - #T-04-2
 
 /label ~UserStory
 /milestone %ProductBacklog
@@ -59,7 +59,7 @@ The agent presents found datasets with:
 
 # Acceptance Criteria
 
-- [ ] HuggingFace MCP endpoint implemented (T-05-1)
+- [ ] HuggingFace MCP endpoint implemented (T-04-1)
 - [ ] Agent can trigger dataset search
 - [ ] Search results are filtered meaningfully
 - [ ] Agent explains why datasets fit

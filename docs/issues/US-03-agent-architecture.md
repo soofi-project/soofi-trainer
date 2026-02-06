@@ -20,7 +20,7 @@ The agent is the heart of Soofi Trainer. It guides users through a structured co
 1. **Understand the goal**: What does the user want to achieve?
 2. **Gather context**: What data is available? What are the constraints?
 3. **Retrieve knowledge**: Search the knowledge base for relevant information
-4. **Search datasets**: Find suitable datasets on HuggingFace if needed (via US-05)
+4. **Search datasets**: Find suitable datasets on HuggingFace if needed (via US-04)
 5. **Apply decision logic**: Use structured decision tree and multi-criteria evaluation (T-03-3)
 6. **Generate recommendation**: Create structured report with primary recommendation, alternatives, and next steps (T-03-3)
 

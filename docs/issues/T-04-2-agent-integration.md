@@ -1,8 +1,8 @@
 # Task
 
-- user story: #US-05
+- user story: #US-04
 
-/label ~UserStory_US-05
+/label ~UserStory_US-04
 /label ~Task
 /label ~ToDo
 /milestone %Sprint1
@@ -75,4 +75,4 @@ The recommended dataset is included in the recommendation report (T-03-3) with:
 
 # Branches
 
-- feature/US-05-huggingface-search
+- feature/US-04-huggingface-search
