@@ -24,7 +24,7 @@ Overview of all user stories and tasks for Phase 1 (MVP).
 | ID | Title | Tasks | Description |
 |----|-------|-------|-------------|
 | US-01 | [Infrastructure](US-01-infrastructure.md) | 4 | Docker stack with Weaviate, Vector MCP, Open WebUI |
-| US-02 | [Knowledge Base](US-02-knowledge-base.md) | 3 | Expert knowledge for all LLM specialization methods |
+| US-02 | [Knowledge Base](US-02-knowledge-base.md) | 2 | Expert knowledge for all LLM specialization methods |
 | US-03 | [Agent Architecture](US-03-agent-architecture.md) | 5 | LangGraph agent with decision logic and recommendation reports |
 | US-04 | [Integration](US-04-integration.md) | 1 | End-to-end testing and documentation |
 | US-05 | [HuggingFace Search](US-05-huggingface-search.md) | 2 | Dataset search on HuggingFace Hub |
@@ -44,9 +44,8 @@ Overview of all user stories and tasks for Phase 1 (MVP).
 
 | ID | Title | Description |
 |----|-------|-------------|
-| T-02-1 | [Knowledge Collection](T-02-1-knowledge-collection.md) | Weaviate schema setup |
-| T-02-2 | [Knowledge Ingestion](T-02-2-knowledge-ingestion.md) | Ingest RAG/Fine-Tuning docs |
-| T-02-3 | [Knowledge Methods](T-02-3-knowledge-methods.md) | Knowledge about all LLM specialization methods |
+| T-02-1 | [Knowledge Ingestion Container](T-02-1-knowledge-ingestion-container.md) | Docker container for automatic collection setup and ingestion with hash-based change detection |
+| T-02-2 | [Knowledge Documents](T-02-2-knowledge-documents.md) | Markdown documents for all LLM specialization methods and best practices |
 
 ### US-03: Agent Architecture
 
@@ -79,12 +78,6 @@ Overview of all user stories and tasks for Phase 1 (MVP).
 4. **US-05** - HuggingFace Search (can start parallel with US-03)
 5. **US-04** - Integration & Testing
 
-## Reference Implementations
-
-- **Weaviate + Vector MCP**: https://gitlab.basys.dfki.dev/hackathon/aas-document-rag/-/blob/master/docker-compose.yml
-- **Vector MCP Server**: `dfkibasys/aas-vector-mcp` on Docker Hub
-- **HuggingFace Hub API**: https://huggingface.co/docs/huggingface_hub/guides/search
-
 ## LLM Specialization Methods (Knowledge Scope)
 
 The agent provides recommendations for these methods:
@@ -102,4 +95,4 @@ The agent provides recommendations for these methods:
 | RAG | Dynamic knowledge, no training |
 | Knowledge Distillation | Deployment constraints |
 
-## Total: 5 User Stories, 15 Tasks
+## Total: 5 User Stories, 14 Tasks

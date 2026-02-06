@@ -13,22 +13,7 @@
 
 Configure Open WebUI as chat interface for the agent.
 
-## Technical Details
-
-```yaml
-open-webui:
-  image: ghcr.io/open-webui/open-webui:main
-  ports:
-    - "3000:8080"
-  environment:
-    - OPENAI_API_KEY=${OPENAI_API_KEY}
-    - WEBUI_AUTH=false
-    - ENABLE_SIGNUP=false
-  volumes:
-    - open_webui_data:/app/backend/data
-```
-
-## Configuration
+## Requirements
 
 - Disable authentication for development
 - Connect to OpenAI API (or local LLM later)
@@ -37,9 +22,16 @@ open-webui:
 ## Integration Options
 
 Open WebUI can connect to:
-1. OpenAI API directly (default)
-2. Custom API endpoint (for LangGraph agent in Phase 2)
-3. Local LLM via Ollama
+1. **OpenAI API** directly (default for MVP)
+2. **Custom API endpoint** for the LangGraph agent (later phase)
+3. **Local LLM via Ollama** (optional)
+
+## Acceptance Criteria
+
+- [ ] Open WebUI accessible at `localhost:3000`
+- [ ] No login required in development mode
+- [ ] Chat works with configured LLM backend
+- [ ] Chat history persists across container restarts
 
 # Branches
 

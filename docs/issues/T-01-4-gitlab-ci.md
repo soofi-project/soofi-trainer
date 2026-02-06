@@ -15,89 +15,28 @@ Set up GitLab CI for automated builds and tests.
 
 ## Pipeline Stages
 
-```yaml
-stages:
-  - lint
-  - test
-  - build
-  - deploy
-```
+| Stage | Description |
+|-------|-------------|
+| Lint | Python linting (ruff, black) and YAML validation |
+| Test | Unit tests (pytest) and Docker Compose config validation |
+| Build | Build Docker images for custom services (agent) |
+| Deploy | (Optional) Push images to registry and deploy to staging |
 
-## Jobs
+## Requirements
 
-### Lint
-- Python: ruff, black --check
-- YAML: yamllint for docker-compose
+- Pipeline runs on push and merge requests
+- Python code is linted and formatted
+- Unit tests pass before build
+- Docker Compose configuration is valid
+- Docker images are built and tagged with commit SHA
 
-### Test
-- Python unit tests (pytest)
-- Docker compose config validation
+## Acceptance Criteria
 
-### Build
-- Build Docker images for custom services (agent)
-- Tag with commit SHA and version
-
-### Deploy (optional)
-- Push images to registry
-- Deploy to staging environment
-
-## .gitlab-ci.yml
-
-```yaml
-image: python:3.11-slim
-
-stages:
-  - lint
-  - test
-  - build
-
-variables:
-  DOCKER_DRIVER: overlay2
-
-lint:python:
-  stage: lint
-  script:
-    - pip install ruff black
-    - ruff check agent/
-    - black --check agent/
-
-lint:yaml:
-  stage: lint
-  image: cytopia/yamllint
-  script:
-    - yamllint docker-compose.yml
-
-test:unit:
-  stage: test
-  script:
-    - pip install -r agent/requirements.txt
-    - pip install pytest
-    - pytest agent/tests/ -v
-
-test:compose:
-  stage: test
-  image: docker:latest
-  services:
-    - docker:dind
-  script:
-    - docker compose config
-
-build:agent:
-  stage: build
-  image: docker:latest
-  services:
-    - docker:dind
-  script:
-    - docker build -t soofi-agent:$CI_COMMIT_SHA agent/
-  only:
-    - main
-    - merge_requests
-```
-
-## Registry
-
-Push images to GitLab Container Registry:
-- `registry.basys.dfki.dev/soofi/soofi-trainer/agent:latest`
+- [ ] `.gitlab-ci.yml` is in place
+- [ ] Lint stage checks Python formatting and YAML validity
+- [ ] Test stage runs unit tests
+- [ ] Build stage creates Docker images
+- [ ] Pipeline runs on push and merge requests
 
 # Branches
 

@@ -3,7 +3,6 @@
 - tasks:
   - #T-02-1
   - #T-02-2
-  - #T-02-3
 
 /label ~UserStory
 /milestone %ProductBacklog
@@ -16,6 +15,8 @@
 
 The agent needs a knowledge base to provide expert advice. This knowledge is stored in Weaviate and accessed via the Vector MCP server.
 
+Knowledge ingestion runs automatically as a Docker container on `docker-compose up` — no manual scripts required. The container uses file hashing for change detection, so only modified documents are re-ingested.
+
 ## Knowledge Topics
 
 The agent should know about:
@@ -25,7 +26,7 @@ The agent should know about:
 - Common pitfalls and how to avoid them
 - Cost and resource considerations
 - Example use cases
-- **All LLM Specialization Methods** (see T-02-3):
+- **All LLM Specialization Methods** (see T-02-2):
   - Continued Pretraining
   - Supervised Fine-Tuning (SFT)
   - LoRA (Low-Rank Adaptation)
@@ -39,20 +40,28 @@ The agent should know about:
 ## Architecture
 
 ```
-┌─────────────────┐     ┌─────────────────┐     ┌──────────────┐
-│     Agent       │────▶│   Vector MCP    │────▶│   Weaviate   │
-│  (LangGraph)    │     │ (search_documents)│   │ (Knowledge)  │
-└─────────────────┘     └─────────────────┘     └──────────────┘
+                        docker-compose up
+                              │
+┌──────────────┐    ┌─────────▼─────────┐    ┌──────────────┐
+│  knowledge/  │───▶│    Ingestion      │───▶│   Weaviate   │
+│  (Markdown)  │    │    Container      │    │ (Knowledge)  │
+└──────────────┘    └───────────────────┘    └──────┬───────┘
+                                                    │
+┌──────────────┐    ┌───────────────────┐           │
+│    Agent     │───▶│   Vector MCP      │───────────┘
+│  (LangGraph) │    │ (search_documents)│
+└──────────────┘    └───────────────────┘
 ```
 
 The Vector MCP server (`dfkibasys/aas-vector-mcp`) provides:
 - `search_documents` - Semantic search over knowledge base
 - `list_metadata_values` - List available topics/categories
 
-# Acceptance Criterion
+# Acceptance Criteria
 
-- [ ] Weaviate collection "SoofiKnowledge" exists
-- [ ] At least 10 documents about RAG/Fine-Tuning ingested
-- [ ] Knowledge about all 10 specialization methods ingested (T-02-3)
+- [ ] Weaviate collection "SoofiKnowledge" is created automatically on startup
+- [ ] All knowledge documents are ingested via the ingestion container
+- [ ] Re-running `docker-compose up` skips unchanged files (hash-based)
+- [ ] Knowledge about all 10 specialization methods is ingested (T-02-2)
 - [ ] Agent can retrieve relevant knowledge via Vector MCP
 - [ ] Search results are relevant to user queries

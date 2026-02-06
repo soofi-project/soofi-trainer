@@ -11,55 +11,34 @@
 
 **End-to-End Test**
 
-Test the complete flow and document the results.
+Test the complete flow from user input to agent recommendation and document the results.
 
 ## Test Scenario
 
-**User**: Developer wants to build a customer service chatbot
+**User**: Developer wants to build a customer service chatbot. They have an FAQ document with about 200 question-answer pairs. The FAQs change about once a month. Response time is not critical.
 
-**Conversation**:
-```
-User: "Ich möchte einen Chatbot für unseren Kundenservice erstellen.
-       Wir haben ein FAQ-Dokument mit etwa 200 Fragen und Antworten."
-
-Agent: [Asks clarifying questions about update frequency, response time needs, etc.]
-
-User: "Die FAQs ändern sich etwa einmal pro Monat.
-       Antwortzeit ist nicht kritisch."
-
-Agent: [Retrieves knowledge about RAG vs Fine-Tuning]
-       [Recommends RAG with reasoning]
-       [Explains next steps]
-```
+**Expected flow**:
+1. User describes their use case
+2. Agent asks clarifying questions (structured interview)
+3. Agent retrieves relevant knowledge from the knowledge base
+4. Agent applies decision logic
+5. Agent provides a recommendation with reasoning and next steps
 
 ## Checkpoints
 
-- [ ] Services start: `./up.sh`
-- [ ] Weaviate healthy: `curl http://localhost:8070/v1/.well-known/ready`
-- [ ] Vector MCP healthy: `curl http://localhost:8113/health`
-- [ ] Knowledge searchable: test query via MCP Inspector
+- [ ] All services start successfully via `./up.sh`
+- [ ] Weaviate is healthy
+- [ ] Vector MCP is healthy
+- [ ] Knowledge is searchable (test via MCP Inspector)
 - [ ] Agent conversation flows naturally
 - [ ] Recommendations cite knowledge base content
-- [ ] Services stop: `./down.sh`
-
-## Logging Commands
-
-```bash
-# Weaviate logs
-docker logs soofi-weaviate
-
-# Vector MCP logs (shows search queries)
-docker logs soofi-vector-mcp
-
-# Agent logs (if separate container)
-docker logs soofi-agent
-```
+- [ ] All services stop cleanly via `./down.sh`
 
 ## Documentation Checklist
 
-- [ ] README.md explains setup
+- [ ] README explains setup and usage
 - [ ] Architecture diagram is accurate
-- [ ] All URLs documented
+- [ ] All service URLs documented
 - [ ] Troubleshooting section exists
 
 # Branches

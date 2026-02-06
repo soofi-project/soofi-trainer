@@ -13,52 +13,33 @@
 
 Create the Docker-Compose configuration for the Soofi Trainer stack.
 
-## Reference Implementation
+## Services
 
-Use the existing setup from:
-https://gitlab.basys.dfki.dev/hackathon/aas-document-rag/-/blob/master/docker-compose.yml
+| Service | Description | Port |
+|---------|-------------|------|
+| Weaviate | Vector database for agent knowledge (RAG) | 8070 |
+| Vector MCP Server | MCP endpoint for semantic search (`dfkibasys/aas-vector-mcp`) | 8113 |
+| MCP Inspector | Debugging tool for MCP tools | 5173 |
+| Open WebUI | Chat interface for user interaction | 3000 |
 
-Extract and adapt these services:
-- `weaviate` (lines 400-429)
-- `aas-weaviate-mcp` (lines 344-360)
-- `mcp-inspector` (lines 363-370)
+## Requirements
 
-## Services to Include
+- All services defined in a single `docker-compose.yml`
+- Weaviate must have a health check so dependent services can wait for it
+- Vector MCP Server connects to Weaviate internally
+- Environment variables configured via `.env` file
+- `.env.example` provided with all required variables (e.g. `OPENAI_API_KEY`, `EMBEDDING_MODEL`)
+- `.gitignore` excludes `.env` and other sensitive/generated files
 
-```yaml
-services:
-  weaviate:
-    image: semitechnologies/weaviate:latest
-    ports:
-      - "8070:8080"
-      - "50051:50051"
-    # ... (see reference)
+## Acceptance Criteria
 
-  vector-mcp:
-    image: dfkibasys/aas-vector-mcp:latest
-    ports:
-      - "8113:8000"
-    environment:
-      - WEAVIATE_HOST=weaviate
-      - WEAVIATE_PORT=8080
-      - EMBEDDING_MODEL=openai:text-embedding-3-small
-    # ... (see reference)
-
-  mcp-inspector:
-    image: ghcr.io/modelcontextprotocol/inspector:latest
-    # ... (see reference)
-
-  open-webui:
-    image: ghcr.io/open-webui/open-webui:main
-    ports:
-      - "3000:8080"
-```
-
-## Files to Create
-
-- `docker-compose.yml`
-- `.env.example` (with OPENAI_API_KEY, EMBEDDING_MODEL, etc.)
-- `.gitignore`
+- [ ] All four services start successfully with `docker compose up`
+- [ ] Weaviate accessible at `localhost:8070`
+- [ ] Vector MCP accessible at `localhost:8113`
+- [ ] MCP Inspector accessible at `localhost:5173`
+- [ ] Open WebUI accessible at `localhost:3000`
+- [ ] `.env.example` documents all required environment variables
+- [ ] `.gitignore` is in place
 
 # Branches
 

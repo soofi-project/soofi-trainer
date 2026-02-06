@@ -17,37 +17,22 @@ Create convenience scripts for stack management.
 
 - Check if `.env` exists, copy from `.env.example` if not
 - Warn if `OPENAI_API_KEY` is not set
-- Start all containers with `docker compose up -d`
+- Start all containers
 - Wait for services to be healthy
-- Display all service URLs
+- Display all service URLs when ready
 
 ## down.sh
 
-- Stop all containers with `docker compose down`
-- Option `--clean` to delete volumes
+- Stop all containers
+- Option `--clean` to also delete volumes
 - Confirmation message
 
-## Example Output
+## Acceptance Criteria
 
-```
-========================================
-  Soofi Trainer - Starting Stack
-========================================
-
-[INFO] Starting containers...
-[INFO] Waiting for services...
-
-========================================
-  Services are ready!
-========================================
-
-  Open WebUI:      http://localhost:3000
-  Weaviate:        http://localhost:8070
-  Vector MCP:      http://localhost:8113
-  MCP Inspector:   http://localhost:5173
-
-========================================
-```
+- [ ] `./up.sh` starts the full stack and displays service URLs
+- [ ] `./down.sh` stops all containers
+- [ ] `./down.sh --clean` removes volumes as well
+- [ ] Missing `.env` is handled gracefully
 
 # Branches
 
