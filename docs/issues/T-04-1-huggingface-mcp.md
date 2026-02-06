@@ -68,7 +68,7 @@ Implement an MCP server endpoint for searching datasets on HuggingFace Hub.
 
 - Results sorted by downloads (descending) by default
 - Rate limiting for HuggingFace API must be respected
-- Runs as a Docker container in the stack
+- Runs as a **separate Docker container** in the stack (independent from other MCP servers)
 
 ## Acceptance Criteria
 
@@ -82,4 +82,4 @@ Implement an MCP server endpoint for searching datasets on HuggingFace Hub.
 
 # Branches
 
-- feature/US-04-huggingface-search
+- feature/US-04-dataset-search

@@ -9,17 +9,19 @@
 
 # Description
 
-**Agent Integration for HuggingFace Dataset Search**
+**Agent Integration for Dataset Search**
 
-Integrate the HuggingFace dataset search into the LangGraph agent so the agent can find suitable public datasets for the user.
+Integrate the dataset search endpoints (HuggingFace and Eclipse Dataspace) into the LangGraph agent so the agent can find suitable datasets for the user from multiple sources.
 
 ## Trigger Conditions
 
-The agent calls `search_huggingface_datasets` when:
+The agent calls dataset search when:
 
 1. **No own data** — User indicated in the interview that they have no training data
 2. **Explicit request** — User explicitly asks for public datasets
 3. **Recommendation requires data** — Agent recommends a fine-tuning method but the user has no data → automatic search
+
+The agent decides which sources to query based on the context (e.g. both, or only one if the other is not relevant).
 
 ## Search Query Construction
 
@@ -32,7 +34,7 @@ The agent builds the search query from the interview context:
 ## Result Presentation
 
 The agent presents found datasets in a user-friendly way:
-- Dataset name and link
+- Dataset name, source, and link
 - Short description
 - Size (number of samples)
 - License
@@ -50,10 +52,13 @@ The agent selects the best dataset based on weighted criteria:
 | Quality | 0.15 | Downloads/likes as quality indicator |
 | Recency | 0.10 | How recent is the dataset? |
 
+Results from all sources are ranked together using the same criteria.
+
 ## Integration in Recommendation Report
 
 The recommended dataset is included in the recommendation report (T-03-3) with:
 - Why this dataset fits
+- Which source it comes from
 - Size and suitability for the recommended method
 - License implications
 - How to get started with the dataset
@@ -61,18 +66,20 @@ The recommended dataset is included in the recommendation report (T-03-3) with:
 ## Error Handling
 
 - **Rate limit exceeded** → Inform user, suggest trying again later
-- **No results found** → Offer to adjust search criteria
-- **API unavailable** → Suggest manual search on HuggingFace
+- **No results found** → Offer to adjust search criteria or try another source
+- **API/Connector unavailable** → Skip that source, inform user, continue with available sources
 
 ## Acceptance Criteria
 
 - [ ] Agent recognizes when dataset search is useful
 - [ ] Agent calls HuggingFace MCP with appropriate query and filters
-- [ ] Search results are presented in a user-friendly way
+- [ ] Agent calls Eclipse Dataspace MCP with appropriate query and filters
+- [ ] Agent can query one or both sources depending on context
+- [ ] Search results from all sources are presented in a unified way
 - [ ] Agent recommends a dataset with reasoning
 - [ ] Dataset recommendation appears in the recommendation report
-- [ ] Error cases are handled gracefully
+- [ ] Error cases are handled gracefully (one source down → other still works)
 
 # Branches
 
-- feature/US-04-huggingface-search
+- feature/US-04-dataset-search

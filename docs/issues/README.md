@@ -33,12 +33,13 @@ n8n is replaced by a LangGraph agent that handles the full conversation flow inc
 └─────────────┘     └─────────────┘     └─────────────┘     └──────────────┘
      :3000               │                   :8113               :8070
                          │
-                         ▼
-                  ┌─────────────┐
-                  │ HuggingFace │
-                  │ MCP Server  │
-                  │ (Datasets)  │
-                  └─────────────┘
+                    ┌────┴────┐
+                    ▼         ▼
+             ┌───────────┐ ┌───────────┐
+             │HuggingFace│ │ Eclipse   │
+             │MCP Server │ │ Dataspace │
+             │(Datasets) │ │MCP Server │
+             └───────────┘ └───────────┘
 ```
 
 ## User Stories
@@ -48,7 +49,7 @@ n8n is replaced by a LangGraph agent that handles the full conversation flow inc
 | US-01 | [Infrastructure](US-01-infrastructure.md) | 3 | Docker stack with Weaviate, Vector MCP, Open WebUI, n8n |
 | US-02 | [Knowledge Base](US-02-knowledge-base.md) | 2 | Expert knowledge for all LLM specialization methods |
 | US-03 | [Agent Architecture](US-03-agent-architecture.md) | 4 | LangGraph agent with decision logic and recommendation reports |
-| US-04 | [HuggingFace Search](US-04-huggingface-search.md) | 2 | Dataset search on HuggingFace Hub |
+| US-04 | [Dataset Search](US-04-dataset-search.md) | 3 | Dataset search via separate MCP servers (HuggingFace, Eclipse Dataspace) |
 | US-05 | [Integration](US-05-integration.md) | 1 | End-to-end testing and documentation |
 
 ## Tasks
@@ -77,12 +78,13 @@ n8n is replaced by a LangGraph agent that handles the full conversation flow inc
 | T-03-3 | [Decision Logic & Recommendation Report](T-03-3-decision-logic.md) | Decision tree, multi-criteria evaluation, and structured report output |
 | T-03-4 | [CI Pipeline](T-03-4-ci-pipeline.md) | CI pipeline for unit tests and linting |
 
-### US-04: HuggingFace Search
+### US-04: Dataset Search
 
 | ID | Title | Description |
 |----|-------|-------------|
-| T-04-1 | [HuggingFace MCP](T-04-1-huggingface-mcp.md) | MCP endpoint for dataset search |
-| T-04-2 | [Agent Integration](T-04-2-agent-integration.md) | Agent integration with HuggingFace search |
+| T-04-1 | [HuggingFace MCP Server](T-04-1-huggingface-mcp.md) | Separate MCP server for HuggingFace dataset search |
+| T-04-2 | [Eclipse Dataspace MCP Server](T-04-2-eclipse-dataspace-mcp.md) | Separate MCP server for Eclipse Dataspace dataset search |
+| T-04-3 | [Agent Integration](T-04-3-agent-integration.md) | Agent integration with all dataset search sources |
 
 ### US-05: Integration
 
@@ -95,7 +97,7 @@ n8n is replaced by a LangGraph agent that handles the full conversation flow inc
 1. **US-01** - Infrastructure (must be first)
 2. **US-02** - Knowledge Base (can start parallel with US-03)
 3. **US-03** - Agent Architecture
-4. **US-04** - HuggingFace Search (can start parallel with US-03)
+4. **US-04** - Dataset Search (can start parallel with US-03)
 5. **US-05** - Integration & Testing
 
 ## LLM Specialization Methods (Knowledge Scope)
@@ -115,5 +117,5 @@ The agent provides recommendations for these methods:
 | RAG | Dynamic knowledge, no training |
 | Knowledge Distillation | Deployment constraints |
 
-## Total: 5 User Stories, 12 Tasks
+## Total: 5 User Stories, 13 Tasks
 

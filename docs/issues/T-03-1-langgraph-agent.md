@@ -34,6 +34,16 @@ Create the agent using LangGraph with Vector MCP integration. The agent replaces
 - The agent connects to the Vector MCP server to search the knowledge base
 - The agent runs as a Docker container within the stack
 
+## Transition from n8n
+
+The LangGraph agent replaces the temporary n8n chatbot (T-01-3). Once the agent is ready:
+
+1. Open WebUI is reconfigured to use the LangGraph agent as its backend
+2. n8n is moved to a Docker Compose profile (e.g. `n8n`) so it is no longer started by default
+3. n8n can still be started on demand via `docker compose --profile n8n up` for quick prototyping or testing
+
+This way, n8n remains available as an optional tool without consuming resources during normal operation.
+
 ## Acceptance Criteria
 
 - [ ] LangGraph agent is implemented and runnable
@@ -41,6 +51,8 @@ Create the agent using LangGraph with Vector MCP integration. The agent replaces
 - [ ] Agent maintains conversation state across turns
 - [ ] Open WebUI connects to the agent as backend
 - [ ] Agent runs as a container in the Docker stack
+- [ ] n8n is moved to a Docker Compose profile and no longer starts by default
+- [ ] n8n is still startable via `docker compose --profile n8n up`
 
 # Branches
 
