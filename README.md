@@ -1,154 +1,98 @@
 # Soofi Trainer
 
-Ein agentisches System, das Benutzer durch den LLM-Training-Prozess führt.
+An agentic system that guides users through the LLM specialization process — from use-case analysis to method recommendation (RAG, fine-tuning, etc.).
 
-## Features
+## Services
 
-- **Interaktive Beratung**: Der Agent analysiert deinen Anwendungsfall und empfiehlt den besten Ansatz
-- **RAG vs. Fine-Tuning**: Intelligente Empfehlung basierend auf deinen Anforderungen
-- **Training Pipeline**: Orchestrierung des gesamten Training-Prozesses (gemockt)
-- **Zwei Phasen**:
-  - Phase 1 (Prototyping): n8n für schnelle Iteration
-  - Phase 2 (Production): LangGraph State-Machine
-
-## Architektur
-
-```
-┌─────────────────┐     ┌─────────────────┐     ┌──────────────┐
-│   Open WebUI    │────▶│  n8n / Agent    │────▶│  MCP Tools   │
-│  (Chat UI)      │     │  (Orchestrator) │     │  (Pipeline)  │
-└─────────────────┘     └─────────────────┘     └──────────────┘
-                                                       │
-                                                ┌──────────────┐
-                                                │ MCP Inspector│
-                                                │  (Debugging) │
-                                                └──────────────┘
-```
+| Service | URL | Description |
+|---------|-----|-------------|
+| Open WebUI | http://localhost:3000 | Chat interface |
+| Vector MCP | http://localhost:8113/mcp/ | Knowledge base search |
+| MCP Inspector | http://localhost:6274 | MCP debugging tool |
+| Weaviate | http://localhost:8070 | Vector database |
 
 ## Quick Start
 
-### Voraussetzungen
+### Prerequisites
 
-- Docker und Docker Compose
-- OpenAI API Key
+- Docker & Docker Compose
+- OpenAI API key (or another embedding provider)
 
-### Installation
-
-1. Repository klonen:
-   ```bash
-   git clone https://mrk40.dfki.de/soofi/soofi-trainer.git
-   cd soofi-trainer
-   ```
-
-2. Environment-Datei erstellen:
-   ```bash
-   cp .env.example .env
-   # Editiere .env und füge deinen OPENAI_API_KEY ein
-   ```
-
-3. Stack starten:
-   ```bash
-   ./up.sh
-   ```
-
-4. Services aufrufen:
-   - **Open WebUI**: http://localhost:3000
-   - **n8n**: http://localhost:5678
-   - **MCP Server**: http://localhost:8000
-   - **MCP Inspector**: http://localhost:5173
-   - **Agent API**: http://localhost:8001
-
-### Stack stoppen
+### 1. Create secrets file
 
 ```bash
-./down.sh
+# Create a secrets file outside the repo
+cat > ~/.env.secrets << 'EOF'
+OPENAI_API_KEY=sk-your-key-here
+EOF
 ```
 
-Mit Daten löschen:
-```bash
-./down.sh --clean
-```
-
-## Komponenten
-
-### MCP Server (Port 8000)
-
-Stellt die Training-Pipeline Tools bereit:
-
-| Tool | Beschreibung |
-|------|-------------|
-| `check_dataset_availability` | HuggingFace Datasets prüfen |
-| `analyze_use_case` | Anwendungsfall analysieren |
-| `recommend_approach` | RAG vs. Fine-Tuning empfehlen |
-| `configure_training` | Training-Parameter konfigurieren |
-| `start_training_pipeline` | Pipeline starten |
-| `get_training_status` | Status abfragen |
-
-### n8n (Port 5678)
-
-Workflow-Automation für Prototyping:
-- Webhook-basierte Integration
-- Visuelle Flow-Erstellung
-- Einfache MCP-Tool-Aufrufe
-
-### LangGraph Agent (Port 8001)
-
-State-Machine basierter Agent für Production:
-
-```
-GREETING → ANALYSIS → RECOMMENDATION → CONFIGURATION → EXECUTION → MONITORING → COMPLETED
-```
-
-### Open WebUI (Port 3000)
-
-Chat-Interface für Benutzerinteraktion.
-
-## API Beispiele
-
-### Chat mit dem Agent
+### 2. Start the stack
 
 ```bash
-curl -X POST http://localhost:8001/chat \
-  -H "Content-Type: application/json" \
-  -d '{
-    "message": "Ich möchte einen Chatbot für Kundenservice erstellen",
-    "session_id": "user123"
-  }'
+docker compose up -d
 ```
 
-### MCP Tool aufrufen
+### 3. Open the UI
+
+- **Chat**: http://localhost:3000
+- **MCP Inspector**: http://localhost:6274/?transport=http&serverUrl=http://localhost:8113/mcp/&MCP_PROXY_AUTH_TOKEN=dev-stack-token-12345
+
+### Stop the stack
 
 ```bash
-curl -X POST http://localhost:8000/tools/analyze_use_case \
-  -H "Content-Type: application/json" \
-  -d '{
-    "user_input": "Ich möchte einen Chatbot für technischen Support",
-    "session_id": "test"
-  }'
+docker compose down
 ```
 
-## Entwicklung
+With volume cleanup:
 
-### Projektstruktur
+```bash
+docker compose down -v
+```
+
+## Configuration
+
+All configuration is in `.env` (committed, no secrets). Secrets are loaded from an external file via `ENV_SECRETS_FILE`.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ENV_SECRETS_FILE` | `~/.env.secrets` | Path to secrets file |
+| `WEAVIATE_PORT` | `8070` | Weaviate HTTP port |
+| `WEAVIATE_COLLECTION` | `SoofiKnowledge` | Weaviate collection name |
+| `VECTOR_MCP_PORT` | `8113` | Vector MCP server port |
+| `EMBEDDING_MODEL` | `openai:text-embedding-3-large` | Embedding model (provider:model) |
+| `OPENWEBUI_PORT` | `3000` | Open WebUI port |
+
+## Project Structure
 
 ```
 soofi-trainer/
-├── agent/                 # LangGraph Agent (Phase 2)
-│   ├── graph.py          # State-Machine Definition
-│   ├── prompts.py        # Agent Prompts
-│   ├── state.py          # State Definitionen
-│   ├── tools.py          # LangChain Tools
-│   └── server.py         # FastAPI Server
-├── mcp-server/           # MCP Tools Server
-│   └── main.py           # FastAPI + Tools
-├── n8n/                  # n8n Workflows (Phase 1)
-│   └── workflows/        # Workflow JSON Dateien
-├── docker-compose.yml    # Service Orchestration
-├── up.sh                 # Stack starten
-├── down.sh               # Stack stoppen
-└── .env.example          # Environment Template
+├── vector-mcp/             # Vector MCP server (local build)
+│   ├── src/vector_mcp/     # Python source
+│   ├── Dockerfile
+│   └── requirements.txt
+├── docker-compose.yml      # Service orchestration
+├── .env                    # Configuration (no secrets)
+└── docs/issues/            # Project tickets
 ```
 
-## Lizenz
+## MCP Tools
 
-MIT License - siehe [LICENSE](LICENSE)
+The Vector MCP server exposes two tools:
+
+- **`search_documents`** — Semantic search over the knowledge base, with optional metadata filters
+- **`list_metadata`** — Discover available metadata fields and values for filtering
+
+### Load test data
+
+The knowledge base starts empty. To seed sample documents for testing:
+
+```bash
+docker exec vector-mcp python scripts/seed_testdata.py
+```
+
+This creates the collection (if needed) and inserts test documents with real embeddings.
+
+## License
+
+MIT License — see [LICENSE](LICENSE)
