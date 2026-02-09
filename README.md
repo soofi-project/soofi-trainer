@@ -30,7 +30,8 @@ EOF
 ### 2. Start the stack
 
 ```bash
-docker compose up -d
+./up.sh              # Start containers
+./up.sh --build      # Rebuild and start containers
 ```
 
 ### 3. Open the UI
@@ -41,13 +42,23 @@ docker compose up -d
 ### Stop the stack
 
 ```bash
-docker compose down
+./down.sh           # Stop containers
+./down.sh --clean   # Stop containers and remove all volumes
 ```
 
-With volume cleanup:
+### Delete individual volumes
+
+The stack uses named Docker volumes (prefixed with `soofi-trainer_`):
+
+| Volume | Content |
+|--------|---------|
+| `soofi-trainer_weaviate_data` | Weaviate vector database |
+| `soofi-trainer_open_webui_data` | Open WebUI settings & chat history |
+
+To delete a single volume (containers must be stopped):
 
 ```bash
-docker compose down -v
+docker volume rm soofi-trainer_weaviate_data
 ```
 
 ## Configuration
@@ -73,6 +84,8 @@ soofi-trainer/
 │   ├── Dockerfile
 │   └── pyproject.toml
 ├── docker-compose.yml      # Service orchestration
+├── up.sh                   # Start stack
+├── down.sh                 # Stop stack
 ├── .env                    # Configuration (no secrets)
 └── docs/issues/            # Project tickets
 ```
