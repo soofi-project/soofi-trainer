@@ -7,7 +7,7 @@ An agentic system that guides users through the LLM specialization process — f
 | Service | URL | Description |
 |---------|-----|-------------|
 | Open WebUI | http://localhost:3000 | Chat interface |
-| Vector MCP | http://localhost:8113/mcp/ | Knowledge base search |
+| Vector MCP | docker-internal (vector-mcp:8000) | Knowledge base search |
 | MCP Inspector | http://localhost:6274 | MCP debugging tool |
 | Weaviate | http://localhost:8070 | Vector database |
 
@@ -36,7 +36,7 @@ docker compose up -d
 ### 3. Open the UI
 
 - **Chat**: http://localhost:3000
-- **MCP Inspector**: http://localhost:6274/?transport=http&serverUrl=http://localhost:8113/mcp/&MCP_PROXY_AUTH_TOKEN=dev-stack-token-12345
+- **MCP Inspector**: http://localhost:6274/?transport=streamablehttp&serverUrl=http://vector-mcp:8000/mcp/&MCP_PROXY_AUTH_TOKEN=dev-stack-token-12345
 
 ### Stop the stack
 
@@ -59,7 +59,8 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 | `ENV_SECRETS_FILE` | `~/.env.secrets` | Path to secrets file |
 | `WEAVIATE_PORT` | `8070` | Weaviate HTTP port |
 | `WEAVIATE_COLLECTION` | `SoofiKnowledge` | Weaviate collection name |
-| `VECTOR_MCP_PORT` | `8113` | Vector MCP server port |
+| `MCPINSPECTOR_CLIENT_PORT` | `6274` | MCP Inspector UI port |
+| `MCPINSPECTOR_PROXY_PORT` | `6277` | MCP Inspector proxy port |
 | `EMBEDDING_MODEL` | `openai:text-embedding-3-large` | Embedding model (provider:model) |
 | `OPENWEBUI_PORT` | `3000` | Open WebUI port |
 
@@ -70,7 +71,7 @@ soofi-trainer/
 ├── vector-mcp/             # Vector MCP server (local build)
 │   ├── src/vector_mcp/     # Python source
 │   ├── Dockerfile
-│   └── requirements.txt
+│   └── pyproject.toml
 ├── docker-compose.yml      # Service orchestration
 ├── .env                    # Configuration (no secrets)
 └── docs/issues/            # Project tickets

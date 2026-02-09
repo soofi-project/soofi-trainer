@@ -11,13 +11,11 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
-# ---- python deps ----
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# ---- app code ----
+# ---- install package ----
+COPY pyproject.toml .
 COPY src/ ./src/
 COPY scripts/ ./scripts/
+RUN pip install --no-cache-dir .
 
 # ---- runtime config ----
 EXPOSE 8000
