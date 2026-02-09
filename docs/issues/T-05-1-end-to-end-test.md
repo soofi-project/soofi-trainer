@@ -23,7 +23,7 @@ Based on the example conversation from the agent specification:
 1. User describes their use case via Open WebUI
 2. Agent asks clarifying questions (domain, data situation, hardware, constraints)
 3. Agent retrieves relevant knowledge about suitable methods from the knowledge base
-4. Agent searches for public datasets on HuggingFace (GDPR-compliant, medical domain)
+4. Agent searches for public datasets on HuggingFace and/or Eclipse Dataspace (GDPR-compliant, medical domain)
 5. Agent applies decision logic and recommends a method (e.g. QLoRA)
 6. Agent generates a structured recommendation report with alternatives and next steps
 

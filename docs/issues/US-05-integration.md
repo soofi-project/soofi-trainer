@@ -16,6 +16,7 @@ The integration ensures that all components work together seamlessly:
 
 - Open WebUI → Agent → Vector MCP → Weaviate
 - Open WebUI → Agent → HuggingFace MCP → HuggingFace Hub
+- Open WebUI → Agent → Eclipse Dataspace MCP → Eclipse Dataspace
 - Knowledge retrieval returns relevant results
 - Agent provides coherent recommendations
 - Error handling works properly
@@ -26,7 +27,7 @@ The integration ensures that all components work together seamlessly:
 2. User describes their use case
 3. Agent asks clarifying questions
 4. Agent retrieves relevant knowledge
-5. Agent searches for datasets on HuggingFace if needed
+5. Agent searches for datasets (HuggingFace, Eclipse Dataspace) if needed
 6. Agent provides recommendation with reasoning
 7. User can ask follow-up questions
 
@@ -37,6 +38,7 @@ The integration ensures that all components work together seamlessly:
 - [ ] Agent responds in German
 - [ ] Knowledge retrieval works (check Vector MCP logs)
 - [ ] HuggingFace dataset search works
+- [ ] Eclipse Dataspace dataset search works
 - [ ] Recommendation includes reasoning from knowledge base
 - [ ] `./down.sh` stops everything cleanly
 - [ ] Documentation is complete

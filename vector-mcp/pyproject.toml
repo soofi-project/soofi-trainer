@@ -1,0 +1,77 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "soofi-vector-mcp"
+version = "0.1.0"
+description = "MCP server for semantic search over Soofi knowledge base in Weaviate"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+    { name = "DFKI GmbH" }
+]
+keywords = [
+    "mcp",
+    "model-context-protocol",
+    "weaviate",
+    "vector-database",
+    "vector-search",
+    "rag",
+    "soofi",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+dependencies = [
+    "fastmcp>=2.14.5",
+    "uvicorn[standard]>=0.40.0",
+    "weaviate-client>=4.19.2",
+    "langchain>=1.2.9",
+    "langchain-openai>=1.1.7",
+    "langchain-ollama>=1.0.1",
+    "langchain-google-genai>=4.2.0",
+    "langchain-voyageai>=0.3.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-cov>=7.0.0",
+    "black>=26.1.0",
+    "ruff>=0.15.0",
+    "mypy>=1.19.1",
+]
+
+[project.urls]
+Homepage = "https://mrk40.dfki.de/soofi/soofi-trainer"
+Repository = "https://mrk40.dfki.de/soofi/soofi-trainer"
+
+[project.scripts]
+soofi-vector-mcp = "vector_mcp.server:main"
+
+[tool.setuptools]
+packages = ["vector_mcp"]
+package-dir = { "" = "src" }
+
+[tool.black]
+line-length = 100
+target-version = ['py311']
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true

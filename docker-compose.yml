@@ -1,0 +1,101 @@
+name: soofi-trainer
+
+services:
+  # ===========================================
+  # Weaviate - Vector Database
+  # ===========================================
+  weaviate:
+    image: cr.weaviate.io/semitechnologies/weaviate:${WEAVIATE_VERSION:-1.35.7}
+    container_name: weaviate
+    restart: unless-stopped
+    ports:
+      - "${WEAVIATE_PORT:-8070}:8080"
+      - "${WEAVIATE_GRPC_PORT:-50051}:50051"
+    environment:
+      - QUERY_DEFAULTS_LIMIT=25
+      - AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=true
+      - PERSISTENCE_DATA_PATH=/var/lib/weaviate
+      - DEFAULT_VECTORIZER_MODULE=none
+      - CLUSTER_HOSTNAME=node1
+    volumes:
+      - weaviate_data:/var/lib/weaviate
+    networks:
+      - soofi-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/v1/.well-known/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===========================================
+  # Vector MCP Server - Semantic Search
+  # ===========================================
+  vector-mcp:
+    build: ./vector-mcp
+    container_name: vector-mcp
+    restart: unless-stopped
+    env_file:
+      - .env
+      - ${ENV_SECRETS_FILE:-.env.secrets}
+    environment:
+      - WEAVIATE_SCHEME=http
+      - WEAVIATE_HOST=weaviate
+      - WEAVIATE_PORT=8080
+      - WEAVIATE_GRPC_PORT=50051
+      - WEAVIATE_COLLECTION=${WEAVIATE_COLLECTION:-SoofiKnowledge}
+    networks:
+      - soofi-network
+    depends_on:
+      weaviate:
+        condition: service_healthy
+
+  # ===========================================
+  # MCP Inspector - Debugging Tool
+  # ===========================================
+  mcp-inspector:
+    image: ghcr.io/modelcontextprotocol/inspector:${MCPINSPECTOR_VERSION:-0.18.0}
+    container_name: mcp-inspector
+    restart: unless-stopped
+    ports:
+      - "${MCPINSPECTOR_CLIENT_PORT:-6274}:6274"
+      - "${MCPINSPECTOR_PROXY_PORT:-6277}:6277"
+    environment:
+      HOST: "0.0.0.0"
+      MCP_PROXY_AUTH_TOKEN: ${MCP_AUTH_TOKEN:-dev-stack-token-12345}
+      MCP_AUTO_OPEN_ENABLED: "false"
+    networks:
+      - soofi-network
+
+  # ===========================================
+  # Open WebUI - Chat Interface
+  # ===========================================
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:${OPENWEBUI_VERSION:-v0.7.2}
+    container_name: open-webui
+    restart: unless-stopped
+    ports:
+      - "${OPENWEBUI_PORT:-3000}:8080"
+    environment:
+      - WEBUI_AUTH=false
+      - ENABLE_SIGNUP=false
+    env_file:
+      - .env
+      - ${ENV_SECRETS_FILE:-.env.secrets}
+    volumes:
+      - open_webui_data:/app/backend/data
+    networks:
+      - soofi-network
+
+# ===========================================
+# Networks
+# ===========================================
+networks:
+  soofi-network:
+    driver: bridge
+
+# ===========================================
+# Volumes
+# ===========================================
+volumes:
+  weaviate_data:
+  open_webui_data:
