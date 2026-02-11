@@ -105,6 +105,12 @@ The knowledge base starts empty. To seed sample documents for testing:
 docker exec vector-mcp python scripts/seed_testdata.py
 ```
 
+### Backup N8N DB
+
+```bash
+docker exec -t postgres pg_dump -U n8n n8n > n8n-backup-$(date +%Y%m%d-%H%M).sql
+```
+
 This creates the collection (if needed) and inserts test documents with real embeddings.
 
 ## License
