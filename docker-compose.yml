@@ -101,10 +101,6 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: postgres
-    environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
     env_file:
       - .env
       - ${ENV_SECRETS_FILE:-.env.secrets}
@@ -120,45 +116,12 @@ services:
     networks:
       - soofi-network
 
-  n8n:
-    image: n8nio/n8n:2.7.3
-    container_name: n8n
-    ports:
-      - "5678:5678"
-    environment:
-      # Database Configuration
-      - DB_TYPE=postgresdb
-      - DB_POSTGRESDB_HOST=postgres
-      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB}
-      - DB_POSTGRESDB_USER=${POSTGRES_USER}
-      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
-      # Instance Settings
-      - N8N_HOST=${N8N_HOST}
-      - N8N_PORT=5678
-      - N8N_PROTOCOL=${N8N_PROTOCOL}
-      - N8N_PERSONALIZATION_ENABLED=false
-      - N8N_ONBOARDING_FLOW_DISABLED=true
-      - N8N_DIAGNOSTICS_ENABLED=false
-      # Timezone
-      - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
-      - TZ=${GENERIC_TIMEZONE}
-    env_file:
-      - .env
-      - ${ENV_SECRETS_FILE:-.env.secrets}
-    depends_on:
-      postgres:
-        condition: service_healthy
-    volumes:
-      - n8n_data:/home/node/.n8n    
-    networks:
-      - soofi-network
-
   # Init container: imports workflows after N8N db is ready
   n8n-init:
     image: n8nio/n8n:2.7.3
     container_name: n8n-init
-    entrypoint: ["n8n"]
-    command: ["import:workflow", "--input=/import-workflows", "--separate"]
+    entrypoint: ["/bin/sh"]
+    command: ["/init-script.sh"]
     environment:
       # Database Configuration
       - DB_TYPE=postgresdb
@@ -174,7 +137,39 @@ services:
         condition: service_healthy
     volumes:
       - ./n8n/workflows:/import-workflows:ro
+      - ./n8n/init-script.sh:/init-script.sh:ro
     restart: "no"  # Runs only once
+    networks:
+      - soofi-network
+
+  n8n:
+    image: n8nio/n8n:2.7.3
+    container_name: n8n
+    ports:
+      - "${N8N_EXTERNAL_PORT:-5678}:5678"
+    environment:
+      # Database Configuration
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB}
+      - DB_POSTGRESDB_USER=${POSTGRES_USER}
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
+      # Instance Settings
+      - N8N_PERSONALIZATION_ENABLED=false
+      - N8N_ONBOARDING_FLOW_DISABLED=true
+      - N8N_DIAGNOSTICS_ENABLED=false
+      # Timezone
+      - TZ=${GENERIC_TIMEZONE}
+    env_file:
+      - .env
+      - ${ENV_SECRETS_FILE:-.env.secrets}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      n8n-init:
+        condition: service_completed_successfully
+    volumes:
+      - n8n_data:/home/node/.n8n    
     networks:
       - soofi-network
 
