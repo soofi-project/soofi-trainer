@@ -13,17 +13,12 @@ RUN apt-get update \
 
 # ---- install package ----
 COPY pyproject.toml .
-COPY src/ ./src/
-RUN pip install --no-cache-dir .
+COPY src/ src/
 
-# ---- runtime config ----
-EXPOSE 8000
-
-ENV WEAVIATE_SCHEME=http
-ENV WEAVIATE_HOST=weaviate
-ENV WEAVIATE_PORT=8080
-ENV WEAVIATE_GRPC_PORT=50051
-ENV WEAVIATE_COLLECTION=SoofiKnowledge
+RUN pip install --no-cache-dir . \
+ && addgroup --system app && adduser --system --ingroup app app
 
 # ---- start ----
-CMD ["python", "-u", "src/vector_mcp/server.py"]
+USER app
+
+CMD ["python", "-u", "src/knowledge_ingestion/ingest.py"]

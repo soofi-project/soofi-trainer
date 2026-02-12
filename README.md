@@ -37,7 +37,7 @@ EOF
 ### 3. Open the UI
 
 - **Chat**: http://localhost:3000
-- **MCP Inspector**: http://localhost:6274/?transport=streamablehttp&serverUrl=http://vector-mcp:8000/mcp/&MCP_PROXY_AUTH_TOKEN=dev-stack-token-12345
+- **MCP Inspector**: http://localhost:6274/?transport=streamable-http&serverUrl=http://vector-mcp:8000/mcp/&MCP_PROXY_AUTH_TOKEN=dev-stack-token-12345
 
 ### Stop the stack
 
@@ -79,6 +79,8 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 
 ```
 soofi-trainer/
+├── knowledge/              # Markdown knowledge documents + YAML metadata
+├── knowledge-ingestion/    # One-shot ingestion container (local build)
 ├── vector-mcp/             # Vector MCP server (local build)
 │   ├── src/vector_mcp/     # Python source
 │   ├── Dockerfile
@@ -97,15 +99,15 @@ The Vector MCP server exposes two tools:
 - **`search_documents`** — Semantic search over the knowledge base, with optional metadata filters
 - **`list_metadata`** — Discover available metadata fields and values for filtering
 
-### Load test data
+### Knowledge base
 
-The knowledge base starts empty. To seed sample documents for testing:
+Knowledge documents live in `knowledge/` as markdown files with YAML metadata. The `knowledge-ingestion` container automatically loads them into Weaviate on `docker-compose up`. It runs once, detects changes via SHA-256 hashes, and exits.
+
+To re-run ingestion after editing documents:
 
 ```bash
-docker exec vector-mcp python scripts/seed_testdata.py
+docker start knowledge-ingestion && docker logs -f knowledge-ingestion
 ```
-
-This creates the collection (if needed) and inserts test documents with real embeddings.
 
 ## License
 
