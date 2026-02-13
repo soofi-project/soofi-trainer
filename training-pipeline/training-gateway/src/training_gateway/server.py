@@ -9,7 +9,7 @@ from contextlib import asynccontextmanager
 import uvicorn
 from fastapi import FastAPI
 
-from training_gateway import db
+from training_gateway import backends, db
 from training_gateway.mcp_tools import mcp
 from training_gateway.webhooks import router as webhooks_router
 
@@ -24,10 +24,14 @@ mcp_app = mcp.http_app()
 async def lifespan(app: FastAPI):
     """Initialize gateway resources and MCP session manager."""
     await db.init_db()
-    logger.info("Training Gateway started")
+    await backends.init_backend()
+    logger.info(
+        "Training Gateway started (backend=%s)", backends.get_config().backend_type
+    )
     # Run the MCP app's lifespan to initialize its session manager
     async with mcp_app.lifespan(app):
         yield
+    await backends.close_backend()
     await db.close_db()
     logger.info("Training Gateway stopped")
 

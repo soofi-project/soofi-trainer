@@ -79,6 +79,7 @@ class Job(BaseModel):
     updated_at: datetime
     error: str | None = None
     result: JobResult | None = None
+    container_id: str | None = None
 
 
 # --- Webhook Payload Models ---
