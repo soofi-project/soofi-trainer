@@ -1,7 +1,11 @@
 #!/bin/bash
+set -e
+set -a 
+source $(pwd)/.env
+set +a
 
 # Configuration
-WEBUI_URL="http://localhost:3000"
+WEBUI_URL="http://localhost:$OPENWEBUI_PORT"
 FUNCTIONS_DIR="$(pwd)/openwebui/functions"
 EMAIL="admin@localhost"
 PASSWORD=""
