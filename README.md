@@ -10,6 +10,7 @@ An agentic system that guides users through the LLM specialization process — f
 | Vector MCP | docker-internal (vector-mcp:8000) | Knowledge base search |
 | MCP Inspector | http://localhost:6274 | MCP debugging tool |
 | Weaviate | http://localhost:8070 | Vector database |
+| N8N | http://localhost:5678 | Workflow Automation Platform |
 
 ## Quick Start
 
