@@ -8,6 +8,7 @@ An agentic system that guides users through the LLM specialization process — f
 |---------|-----|-------------|
 | Open WebUI | http://localhost:3000 | Chat interface |
 | Vector MCP | docker-internal (vector-mcp:8000) | Knowledge base search |
+| Training Gateway | docker-internal (training-gateway:8000) | Training job management |
 | MCP Inspector | http://localhost:6274 | MCP debugging tool |
 | Weaviate | http://localhost:8070 | Vector database |
 
@@ -54,6 +55,7 @@ The stack uses named Docker volumes (prefixed with `soofi-trainer_`):
 |--------|---------|
 | `soofi-trainer_weaviate_data` | Weaviate vector database |
 | `soofi-trainer_open_webui_data` | Open WebUI settings & chat history |
+| `soofi-trainer_training_gateway_data` | Training Gateway job state (SQLite) |
 
 To delete a single volume (containers must be stopped):
 
@@ -79,11 +81,20 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 
 ```
 soofi-trainer/
-├── vector-mcp/             # Vector MCP server (local build)
-│   ├── src/vector_mcp/     # Python source
+├── vector-mcp/                 # Vector MCP server (local build)
+│   ├── src/vector_mcp/         # Python source
 │   ├── Dockerfile
 │   └── pyproject.toml
-├── docker-compose.yml      # Service orchestration
+├── training-pipeline/          # Training infrastructure
+│   ├── training-gateway/       # Training Gateway MCP server
+│   │   ├── src/training_gateway/
+│   │   ├── tests/              # Pytest test suite (unit, integration, e2e)
+│   │   ├── Dockerfile
+│   │   └── pyproject.toml
+│   └── dummy-training-container/  # Training simulator (profile: training-sim)
+│       ├── simulate.py
+│       └── Dockerfile
+├── docker-compose.yml          # Service orchestration
 ├── up.sh                   # Start stack
 ├── down.sh                 # Stop stack
 ├── .env                    # Configuration (no secrets)
@@ -92,10 +103,17 @@ soofi-trainer/
 
 ## MCP Tools
 
-The Vector MCP server exposes two tools:
+### Vector MCP
 
 - **`search_documents`** — Semantic search over the knowledge base, with optional metadata filters
 - **`list_metadata`** — Discover available metadata fields and values for filtering
+
+### Training Gateway
+
+- **`start_training_job`** — Start a training job for a given specialization method
+- **`get_job_status`** — Get current status, phases, and progress of a training job
+- **`list_training_jobs`** — List all training jobs, optionally filtered by status
+- **`cancel_training_job`** — Cancel a running or queued training job
 
 ### Load test data
 

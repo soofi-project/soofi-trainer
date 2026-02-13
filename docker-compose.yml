@@ -95,6 +95,39 @@ services:
       retries: 5
       start_period: 120s
 
+  # ===========================================
+  # Training Gateway - Training Job Management
+  # ===========================================
+  training-gateway:
+    build: ./training-pipeline/training-gateway
+    container_name: training-gateway
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - training_gateway_data:/data
+    networks:
+      - soofi-network
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===========================================
+  # Dummy Training Container - Simulation
+  # ===========================================
+  dummy-training:
+    build: ./training-pipeline/dummy-training-container
+    container_name: dummy-training
+    profiles:
+      - training-sim
+    networks:
+      - soofi-network
+    depends_on:
+      training-gateway:
+        condition: service_healthy
+
 # ===========================================
 # Networks
 # ===========================================
@@ -108,3 +141,4 @@ networks:
 volumes:
   weaviate_data:
   open_webui_data:
+  training_gateway_data:
