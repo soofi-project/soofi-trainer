@@ -25,7 +25,7 @@ The agent should know about:
 - Common pitfalls and how to avoid them
 - Cost and resource considerations
 - Example use cases
-- **All LLM Specialization Methods** (see [T-02-2](T-02-2-knowledge-documents.md)):
+- **All LLM Specialization Methods** (see T-02-2):
   - Continued Pretraining
   - Supervised Fine-Tuning (SFT)
   - LoRA (Low-Rank Adaptation)
@@ -62,8 +62,8 @@ The Vector MCP server (`dfkibasys/aas-vector-mcp`) provides:
 - [ ] Weaviate collection "SoofiKnowledge" is created automatically on startup
 - [ ] All knowledge documents are ingested via the ingestion container
 - [ ] Re-running `docker-compose up` skips unchanged files (hash-based)
-- [ ] Knowledge about all 10 specialization methods is ingested ([T-02-2](T-02-2-knowledge-documents.md))
+- [ ] Knowledge about all 10 specialization methods is ingested (T-02-2)
 - [ ] Agent can retrieve relevant knowledge via Vector MCP
 - [ ] Search results are relevant to user queries
-- [ ] Reranking improves search result quality when enabled ([T-02-3](T-02-3-reranking.md))
-- [ ] Knowledge documents are accessible via clickable URLs ([T-02-4](T-02-4-minio-knowledge-urls.md))
+- [ ] Reranking improves search result quality when enabled (T-02-3)
+- [ ] Knowledge documents are accessible via clickable URLs (T-02-4)

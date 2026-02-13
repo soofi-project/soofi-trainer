@@ -1,12 +1,12 @@
 # Task
 
-- user story: [US-06](US-06-inference-server.md)
+- user story: US-06
 
 # Description
 
 **Ansible Setup for Inference Server Deployment**
 
-Prepare the Ansible infrastructure for provisioning GPU servers. This covers the tooling and project structure — not the actual server configuration (see [T-06-3](T-06-3-server-provisioning.md)).
+Prepare the Ansible infrastructure for provisioning GPU servers. This covers the tooling and project structure — not the actual server configuration (see T-06-3).
 
 Repository: [soofi-inference-server](https://mrk40.dfki.de/soofi/soofi-inference-server)
 

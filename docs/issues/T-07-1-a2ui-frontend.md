@@ -1,6 +1,6 @@
 # Task
 
-- user story: [US-07](US-07-voice-agent-ui.md)
+- user story: #US-07
 
 /label ~UserStory_US-07
 /label ~Task
@@ -25,7 +25,7 @@ Project scaffolding for the A2UI-based frontend as an **additional** service alo
 ### A2UI Integration
 
 - Use the official `@a2ui/web-lib` package (Lit-based renderer, ~5kb)
-- The Interaction Agent ([T-07-6](T-07-6-interaction-agent.md)) sends JSON A2UI message descriptors
+- The Interaction Agent (T-07-6) sends JSON A2UI message descriptors
 - The frontend renders them natively using Lit Web Components
 - Use `ag-ui-langgraph` PyPI package on the agent side for LangGraph ↔ A2UI integration
 
@@ -38,9 +38,9 @@ Project scaffolding for the A2UI-based frontend as an **additional** service alo
 
 ### Agent Connection
 
-- SSE or WebSocket endpoint from the Interaction Agent ([T-07-6](T-07-6-interaction-agent.md))
+- SSE or WebSocket endpoint from the Interaction Agent (T-07-6)
 - The frontend subscribes to a stream of A2UI message events from the Interaction Agent
-- User input (text for now, voice later in [T-07-3](T-07-3-voice-local.md)) is sent back to the Interaction Agent
+- User input (text for now, voice later in T-07-3) is sent back to the Interaction Agent
 - The frontend only communicates with the Interaction Agent — specialist agents are reached via A2A on the backend
 
 ## Key References
@@ -55,7 +55,7 @@ Project scaffolding for the A2UI-based frontend as an **additional** service alo
 - [ ] Dockerfile builds and serves the frontend
 - [ ] Frontend runs as `soofi-ui` service alongside Open WebUI in `docker-compose.yml`
 - [ ] Basic A2UI message types render correctly (text, cards, buttons)
-- [ ] Frontend connects to Interaction Agent ([T-07-6](T-07-6-interaction-agent.md)) via SSE or WebSocket
+- [ ] Frontend connects to Interaction Agent (T-07-6) via SSE or WebSocket
 - [ ] A2UI messages from the Interaction Agent appear in the browser in real-time
 - [ ] `docker-compose up` starts both Open WebUI (:3000) and soofi-ui (:3001)
 

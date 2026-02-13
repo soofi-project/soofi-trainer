@@ -1,6 +1,6 @@
 # Task
 
-- user story: [US-02](US-02-knowledge-base.md)
+- user story: #US-02
 
 /label ~UserStory_US-02
 /label ~Task

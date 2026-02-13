@@ -1,6 +1,6 @@
 # Task
 
-- user story: [US-06](US-06-inference-server.md)
+- user story: US-06
 
 # Description
 
@@ -15,7 +15,7 @@ Repository: [soofi-inference-server](https://mrk40.dfki.de/soofi/soofi-inference
 - DNS entry for the GPU server (e.g. `triton.mrk40.dfki.de`)
 - Reverse proxy with TLS termination (HTTPS)
 - Firewall rules: allow HTTPS (443) from Trainer network, SSH (22) for Ansible
-- SSH access for Ansible provisioning ([T-06-2](T-06-2-ansible-setup.md) depends on this)
+- SSH access for Ansible provisioning (T-06-2 depends on this)
 - Connectivity test: verify Triton API is reachable via `https://triton.mrk40.dfki.de/v2/health/ready`
 
 ## Network Requirements

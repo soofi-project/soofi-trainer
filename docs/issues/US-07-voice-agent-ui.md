@@ -1,12 +1,12 @@
 # User story
 
 - tasks:
-  - [T-07-1](T-07-1-a2ui-frontend.md)
-  - [T-07-2](T-07-2-custom-components.md)
-  - [T-07-3](T-07-3-voice-local.md)
-  - [T-07-4](T-07-4-voice-h200.md)
-  - [T-07-5](T-07-5-dashboard-embedding.md)
-  - [T-07-6](T-07-6-interaction-agent.md)
+  - #T-07-1
+  - #T-07-2
+  - #T-07-3
+  - #T-07-4
+  - #T-07-5
+  - #T-07-6
 
 # Story
 
@@ -18,7 +18,7 @@ Open WebUI is a basic chat interface — functional but not impressive for demos
 
 A2UI (v0.8, Apache 2.0) is a declarative JSON protocol where the agent sends UI descriptions and the client renders them natively. The Lit Web Components renderer is the official, lightweight (~5kb) option for browser-based apps.
 
-A dedicated **Interaction Agent** ([T-07-6](T-07-6-interaction-agent.md)) owns the user-facing experience and communicates with specialist agents (analysis, recommendation, pipeline) via **A2A** (Agent-to-Agent protocol). This makes agent-to-agent communication — a core feature of Soofi — architecturally visible and demo-able, not just a claim.
+A dedicated **Interaction Agent** (T-07-6) owns the user-facing experience and communicates with specialist agents (analysis, recommendation, pipeline) via **A2A** (Agent-to-Agent protocol). This makes agent-to-agent communication — a core feature of Soofi — architecturally visible and demo-able, not just a claim.
 
 The Interaction Agent controls what the user sees — pulsating logo during processing, embedded dashboards, voice controls — making the experience significantly more engaging than a text chat.
 
@@ -45,18 +45,18 @@ The Interaction Agent controls what the user sees — pulsating logo during proc
                                                         Weaviate
 ```
 
-The A2UI frontend (`soofi-ui`) is added as a new service alongside Open WebUI in docker-compose. Open WebUI remains available for quick testing directly against the backend agents. The Interaction Agent ([T-07-6](T-07-6-interaction-agent.md)) is the only agent the A2UI frontend talks to — it delegates domain tasks to specialist agents via A2A. Voice services (STT/TTS) run as separate Docker containers, configurable for local (GPU) or cloud API usage.
+The A2UI frontend (`soofi-ui`) is added as a new service alongside Open WebUI in docker-compose. Open WebUI remains available for quick testing directly against the backend agents. The Interaction Agent (T-07-6) is the only agent the A2UI frontend talks to — it delegates domain tasks to specialist agents via A2A. Voice services (STT/TTS) run as separate Docker containers, configurable for local (GPU) or cloud API usage.
 
 ## Sub-Tasks
 
 | Task | Title | Dependencies |
 |------|-------|--------------|
-| [T-07-1](T-07-1-a2ui-frontend.md) | A2UI + Lit Frontend Scaffold | — |
-| [T-07-2](T-07-2-custom-components.md) | Custom Components & Theming | [T-07-1](T-07-1-a2ui-frontend.md) |
-| [T-07-3](T-07-3-voice-local.md) | Voice Pipeline (Local/Cloud) | [T-07-1](T-07-1-a2ui-frontend.md) |
-| [T-07-4](T-07-4-voice-h200.md) | Voice on H200 (Production) | [T-07-3](T-07-3-voice-local.md) |
-| [T-07-5](T-07-5-dashboard-embedding.md) | Dashboard Embedding (Exploration) | [T-07-1](T-07-1-a2ui-frontend.md) |
-| [T-07-6](T-07-6-interaction-agent.md) | Interaction Agent (A2A Orchestrator) | [T-07-1](T-07-1-a2ui-frontend.md) |
+| T-07-1 | A2UI + Lit Frontend Scaffold | — |
+| T-07-2 | Custom Components & Theming | T-07-1 |
+| T-07-3 | Voice Pipeline (Local/Cloud) | T-07-1 |
+| T-07-4 | Voice on H200 (Production) | T-07-3 |
+| T-07-5 | Dashboard Embedding (Exploration) | T-07-1 |
+| T-07-6 | Interaction Agent (A2A Orchestrator) | T-07-1 |
 
 ## Future Extensions
 

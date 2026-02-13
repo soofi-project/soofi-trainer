@@ -1,7 +1,7 @@
 # Task
 
-- user story: [US-07](US-07-voice-agent-ui.md)
-- depends on: [T-07-1](T-07-1-a2ui-frontend.md)
+- user story: #US-07
+- depends on: #T-07-1
 
 /label ~UserStory_US-07
 /label ~Task
@@ -23,7 +23,7 @@ The Interaction Agent is the **only agent the user talks to**. It:
 - Translates specialist agent responses into user-friendly A2UI presentations
 - Orchestrates the voice pipeline (routes STT output as input, sends responses to TTS)
 
-It does **not** contain domain logic (use-case analysis, method recommendation, dataset search). That stays in the specialist agents from [US-03](US-03-agent-architecture.md)/[US-04](US-04-dataset-search.md).
+It does **not** contain domain logic (use-case analysis, method recommendation, dataset search). That stays in the specialist agents from US-03/US-04.
 
 ## Architecture
 
@@ -58,7 +58,7 @@ The current monolithic agent in `agent/` handles both conversation and domain lo
 - **Before**: Single LangGraph agent does everything (conversation + analysis + recommendation)
 - **After**: Interaction Agent handles conversation/UI, delegates domain work via A2A
 
-The existing agent logic from [US-03](US-03-agent-architecture.md) (analysis, recommendation, decision tree) is preserved — it moves into specialist agents that the Interaction Agent calls via A2A. The LangGraph state machine in `agent/graph.py` is split:
+The existing agent logic from US-03 (analysis, recommendation, decision tree) is preserved — it moves into specialist agents that the Interaction Agent calls via A2A. The LangGraph state machine in `agent/graph.py` is split:
 
 - States related to **user interaction** (GREETING, conversation management) → Interaction Agent
 - States related to **domain work** (ANALYSIS, RECOMMENDATION, CONFIGURATION, EXECUTION) → specialist agents
@@ -69,14 +69,14 @@ The Interaction Agent generates A2UI messages to control the frontend:
 
 - **Processing state**: Sends `soofi-logo` component update (idle → processing) when delegating to a specialist agent, back to idle when the response arrives
 - **Results presentation**: Translates specialist agent output into A2UI cards, buttons, structured layouts
-- **Dashboard triggers**: Sends `dashboard-embed` messages when context calls for it ([T-07-5](T-07-5-dashboard-embedding.md))
+- **Dashboard triggers**: Sends `dashboard-embed` messages when context calls for it (T-07-5)
 - **Voice flow**: Coordinates with STT/TTS services and sends `voice-controls` state updates
 
 ## Demo Value
 
 This architecture makes A2A visible and tangible:
 
-- obs-api ([T-07-5](T-07-5-dashboard-embedding.md)) can visualize the agent-to-agent communication in real-time
+- obs-api (T-07-5) can visualize the agent-to-agent communication in real-time
 - The logo pulses while specialist agents are working — the user sees the delegation happening
 - Langfuse traces show the full chain: user → Interaction Agent → A2A → specialist → response
 - On Hannover Messe, we can explain and demonstrate A2A live, not just claim we use it

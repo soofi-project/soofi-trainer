@@ -1,7 +1,7 @@
 # Task
 
-- user story: [US-07](US-07-voice-agent-ui.md)
-- depends on: [T-07-1](T-07-1-a2ui-frontend.md)
+- user story: #US-07
+- depends on: #T-07-1
 - type: exploration
 
 /label ~UserStory_US-07
@@ -13,7 +13,7 @@
 
 **Exploration: Dashboard Embedding**
 
-Research and PoC for embedding external dashboards in the A2UI frontend via the `dashboard-embed` custom component ([T-07-2](T-07-2-custom-components.md)). This is an exploration ticket — the goal is research and a working proof of concept, not a full production implementation.
+Research and PoC for embedding external dashboards in the A2UI frontend via the `dashboard-embed` custom component (T-07-2). This is an exploration ticket — the goal is research and a working proof of concept, not a full production implementation.
 
 ## Candidates to Evaluate
 
@@ -35,7 +35,7 @@ Research and PoC for embedding external dashboards in the A2UI frontend via the 
 
 ## Agent-Driven Display
 
-The Interaction Agent ([T-07-6](T-07-6-interaction-agent.md)) decides when and what dashboard to show based on conversation context:
+The Interaction Agent (T-07-6) decides when and what dashboard to show based on conversation context:
 - During execution phase → show training progress dashboard
 - When discussing recommendations → show comparison metrics
 - On request → show detailed traces or system health
