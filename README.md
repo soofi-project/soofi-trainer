@@ -104,6 +104,22 @@ The knowledge base starts empty. To seed sample documents for testing:
 ```bash
 docker exec vector-mcp python scripts/seed_testdata.py
 ```
+This creates the collection (if needed) and inserts test documents with real embeddings.
+
+### Import N8N workflows
+N8N starts without workflows. Execute the following to load all workflows from `n8n/workflows`
+
+```bash
+./n8n/import_workflows.sh
+
+```
+
+### Load OpenWebUI functions
+OpenWebUI starts without functions (e.g. to connect to N8N). Execute the following to load all functions from `openwebui/functions`
+
+```bash
+./openwebui/import_functions.sh
+```
 
 ### Backup N8N DB
 
@@ -111,7 +127,6 @@ docker exec vector-mcp python scripts/seed_testdata.py
 docker exec -t postgres pg_dump -U n8n n8n > n8n-backup-$(date +%Y%m%d-%H%M).sql
 ```
 
-This creates the collection (if needed) and inserts test documents with real embeddings.
 
 ## License
 
