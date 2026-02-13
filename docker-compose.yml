@@ -189,11 +189,30 @@ services:
       postgres:
         condition: service_healthy
     volumes:
-      - n8n_data:/home/node/.n8n   
+      - n8n_data:/home/node/.n8n
       - ./n8n/workflows:/home/node/import-workflows:ro
-      - ./n8n/init_script.sh:/home/node/init_script.sh:ro 
+      - ./n8n/init_script.sh:/home/node/init_script.sh:ro
     networks:
       - soofi-network
+
+  # ===========================================
+  # Training Gateway - Training Job Management
+  # ===========================================
+  training-gateway:
+    build: ./training-pipeline/training-gateway
+    container_name: training-gateway
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - training_gateway_data:/data
+    networks:
+      - soofi-network
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 # ===========================================
 # Networks
@@ -212,3 +231,4 @@ volumes:
   postgres_data:
   n8n_data:
   minio_data:
+  training_gateway_data:
