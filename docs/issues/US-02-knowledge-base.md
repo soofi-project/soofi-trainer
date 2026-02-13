@@ -1,11 +1,10 @@
-# User Story
+# User story
 
 - tasks:
-  - #T-02-1
-  - #T-02-2
-
-/label ~UserStory
-/milestone %ProductBacklog
+  - #6
+  - #7 
+  - #19
+  - #21 
 
 # Story
 
@@ -42,16 +41,16 @@ The agent should know about:
 
 ```
                         docker-compose up
-                              │
-┌──────────────┐    ┌─────────▼─────────┐    ┌──────────────┐
-│  knowledge/  │───▶│    Ingestion      │───▶│   Weaviate   │
-│  (Markdown)  │    │    Container      │    │ (Knowledge)  │
-└──────────────┘    └───────────────────┘    └──────┬───────┘
-                                                    │
-┌──────────────┐    ┌───────────────────┐           │
-│  Agent (n8n  │───▶│   Vector MCP      │───────────┘
-│  / LangGraph)│    │ (search_documents)│
-└──────────────┘    └───────────────────┘
+                              |
++----------------+    +-------------------+    +--------------+
+|  knowledge/    |--->|    Ingestion      |--->|   Weaviate   |
+|  (Markdown)    |    |    Container      |    | (Knowledge)  |
++----------------+    +-------------------+    +------+-------+
+                                                      |
++----------------+    +-------------------+           |
+|  Agent (n8n    |--->|   Vector MCP      |-----------+
+|  / LangGraph)  |    | (search_documents)|
++----------------+    +-------------------+
 ```
 
 The Vector MCP server (`dfkibasys/aas-vector-mcp`) provides:
@@ -66,3 +65,5 @@ The Vector MCP server (`dfkibasys/aas-vector-mcp`) provides:
 - [ ] Knowledge about all 10 specialization methods is ingested (T-02-2)
 - [ ] Agent can retrieve relevant knowledge via Vector MCP
 - [ ] Search results are relevant to user queries
+- [ ] Reranking improves search result quality when enabled (T-02-3)
+- [ ] Knowledge documents are accessible via clickable URLs (T-02-4)
