@@ -58,6 +58,12 @@ async def init_db() -> None:
         )
     """)
     await db.commit()
+    # Add container_id column if it doesn't exist (migration for existing DBs)
+    try:
+        await db.execute("ALTER TABLE jobs ADD COLUMN container_id TEXT")
+        await db.commit()
+    except Exception:
+        pass  # Column already exists
     logger.info("Database initialized at %s", DB_PATH)
 
 
@@ -88,6 +94,7 @@ def _serialize_job(job: Job) -> dict:
         "updated_at": job.updated_at.isoformat(),
         "error": job.error,
         "result": json.dumps(job.result.model_dump()) if job.result else None,
+        "container_id": job.container_id,
     }
 
 
@@ -106,6 +113,7 @@ def _deserialize_job(row: aiosqlite.Row) -> Job:
         updated_at=datetime.fromisoformat(row["updated_at"]),
         error=row["error"],
         result=JobResult(**json.loads(row["result"])) if row["result"] else None,
+        container_id=row["container_id"],
     )
 
 
@@ -147,9 +155,11 @@ async def create_job(
     await db.execute(
         """
         INSERT INTO jobs (id, method, dataset_ref, base_model, config, status,
-                          current_phase, phases, created_at, updated_at, error, result)
+                          current_phase, phases, created_at, updated_at, error, result,
+                          container_id)
         VALUES (:id, :method, :dataset_ref, :base_model, :config, :status,
-                :current_phase, :phases, :created_at, :updated_at, :error, :result)
+                :current_phase, :phases, :created_at, :updated_at, :error, :result,
+                :container_id)
         """,
         data,
     )
@@ -310,9 +320,21 @@ async def _save_job(job: Job) -> None:
         UPDATE jobs SET
             method = :method, dataset_ref = :dataset_ref, base_model = :base_model,
             config = :config, status = :status, current_phase = :current_phase,
-            phases = :phases, updated_at = :updated_at, error = :error, result = :result
+            phases = :phases, updated_at = :updated_at, error = :error, result = :result,
+            container_id = :container_id
         WHERE id = :id
         """,
         data,
     )
     await db.commit()
+
+
+async def update_job_container_id(job_id: str, container_id: str) -> None:
+    """Store the container ID for a job."""
+    conn = await get_db()
+    now = _now()
+    await conn.execute(
+        "UPDATE jobs SET container_id = ?, updated_at = ? WHERE id = ?",
+        (container_id, now.isoformat(), job_id),
+    )
+    await conn.commit()

@@ -47,12 +47,28 @@ async def start_training_job(
         config=config,
     )
 
+    # Start training container via backend
+    from training_gateway import backends
+
+    try:
+        container_id = await backends.get_backend().start_container(job)
+        await db.update_job_container_id(job.id, container_id)
+    except backends.BackendError as e:
+        logger.error("Failed to start container for job %s: %s", job.id, e)
+        await db.fail_job(job.id, f"Container start failed: {e}")
+        return {
+            "job_id": job.id,
+            "status": "failed",
+            "error": f"Container start failed: {e}",
+        }
+
     return {
         "job_id": job.id,
         "method": job.method.value,
         "status": job.status.value,
         "current_phase": job.current_phase,
         "phases": [p.name for p in job.phases],
+        "container_id": container_id,
         "message": f"Training job started (method={method})",
     }
 
@@ -133,6 +149,20 @@ async def cancel_training_job(job_id: str) -> dict[str, Any]:
             "job_id": job_id,
             "status": job.status.value,
         }
+
+    # Stop the container if one is running
+    if job.container_id:
+        from training_gateway import backends
+
+        try:
+            await backends.get_backend().stop_container(job.container_id)
+        except backends.BackendError as e:
+            logger.warning(
+                "Failed to stop container %s for job %s: %s",
+                job.container_id,
+                job_id,
+                e,
+            )
 
     job = await db.cancel_job(job_id)
     return {

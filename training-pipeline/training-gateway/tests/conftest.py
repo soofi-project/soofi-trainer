@@ -2,15 +2,14 @@
 
 from __future__ import annotations
 
-import os
-import tempfile
 from collections.abc import AsyncGenerator, Generator
 from pathlib import Path
+from unittest.mock import AsyncMock
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from training_gateway import db
+from training_gateway import backends, db
 
 
 @pytest.fixture(autouse=True)
@@ -27,7 +26,12 @@ def _temp_db(tmp_path: Path) -> Generator[None, None, None]:
 async def init_db() -> AsyncGenerator[None, None]:
     """Initialize a fresh test database and tear it down after."""
     await db.init_db()
+    # Provide a mock backend so MCP tools can call start/stop container
+    mock = AsyncMock(spec=backends.TrainingBackend)
+    mock.start_container.return_value = "mock-container-123"
+    backends._backend = mock
     yield
+    backends._backend = None
     await db.close_db()
     db._db = None
 

@@ -32,7 +32,7 @@ MCP server for training job management in the Soofi Trainer stack. Acts as media
 ### Sequence
 
 1. **Agent** calls `start_training_job` via MCP → Gateway creates job record, returns `job_id`
-2. **Gateway** starts a training container on remote infrastructure (T-08-4, not yet implemented)
+2. **Gateway** starts a training container via the configured backend (local subprocess or remote Docker)
 3. **Training container** sends webhook callbacks to the gateway as it progresses:
    - `job-progress` — phase percentage updates (e.g. "training: 42%")
    - `job-phase-transition` — phase changes (e.g. data_preparation → training)
@@ -110,6 +110,25 @@ TRAINING_DB_PATH=./training.db python src/training_gateway/server.py
 | `PORT` | `8000` | Server port |
 | `TRAINING_DB_PATH` | `/data/training.db` | SQLite database file path |
 
+### Backend Configuration
+
+The gateway supports two backends for running training containers:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TRAINING_BACKEND` | `local` | Backend type: `local` (subprocess) or `docker` (Docker API) |
+| `TRAINING_DOCKER_HOST` | *(default socket)* | Remote Docker API URL (e.g. `ssh://user@gpu-server`) |
+| `TRAINING_IMAGE` | `soofi-trainer-dummy-training:latest` | Docker image for training containers |
+| `TRAINING_GPU_DEVICE` | `all` | GPU device ID (`all` or specific e.g. `0`) |
+| `TRAINING_GATEWAY_URL` | `http://training-gateway:8000/webhooks` | Webhook callback URL for containers |
+| `TRAINING_CONTAINER_NETWORK` | `soofi-trainer_soofi-network` | Docker network for training containers |
+| `TRAINING_DEFAULT_DURATION` | `120` | Simulation duration in seconds (dummy container) |
+| `TRAINING_SIMULATE_SCRIPT` | *(auto-discovered)* | Path to `simulate.py` (local backend only) |
+
+**Local backend** (`TRAINING_BACKEND=local`): Runs `simulate.py` as a subprocess. No Docker required. Ideal for development and testing.
+
+**Docker backend** (`TRAINING_BACKEND=docker`): Connects to a Docker daemon (local or remote via SSH/TCP) and runs training containers. Supports GPU allocation and network configuration.
+
 ## Project Structure
 
 ```
@@ -124,7 +143,13 @@ training-gateway/
 │   ├── mcp_tools.py     # MCP tool definitions
 │   ├── webhooks.py      # Webhook REST endpoints
 │   ├── models.py        # Pydantic models and enums
-│   └── db.py            # SQLite persistence layer
+│   ├── db.py            # SQLite persistence layer
+│   └── backends/        # Container orchestration
+│       ├── __init__.py       # Singleton + factory
+│       ├── base.py           # ABC, ContainerStatus, BackendError
+│       ├── config.py         # BackendConfig from env vars
+│       ├── local_backend.py  # Subprocess backend (dev/test)
+│       └── docker_backend.py # Docker API backend (production)
 └── tests/
     ├── conftest.py      # Shared fixtures (temp DB, async client)
     ├── unit/            # Models, DB layer
