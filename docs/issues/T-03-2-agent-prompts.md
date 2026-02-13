@@ -1,6 +1,6 @@
 # Task
 
-- user story: #US-03
+- user story: [US-03](US-03-agent-architecture.md)
 
 /label ~UserStory_US-03
 /label ~Task

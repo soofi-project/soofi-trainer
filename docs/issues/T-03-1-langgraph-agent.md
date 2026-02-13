@@ -1,6 +1,6 @@
 # Task
 
-- user story: #US-03
+- user story: [US-03](US-03-agent-architecture.md)
 
 /label ~UserStory_US-03
 /label ~Task
@@ -11,7 +11,7 @@
 
 **Implement LangGraph Agent**
 
-Create the agent using LangGraph with Vector MCP integration. The agent replaces the temporary n8n chatbot (T-01-3) and provides the full conversation and recommendation flow. Open WebUI connects to the LangGraph agent as its backend.
+Create the agent using LangGraph with Vector MCP integration. The agent replaces the temporary n8n chatbot ([T-01-3](T-01-3-n8n-chatbot.md)) and provides the full conversation and recommendation flow. Open WebUI connects to the LangGraph agent as its backend.
 
 ## Agent Responsibilities
 
@@ -36,7 +36,7 @@ Create the agent using LangGraph with Vector MCP integration. The agent replaces
 
 ## Transition from n8n
 
-The LangGraph agent replaces the temporary n8n chatbot (T-01-3). Once the agent is ready:
+The LangGraph agent replaces the temporary n8n chatbot ([T-01-3](T-01-3-n8n-chatbot.md)). Once the agent is ready:
 
 1. Open WebUI is reconfigured to use the LangGraph agent as its backend
 2. n8n is moved to a Docker Compose profile (e.g. `n8n`) so it is no longer started by default

@@ -1,12 +1,12 @@
 # Task
 
-- user story: US-06
+- user story: [US-06](US-06-inference-server.md)
 
 # Description
 
 **Server Provisioning Playbooks**
 
-Create the Ansible playbooks that configure a bare GPU server from scratch. This task uses the Ansible setup from T-06-2 and writes the actual provisioning logic.
+Create the Ansible playbooks that configure a bare GPU server from scratch. This task uses the Ansible setup from [T-06-2](T-06-2-ansible-setup.md) and writes the actual provisioning logic.
 
 Repository: [soofi-inference-server](https://mrk40.dfki.de/soofi/soofi-inference-server)
 

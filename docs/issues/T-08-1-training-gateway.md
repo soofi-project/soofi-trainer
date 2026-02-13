@@ -1,6 +1,6 @@
 # Task
 
-- user story: #US-08
+- user story: [US-08](US-08-training-pipeline.md)
 
 /label ~UserStory_US-08
 /label ~Task

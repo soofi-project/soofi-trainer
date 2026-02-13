@@ -1,11 +1,11 @@
 # User story
 
 - tasks:
-  - #T-08-1
-  - #T-08-2
-  - #T-08-3
-  - #T-08-4
-  - #T-08-5
+  - [T-08-1](T-08-1-training-gateway.md)
+  - [T-08-2](T-08-2-dummy-training-containers.md)
+  - [T-08-3](T-08-3-agent-training-flow.md)
+  - [T-08-4](T-08-4-remote-deployment.md)
+  - [T-08-5](T-08-5-training-progress-ui.md)
 
 /label ~UserStory
 /milestone %ProductBacklog
@@ -16,7 +16,7 @@
 
 # Description
 
-After the agent has completed the analysis (US-03) and the user has confirmed the recommended specialization method and selected training datasets (US-04), the system should be able to trigger a training pipeline. In Phase 1, this is a **dummy pipeline** that simulates the training process with realistic phases and progress reporting.
+After the agent has completed the analysis ([US-03](US-03-agent-architecture.md)) and the user has confirmed the recommended specialization method and selected training datasets ([US-04](US-04-dataset-search.md)), the system should be able to trigger a training pipeline. In Phase 1, this is a **dummy pipeline** that simulates the training process with realistic phases and progress reporting.
 
 A **Training Gateway** service acts as a mediator between the agent and the remote training infrastructure. It exposes MCP tools so the agent can start, monitor, and cancel training jobs — fitting seamlessly into the existing MCP-based architecture. The gateway abstracts whether the training containers run on Docker Compose, Kubernetes, or SLURM clusters.
 
@@ -73,10 +73,10 @@ Phase 1 (dummy) uses a single base image parameterized by method. Real implement
 
 ## Dependencies
 
-- **US-03**: Agent recommendation provides the method and parameters
-- **US-04**: Dataset search provides the training data references
-- **US-06**: Inference server patterns (Ansible, remote deployment) are reused
-- **US-07** (optional): A2UI frontend for rich progress visualization
+- **[US-03](US-03-agent-architecture.md)**: Agent recommendation provides the method and parameters
+- **[US-04](US-04-dataset-search.md)**: Dataset search provides the training data references
+- **[US-06](US-06-inference-server.md)**: Inference server patterns (Ansible, remote deployment) are reused
+- **[US-07](US-07-voice-agent-ui.md)** (optional): A2UI frontend for rich progress visualization
 
 # Acceptance Criteria
 

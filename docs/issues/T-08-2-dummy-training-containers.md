@@ -1,7 +1,7 @@
 # Task
 
-- user story: #US-08
-- depends on: #T-08-1
+- user story: [US-08](US-08-training-pipeline.md)
+- depends on: [T-08-1](T-08-1-training-gateway.md)
 
 /label ~UserStory_US-08
 /label ~Task

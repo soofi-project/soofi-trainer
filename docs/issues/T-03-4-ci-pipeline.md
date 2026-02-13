@@ -1,6 +1,6 @@
 # Task
 
-- user story: #US-03
+- user story: [US-03](US-03-agent-architecture.md)
 
 /label ~UserStory_US-03
 /label ~Task
@@ -15,7 +15,7 @@ Set up a CI pipeline that runs unit tests for the agent's decision logic and oth
 
 ## Scope
 
-- Run unit tests for the decision logic (T-03-3)
+- Run unit tests for the decision logic ([T-03-3](T-03-3-decision-logic.md))
 - Run linting for agent code (e.g. ruff, black)
 - Pipeline triggers on push and merge requests
 

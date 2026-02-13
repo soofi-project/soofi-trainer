@@ -1,7 +1,7 @@
 # Task
 
-- user story: #US-07
-- depends on: #T-07-1
+- user story: [US-07](US-07-voice-agent-ui.md)
+- depends on: [T-07-1](T-07-1-a2ui-frontend.md)
 
 /label ~UserStory_US-07
 /label ~Task
@@ -20,19 +20,19 @@ Register custom Soofi components via A2UI's `componentRegistry.register()` and a
   - **idle**: static logo display
   - **processing**: pulsating animation (triggered when agent is thinking/generating)
   - **error**: visual error indication (e.g. red tint, shake)
-- Interaction Agent (T-07-6) controls the state via A2UI messages
+- Interaction Agent ([T-07-6](T-07-6-interaction-agent.md)) controls the state via A2UI messages
 
 ### `voice-controls`
 - Audio level indicator (visualizes input volume while recording)
 - Playback controls (play/pause/stop for TTS audio output)
-- Integrates with voice pipeline from T-07-3
+- Integrates with voice pipeline from [T-07-3](T-07-3-voice-local.md)
 - **Visibility configurable** via env var `VOICE_CONTROLS_VISIBLE=true|false` — in demo setups (Hannover Messe) the mic is always on with a physical mute button on the hardware mic, so on-screen controls are unnecessary and awkward without a touchscreen. For development with a laptop, the on-screen controls are useful.
 
 ### `dashboard-embed`
 - iframe wrapper for embedding external dashboards
 - Configurable URL, dimensions, and loading state
-- Used by T-07-5 for Grafana, Langfuse, and other dashboard embedding
-- Interaction Agent (T-07-6) decides when and what dashboard to show based on conversation context
+- Used by [T-07-5](T-07-5-dashboard-embedding.md) for Grafana, Langfuse, and other dashboard embedding
+- Interaction Agent ([T-07-6](T-07-6-interaction-agent.md)) decides when and what dashboard to show based on conversation context
 
 ## Theming & Branding
 

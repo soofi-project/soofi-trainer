@@ -1,7 +1,7 @@
 # Task
 
-- user story: #US-08
-- depends on: #T-08-2, #T-06-2
+- user story: [US-08](US-08-training-pipeline.md)
+- depends on: [T-08-2](T-08-2-dummy-training-containers.md), [T-06-2](T-06-2-ansible-setup.md)
 
 /label ~UserStory_US-08
 /label ~Task
@@ -22,7 +22,7 @@ For single-server setups (e.g. the H200 lab server):
 - Training Gateway uses Docker API (remote TCP or SSH tunnel) to start containers
 - Containers run as one-shot jobs (`docker run --rm`)
 - Gateway manages container lifecycle (start, monitor, stop)
-- Reuses Ansible patterns from US-06 for server provisioning
+- Reuses Ansible patterns from [US-06](US-06-inference-server.md) for server provisioning
 
 ### Option B: Kubernetes
 
@@ -52,7 +52,7 @@ Soofi Trainer Stack              Remote Infrastructure
 
 ## Ansible Playbooks
 
-Following the same Ansible patterns as US-06:
+Following the same Ansible patterns as [US-06](US-06-inference-server.md):
 
 | Playbook | Purpose |
 |----------|---------|
@@ -63,7 +63,7 @@ Following the same Ansible patterns as US-06:
 ## Resource Management
 
 - GPU memory allocation per training job (environment variables)
-- Coexistence with inference models (US-06) on the same GPU server
+- Coexistence with inference models ([US-06](US-06-inference-server.md)) on the same GPU server
 - One training job at a time in Phase 1 (queue in gateway)
 - Container resource limits (CPU, memory, GPU)
 

@@ -1,7 +1,7 @@
 # Task
 
-- user story: #US-08
-- depends on: #T-08-1, #T-03-1, #T-03-3
+- user story: [US-08](US-08-training-pipeline.md)
+- depends on: [T-08-1](T-08-1-training-gateway.md), [T-03-1](T-03-1-langgraph-agent.md), [T-03-3](T-03-3-decision-logic.md)
 
 /label ~UserStory_US-08
 /label ~Task
@@ -11,7 +11,7 @@
 
 **Agent Training Flow**
 
-Integrate the training pipeline into the LangGraph agent's conversation flow. After the agent has recommended a specialization method (US-03) and the user has confirmed, the agent offers to start a training job and monitors its progress.
+Integrate the training pipeline into the LangGraph agent's conversation flow. After the agent has recommended a specialization method ([US-03](US-03-agent-architecture.md)) and the user has confirmed, the agent offers to start a training job and monitors its progress.
 
 ## Conversation Flow
 

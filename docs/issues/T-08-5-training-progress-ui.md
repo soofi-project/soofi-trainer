@@ -1,7 +1,7 @@
 # Task
 
-- user story: #US-08
-- depends on: #T-08-1, #T-08-3
+- user story: [US-08](US-08-training-pipeline.md)
+- depends on: [T-08-1](T-08-1-training-gateway.md), [T-08-3](T-08-3-agent-training-flow.md)
 
 /label ~UserStory_US-08
 /label ~Task
@@ -11,7 +11,7 @@
 
 **Training Progress UI**
 
-Visualize training job progress for the user. Supports two modes: text-based progress in Open WebUI (baseline) and rich visual progress via A2UI (if US-07 is available).
+Visualize training job progress for the user. Supports two modes: text-based progress in Open WebUI (baseline) and rich visual progress via A2UI (if [US-07](US-07-voice-agent-ui.md) is available).
 
 ## Mode 1: Open WebUI (Text-Based)
 
@@ -35,7 +35,7 @@ Phase 3/3: Model Upload ................. ⏸ pending
 
 ## Mode 2: A2UI (Rich Visual — depends on US-07)
 
-If the A2UI frontend (T-07-1) is available, the Interaction Agent (T-07-6) renders training progress as dynamic A2UI components:
+If the A2UI frontend ([T-07-1](T-07-1-a2ui-frontend.md)) is available, the Interaction Agent ([T-07-6](T-07-6-interaction-agent.md)) renders training progress as dynamic A2UI components:
 
 ### A2UI Component: `soofi-training-progress`
 

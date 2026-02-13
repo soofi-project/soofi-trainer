@@ -1,7 +1,7 @@
 # Task
 
-- user story: #US-07
-- depends on: #T-07-1
+- user story: [US-07](US-07-voice-agent-ui.md)
+- depends on: [T-07-1](T-07-1-a2ui-frontend.md)
 
 /label ~UserStory_US-07
 /label ~Task
@@ -47,7 +47,7 @@ Future: Reachy Mini (if available) could activate the mic via gaze detection (ro
 
 ## Browser Integration
 
-The full voice pipeline flows through the browser and the Interaction Agent (T-07-6):
+The full voice pipeline flows through the browser and the Interaction Agent ([T-07-6](T-07-6-interaction-agent.md)):
 
 ```
 Activation trigger → Browser mic capture → STT service → text → Interaction Agent → (A2A → specialist agents) → response text → TTS service → audio → Browser playback
@@ -60,7 +60,7 @@ Activation trigger → Browser mic capture → STT service → text → Interact
 - The Interaction Agent delegates domain work to specialist agents via A2A as needed
 - Response text is sent to the TTS service
 - Generated audio is streamed back to the browser for playback
-- The `voice-controls` component (T-07-2) provides the UI for this flow (when visible)
+- The `voice-controls` component ([T-07-2](T-07-2-custom-components.md)) provides the UI for this flow (when visible)
 
 ## Docker Setup
 

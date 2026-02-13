@@ -1,6 +1,6 @@
 # Task
 
-- user story: #US-04
+- user story: [US-04](US-04-dataset-search.md)
 
 /label ~UserStory_US-04
 /label ~Task
@@ -56,7 +56,7 @@ Results from all sources are ranked together using the same criteria.
 
 ## Integration in Recommendation Report
 
-The recommended dataset is included in the recommendation report (T-03-3) with:
+The recommended dataset is included in the recommendation report ([T-03-3](T-03-3-decision-logic.md)) with:
 - Why this dataset fits
 - Which source it comes from
 - Size and suitability for the recommended method
