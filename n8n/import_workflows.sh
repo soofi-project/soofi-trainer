@@ -14,7 +14,7 @@ docker run --rm \
   -v "$(pwd)/n8n/workflows:/import-workflows:ro" \
   -v "$(pwd)/n8n/init_script.sh:/init_script.sh:ro" \
   --entrypoint sh \
-  n8nio/n8n:2.7.3 \
+  n8nio/n8n:$N8N_VERSION \
   -c "sh /init_script.sh"
 
 echo "Import complete, restarting n8n..."
