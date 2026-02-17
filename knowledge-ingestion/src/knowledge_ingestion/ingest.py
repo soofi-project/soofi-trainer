@@ -116,20 +116,25 @@ def source_hash(md_path: Path) -> str:
     return h.hexdigest()
 
 
-def connect_minio() -> Minio | None:
-    """Return a MinIO client if MINIO_ENDPOINT is configured, else None."""
+def connect_minio() -> Minio:
+    """Return a MinIO client. Raises if required env vars are missing."""
     endpoint = os.getenv("MINIO_ENDPOINT")
     if not endpoint:
-        logger.info("MINIO_ENDPOINT not set — skipping MinIO upload")
-        return None
+        raise RuntimeError("MINIO_ENDPOINT is not set")
+    access_key = os.getenv("MINIO_ACCESS_KEY")
+    if not access_key:
+        raise RuntimeError("MINIO_ACCESS_KEY is not set")
+    secret_key = os.getenv("MINIO_SECRET_KEY")
+    if not secret_key:
+        raise RuntimeError("MINIO_SECRET_KEY is not set")
 
     last_exc: Exception | None = None
     for attempt in range(1, MINIO_CONNECT_RETRIES + 1):
         try:
             client = Minio(
                 endpoint,
-                access_key=os.getenv("MINIO_ACCESS_KEY", ""),
-                secret_key=os.getenv("MINIO_SECRET_KEY", ""),
+                access_key=access_key,
+                secret_key=secret_key,
                 secure=False,
             )
             # Verify actual connectivity (Minio() does not connect)
@@ -153,11 +158,8 @@ def connect_minio() -> Minio | None:
     ) from last_exc
 
 
-def ensure_bucket(minio_client: Minio | None, bucket: str) -> None:
-    """Create bucket and set public-read policy. No-op if minio_client is None."""
-    if minio_client is None:
-        return
-
+def ensure_bucket(minio_client: Minio, bucket: str) -> None:
+    """Create bucket and set public-read policy."""
     if not minio_client.bucket_exists(bucket):
         minio_client.make_bucket(bucket)
         logger.info("Created MinIO bucket '%s'", bucket)
@@ -180,12 +182,9 @@ def ensure_bucket(minio_client: Minio | None, bucket: str) -> None:
 
 
 def upload_to_minio(
-    minio_client: Minio | None, md_path: Path, knowledge_dir: Path, bucket: str
+    minio_client: Minio, md_path: Path, knowledge_dir: Path, bucket: str
 ) -> None:
-    """Upload a markdown file to MinIO. No-op if minio_client is None."""
-    if minio_client is None:
-        return
-
+    """Upload a markdown file to MinIO."""
     object_name = md_path.relative_to(knowledge_dir).as_posix()
     minio_client.fput_object(
         bucket,
@@ -267,6 +266,8 @@ def ingest() -> None:
     """Run the full ingestion pipeline."""
     # --- Config ---
     collection_name = os.getenv("WEAVIATE_COLLECTION")
+    if not collection_name:
+        raise RuntimeError("WEAVIATE_COLLECTION is not set")
     embedding_model = os.getenv("EMBEDDING_MODEL")
 
     if not collection_name:
@@ -282,9 +283,15 @@ def ingest() -> None:
     if not knowledge_dir.exists():
         raise RuntimeError(f"Knowledge directory not found: {knowledge_dir}")
 
+    minio_bucket = os.getenv("MINIO_BUCKET")
+    if not minio_bucket:
+        raise RuntimeError("MINIO_BUCKET is not set")
+    base_url = os.getenv("KNOWLEDGE_BASE_URL")
+    if not base_url:
+        raise RuntimeError("KNOWLEDGE_BASE_URL is not set")
+
     # --- Connect ---
     minio_client = connect_minio()
-    minio_bucket = os.getenv("MINIO_BUCKET", "knowledge")
     ensure_bucket(minio_client, minio_bucket)
     client = connect_weaviate()
 
@@ -310,7 +317,6 @@ def ingest() -> None:
         # --- Process files ---
         stats = {"added": 0, "updated": 0, "deleted": 0, "skipped": 0}
         processed_sources: set[str] = set()
-        base_url = os.getenv("KNOWLEDGE_BASE_URL")
 
         for md_path in content_files:
             rel_path = md_path.relative_to(knowledge_dir).as_posix()
@@ -318,8 +324,7 @@ def ingest() -> None:
             # Load metadata
             meta = load_meta(md_path)
 
-            # Build source URL from KNOWLEDGE_BASE_URL if set, else use relative path
-            source = f"{base_url}/{rel_path}" if base_url else rel_path
+            source = f"{base_url}/{rel_path}"
             processed_sources.add(source)
             current_hash = source_hash(md_path)
 
