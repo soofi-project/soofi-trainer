@@ -143,6 +143,30 @@ services:
       start_period: 120s
 
   # ===========================================
+  # Soofi UI - A2UI Frontend
+  # ===========================================
+  soofi-ui:
+    build: ./soofi-ui
+    container_name: soofi-ui
+    restart: unless-stopped
+    ports:
+      - "${SOOFI_UI_PORT:-3001}:80"
+    networks:
+      - soofi-network
+    depends_on:
+      - interaction-agent
+
+  # ===========================================
+  # Interaction Agent - Mock AG-UI Backend
+  # ===========================================
+  interaction-agent:
+    build: ./interaction-agent
+    container_name: interaction-agent
+    restart: unless-stopped
+    networks:
+      - soofi-network
+
+  # ===========================================
   # N8N
   # ===========================================
   postgres:
