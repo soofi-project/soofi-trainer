@@ -69,11 +69,14 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `ENV_SECRETS_FILE` | `~/.env.secrets` | Path to secrets file |
+| `WEAVIATE_VERSION` | `1.35.7` | Weaviate Image version |
 | `WEAVIATE_PORT` | `8070` | Weaviate HTTP port |
 | `WEAVIATE_COLLECTION` | `SoofiKnowledge` | Weaviate collection name |
+| `EMBEDDING_MODEL` | `openai:text-embedding-3-large` | Embedding model (provider:model) |
+| `MCPINSPECTOR_VERSION` | `0.18.0` | MCP Inspector Image version |
 | `MCPINSPECTOR_CLIENT_PORT` | `6274` | MCP Inspector UI port |
 | `MCPINSPECTOR_PROXY_PORT` | `6277` | MCP Inspector proxy port |
-| `EMBEDDING_MODEL` | `openai:text-embedding-3-large` | Embedding model (provider:model) |
+| `MCP_AUTH_TOKEN` | `dev-stack-token-12345` | MCP Auth token |
 | `OPENWEBUI_VERSION` | `v0.7.2` | Open WebUI Image version|
 | `OPENWEBUI_PORT` | `3000` | Open WebUI port |
 | `POSTGRES_VERSION` | `18-alpine` | PostgreSQL Image version |

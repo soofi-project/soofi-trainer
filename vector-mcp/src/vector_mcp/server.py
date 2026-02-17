@@ -62,14 +62,18 @@ def get_client() -> weaviate.WeaviateClient:
     global _client
 
     if _client is None:
-        scheme = os.getenv("WEAVIATE_SCHEME", "http")
-        host = os.getenv("WEAVIATE_HOST", "localhost")
-        port = int(os.getenv("WEAVIATE_PORT", "8080"))
+        scheme = os.getenv("WEAVIATE_SCHEME")
+        host = os.getenv("WEAVIATE_HOST")
+        port = int(os.getenv("WEAVIATE_PORT"))
 
         logger.info(f"Connecting to Weaviate at {scheme}://{host}:{port}")
 
         if scheme != "http":
             raise RuntimeError("Only http scheme supported in this setup")
+        if not host:
+            raise RuntimeError("WEAVIATE_HOST env var required.")
+        if not port:
+            raise RuntimeError("WEAVIATE_PORT env var required.")
 
         _client = weaviate.connect_to_local(
             host=host,
@@ -104,7 +108,11 @@ def search_documents(
     try:
         client = get_client()
 
-        collection_name = os.getenv("WEAVIATE_COLLECTION", "SoofiKnowledge")
+        collection_name = os.getenv("WEAVIATE_COLLECTION")
+
+        if not collection_name:
+            raise RuntimeError("WEAVIATE_COLLECTION env var required.")
+    
         collection = client.collections.get(collection_name)
 
         filters_applied = filters or {}
@@ -176,7 +184,11 @@ def list_metadata() -> dict[str, Any]:
     """
     try:
         client = get_client()
-        collection_name = os.getenv("WEAVIATE_COLLECTION", "SoofiKnowledge")
+        collection_name = os.getenv("WEAVIATE_COLLECTION")
+
+        if not collection_name:
+            raise RuntimeError("WEAVIATE_COLLECTION env var required.")
+        
         collection = client.collections.get(collection_name)
 
         schema = collection.config.get()
@@ -206,9 +218,14 @@ def list_metadata() -> dict[str, Any]:
 # -------------------------------------------------
 if __name__ == "__main__":
     app = mcp.http_app()
+    port = int(os.getenv("MCP_SERVER_PORT"))
+
+    if not port:
+        raise RuntimeError("MCP_SERVER_PORT env var required.")
+
     uvicorn.run(
         app,
         host="0.0.0.0",
-        port=int(os.getenv("PORT", "8000")),
+        port=port,
         log_level="info",
     )
