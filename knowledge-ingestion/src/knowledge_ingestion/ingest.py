@@ -5,6 +5,7 @@ via SHA-256 hashes, chunks documents, embeds them, and upserts into Weaviate.
 """
 
 import hashlib
+import json
 import logging
 import os
 import time
@@ -13,6 +14,7 @@ from typing import Any
 
 import weaviate
 import yaml
+from minio import Minio
 from langchain.embeddings.base import init_embeddings
 from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
 from weaviate.classes.config import DataType, Property
@@ -32,6 +34,8 @@ CHUNK_SIZE = 500
 CHUNK_OVERLAP = 50
 WEAVIATE_CONNECT_RETRIES = 5
 WEAVIATE_CONNECT_DELAY = 5  # seconds
+MINIO_CONNECT_RETRIES = 5
+MINIO_CONNECT_DELAY = 5  # seconds
 
 COLLECTION_PROPERTIES = [
     Property(name="text", data_type=DataType.TEXT),
@@ -110,6 +114,86 @@ def source_hash(md_path: Path) -> str:
     if meta_path.exists():
         h.update(meta_path.read_bytes())
     return h.hexdigest()
+
+
+def connect_minio() -> Minio | None:
+    """Return a MinIO client if MINIO_ENDPOINT is configured, else None."""
+    endpoint = os.getenv("MINIO_ENDPOINT")
+    if not endpoint:
+        logger.info("MINIO_ENDPOINT not set — skipping MinIO upload")
+        return None
+
+    last_exc: Exception | None = None
+    for attempt in range(1, MINIO_CONNECT_RETRIES + 1):
+        try:
+            client = Minio(
+                endpoint,
+                access_key=os.getenv("MINIO_ACCESS_KEY", ""),
+                secret_key=os.getenv("MINIO_SECRET_KEY", ""),
+                secure=False,
+            )
+            # Verify actual connectivity (Minio() does not connect)
+            client.list_buckets()
+            logger.info("Connected to MinIO at %s", endpoint)
+            return client
+        except Exception as exc:
+            last_exc = exc
+            if attempt < MINIO_CONNECT_RETRIES:
+                logger.warning(
+                    "MinIO connection attempt %d/%d failed: %s — retrying in %ds",
+                    attempt,
+                    MINIO_CONNECT_RETRIES,
+                    exc,
+                    MINIO_CONNECT_DELAY,
+                )
+                time.sleep(MINIO_CONNECT_DELAY)
+
+    raise RuntimeError(
+        f"Could not connect to MinIO after {MINIO_CONNECT_RETRIES} attempts"
+    ) from last_exc
+
+
+def ensure_bucket(minio_client: Minio | None, bucket: str) -> None:
+    """Create bucket and set public-read policy. No-op if minio_client is None."""
+    if minio_client is None:
+        return
+
+    if not minio_client.bucket_exists(bucket):
+        minio_client.make_bucket(bucket)
+        logger.info("Created MinIO bucket '%s'", bucket)
+    else:
+        logger.info("MinIO bucket '%s' already exists", bucket)
+
+    policy = {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Effect": "Allow",
+                "Principal": {"AWS": "*"},
+                "Action": ["s3:GetObject"],
+                "Resource": [f"arn:aws:s3:::{bucket}/*"],
+            }
+        ],
+    }
+    minio_client.set_bucket_policy(bucket, json.dumps(policy))
+    logger.info("Set public-read policy on bucket '%s'", bucket)
+
+
+def upload_to_minio(
+    minio_client: Minio | None, md_path: Path, knowledge_dir: Path, bucket: str
+) -> None:
+    """Upload a markdown file to MinIO. No-op if minio_client is None."""
+    if minio_client is None:
+        return
+
+    object_name = md_path.relative_to(knowledge_dir).as_posix()
+    minio_client.fput_object(
+        bucket,
+        object_name,
+        str(md_path),
+        content_type="text/markdown; charset=utf-8",
+    )
+    logger.debug("Uploaded %s to MinIO bucket '%s'", object_name, bucket)
 
 
 def load_meta(md_path: Path) -> dict[str, str]:
@@ -199,6 +283,9 @@ def ingest() -> None:
         raise RuntimeError(f"Knowledge directory not found: {knowledge_dir}")
 
     # --- Connect ---
+    minio_client = connect_minio()
+    minio_bucket = os.getenv("MINIO_BUCKET", "knowledge")
+    ensure_bucket(minio_client, minio_bucket)
     client = connect_weaviate()
 
     try:
@@ -223,9 +310,16 @@ def ingest() -> None:
         # --- Process files ---
         stats = {"added": 0, "updated": 0, "deleted": 0, "skipped": 0}
         processed_sources: set[str] = set()
+        base_url = os.getenv("KNOWLEDGE_BASE_URL")
 
         for md_path in content_files:
-            source = md_path.relative_to(knowledge_dir).as_posix()
+            rel_path = md_path.relative_to(knowledge_dir).as_posix()
+
+            # Load metadata
+            meta = load_meta(md_path)
+
+            # Build source URL from KNOWLEDGE_BASE_URL if set, else use relative path
+            source = f"{base_url}/{rel_path}" if base_url else rel_path
             processed_sources.add(source)
             current_hash = source_hash(md_path)
 
@@ -251,9 +345,6 @@ def ingest() -> None:
             else:
                 logger.info("Adding: %s", source)
 
-            # Load metadata
-            meta = load_meta(md_path)
-
             # Embed
             vectors = embeddings.embed_documents(chunks)
 
@@ -275,6 +366,10 @@ def ingest() -> None:
                 logger.error("Batch insert had %d errors for %s", batch.number_errors, source)
 
             logger.info("Inserted %d chunks for %s", len(chunks), source)
+
+            # Upload to MinIO (after successful embed+insert)
+            upload_to_minio(minio_client, md_path, knowledge_dir, minio_bucket)
+
             stats["updated" if is_update else "added"] += 1
 
         # --- Cleanup deleted files ---
