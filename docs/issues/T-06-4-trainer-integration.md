@@ -1,6 +1,6 @@
 # Task
 
-- user story: US-06
+- user story: [US-06](US-06-inference-server.md)
 
 # Description
 

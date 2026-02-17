@@ -1,12 +1,12 @@
 # User story
 
 - tasks:
-  - T-06-1
-  - T-06-2
-  - T-06-3
-  - T-06-4
-  - T-06-5
-  - T-06-6
+  - [T-06-1](T-06-1-network-access.md)
+  - [T-06-2](T-06-2-ansible-setup.md)
+  - [T-06-3](T-06-3-server-provisioning.md)
+  - [T-06-4](T-06-4-trainer-integration.md)
+  - [T-06-5](T-06-5-model-selection.md)
+  - [T-06-6](T-06-6-local-inference.md)
 
 # Story
 
@@ -41,12 +41,12 @@ Reuse the Ansible Docker image pattern from [soofi-cluster](https://mrk40.dfki.d
 
 ## Scope
 
-- Network access & connectivity (Firewall, DNS, SSH) — T-06-1
-- Ansible setup (Docker image, project structure, inventory) — T-06-2
-- Server provisioning playbooks (OS, NVIDIA, Docker, Triton) — T-06-3
-- Soofi Trainer integration (env vars, README, `.env`) — T-06-4
-- Model evaluation & deployment on Triton (chat + embedding) — T-06-5
-- Local inference with Ollama / LM Studio (dev PCs, 8 GB VRAM) — T-06-6
+- Network access & connectivity (Firewall, DNS, SSH) — [T-06-1](T-06-1-network-access.md)
+- Ansible setup (Docker image, project structure, inventory) — [T-06-2](T-06-2-ansible-setup.md)
+- Server provisioning playbooks (OS, NVIDIA, Docker, Triton) — [T-06-3](T-06-3-server-provisioning.md)
+- Soofi Trainer integration (env vars, README, `.env`) — [T-06-4](T-06-4-trainer-integration.md)
+- Model evaluation & deployment on Triton (chat + embedding) — [T-06-5](T-06-5-model-selection.md)
+- Local inference with Ollama / LM Studio (dev PCs, 8 GB VRAM) — [T-06-6](T-06-6-local-inference.md)
 - No Kubernetes / Helm — that is a separate concern for the soofi-cluster project
 
 ## Integration with Soofi Trainer
