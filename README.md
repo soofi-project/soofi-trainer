@@ -79,7 +79,7 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 | `N8N_HOST` | `localhost` | Host name n8n runs on |
 | `N8N_PROTOCOL` | `http` | The protocol used to reach n8n |
 | `N8N_EXTERNAL_PORT` | `5678` | The HTTP port n8n runs on |
-| `GENERIC_TIMEZONE` | `America/New_York` | The n8n instance timezone |
+| `GENERIC_TIMEZONE` | `Europe/Berlin` | The n8n instance timezone |
 
 ## Project Structure
 
