@@ -10,6 +10,7 @@ An agentic system that guides users through the LLM specialization process — f
 | Vector MCP | docker-internal (vector-mcp:8000) | Knowledge base search |
 | MCP Inspector | http://localhost:6274 | MCP debugging tool |
 | Weaviate | http://localhost:8070 | Vector database |
+| N8N | http://localhost:5678 | Workflow Automation Platform |
 
 ## Quick Start
 
@@ -73,7 +74,14 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 | `MCPINSPECTOR_CLIENT_PORT` | `6274` | MCP Inspector UI port |
 | `MCPINSPECTOR_PROXY_PORT` | `6277` | MCP Inspector proxy port |
 | `EMBEDDING_MODEL` | `openai:text-embedding-3-large` | Embedding model (provider:model) |
+| `OPENWEBUI_VERSION` | `v0.7.2` | Open WebUI Image version|
 | `OPENWEBUI_PORT` | `3000` | Open WebUI port |
+| `POSTGRES_VERSION` | `18-alpine` | PostgreSQL Image version |
+| `N8N_VERSION` | `2.8.3` | N8N Image version |
+| `N8N_HOST` | `localhost` | Host name n8n runs on |
+| `N8N_PROTOCOL` | `http` | The protocol used to reach n8n |
+| `N8N_EXTERNAL_PORT` | `5678` | The HTTP port n8n runs on |
+| `GENERIC_TIMEZONE` | `Europe/Berlin` | The n8n instance timezone |
 
 ## Project Structure
 
@@ -83,6 +91,14 @@ soofi-trainer/
 │   ├── src/vector_mcp/     # Python source
 │   ├── Dockerfile
 │   └── pyproject.toml
+├── n8n/                   
+│   ├── initdb/     
+│   ├── workflows/
+│   ├── import_workflows.sh
+│   └── init_script.sh
+├── openwebui/                    
+│   ├── functions/
+│   └── import_functions.sh
 ├── docker-compose.yml      # Service orchestration
 ├── up.sh                   # Start stack
 ├── down.sh                 # Stop stack
@@ -104,8 +120,33 @@ The knowledge base starts empty. To seed sample documents for testing:
 ```bash
 docker exec vector-mcp python scripts/seed_testdata.py
 ```
-
 This creates the collection (if needed) and inserts test documents with real embeddings.
+
+## N8N
+
+### Import N8N workflows
+N8N starts without workflows. Execute the following to load all workflows from `n8n/workflows`
+
+```bash
+./n8n/import_workflows.sh
+
+```
+
+### Backup N8N DB
+Create a new database dump if the existing SQL cannot be imported anymore (e.g. due to N8N updates).
+
+```bash
+docker exec -t postgres pg_dump -U n8n n8n > n8n-backup-$(date +%Y%m%d-%H%M).sql
+```
+
+## OpenWebUI
+
+### Load OpenWebUI functions
+OpenWebUI starts without functions (e.g. to connect to N8N). Execute the following to load all functions from `openwebui/functions`
+
+```bash
+./openwebui/import_functions.sh
+```
 
 ## License
 
