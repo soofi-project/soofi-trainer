@@ -5,7 +5,8 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir requests
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY simulate.py .
 
