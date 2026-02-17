@@ -1,12 +1,12 @@
-# User Story
+# User story
 
 - tasks:
-  - #T-01-1
-  - #T-01-2
-  - #T-01-3
+  - #2
+  - #3
+  - #4
+  - #20 
+  - #42
 
-/label ~UserStory
-/milestone %ProductBacklog
 
 # Story
 

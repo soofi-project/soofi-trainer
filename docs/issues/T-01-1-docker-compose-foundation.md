@@ -1,6 +1,6 @@
 # Task
 
-- user story: #US-01
+- user story: [US-01](US-01-infrastructure.md)
 
 /label ~UserStory_US-01
 /label ~Task
@@ -11,7 +11,7 @@
 
 **Create Docker-Compose Foundation**
 
-Create the Docker-Compose configuration for the Soofi Trainer stack. n8n is added to the stack separately in T-01-3.
+Create the Docker-Compose configuration for the Soofi Trainer stack. n8n is added to the stack separately in [T-01-3](T-01-3-n8n-chatbot.md).
 
 ## Services
 
