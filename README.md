@@ -106,7 +106,7 @@ Knowledge documents live in `knowledge/` as markdown files with YAML metadata. T
 To re-run ingestion after editing documents:
 
 ```bash
-docker start knowledge-ingestion && docker logs -f knowledge-ingestion
+docker compose up knowledge-ingestion
 ```
 
 ## License
