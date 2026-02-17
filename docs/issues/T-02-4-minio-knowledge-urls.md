@@ -50,10 +50,10 @@ If no `source` field is present in the YAML, the ingestion falls back to the rel
 
 - Add MinIO as a new service in `docker-compose.yml`
 - Ingestion container uploads each `.md` file to a MinIO bucket
-- Ingestion container resolves `${ENV_VAR}` placeholders in the `source` meta field
+- Ingestion container builds source URL from KNOWLEDGE_BASE_URL and the file's relative path
 - Store the resolved URL as `source` in Weaviate
 - MinIO bucket should be publicly readable (no auth needed for GET)
-- Configure via env vars: `KNOWLEDGE_BASE_URL`, `MINIO_ENDPOINT`, `MINIO_BUCKET`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`
+- Configure via env vars: `KNOWLEDGE_BASE_URL`, `MINIO_BUCKET`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`
 
 ## Acceptance Criteria
 
@@ -62,7 +62,6 @@ If no `source` field is present in the YAML, the ingestion falls back to the rel
 - [ ] MinIO bucket is publicly readable
 - [ ] `source` field in Weaviate contains resolved HTTP URLs
 - [ ] `${ENV_VAR}` placeholders in `-meta.yaml` are resolved at runtime
-- [ ] Fallback to relative file path if no `source` in meta YAML
 - [ ] Agent can cite clickable source links in responses
 
 # Branches
