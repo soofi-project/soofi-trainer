@@ -19,11 +19,5 @@ RUN pip install --no-cache-dir .
 # ---- runtime config ----
 EXPOSE 8000
 
-ENV WEAVIATE_SCHEME=http
-ENV WEAVIATE_HOST=weaviate
-ENV WEAVIATE_PORT=8080
-ENV WEAVIATE_GRPC_PORT=50051
-ENV WEAVIATE_COLLECTION=SoofiKnowledge
-
 # ---- start ----
 CMD ["python", "-u", "src/vector_mcp/server.py"]
