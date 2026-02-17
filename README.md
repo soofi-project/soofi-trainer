@@ -101,7 +101,7 @@ The Vector MCP server exposes two tools:
 
 ### Knowledge base
 
-Knowledge documents live in `knowledge/` as markdown files with YAML metadata. The `knowledge-ingestion` container automatically loads them into Weaviate on `docker-compose up`. It runs once, detects changes via SHA-256 hashes, and exits.
+Knowledge documents live in `knowledge/` as markdown files with YAML metadata. The `knowledge-ingestion` container automatically loads them into Weaviate on `./up.sh`. It runs once, detects changes via SHA-256 hashes, and exits.
 
 To re-run ingestion after editing documents:
 
