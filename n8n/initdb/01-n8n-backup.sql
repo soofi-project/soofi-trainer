@@ -2,14 +2,15 @@
 -- PostgreSQL database dump
 --
 
-\restrict VxsSiSnRUAZh296HJdJlcka9FX1bN63GwaDedNEMCTVK9omy9qiVkKSsSEwIzsr
+\restrict ZJ1U7EVMNEfqMayh0KHpHaECMigv3TyKhc4tKDVnF4UNidgKfaIrqKjNotnikeq
 
--- Dumped from database version 15.15
--- Dumped by pg_dump version 15.15
+-- Dumped from database version 18.2
+-- Dumped by pg_dump version 18.2
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
+SET transaction_timeout = 0;
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
@@ -117,7 +118,7 @@ CREATE SEQUENCE public.auth_provider_sync_history_id_seq
     CACHE 1;
 
 
-ALTER TABLE public.auth_provider_sync_history_id_seq OWNER TO n8n;
+ALTER SEQUENCE public.auth_provider_sync_history_id_seq OWNER TO n8n;
 
 --
 -- Name: auth_provider_sync_history_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: n8n
@@ -354,7 +355,7 @@ CREATE TABLE public.credentials_entity (
     type character varying(128) NOT NULL,
     "createdAt" timestamp(3) with time zone DEFAULT CURRENT_TIMESTAMP(3) NOT NULL,
     "updatedAt" timestamp(3) with time zone DEFAULT CURRENT_TIMESTAMP(3) NOT NULL,
-    id character varying(36) NOT NULL,
+    id character varying(36) CONSTRAINT credentials_entity_id_not_null1 NOT NULL,
     "isManaged" boolean DEFAULT false NOT NULL,
     "isGlobal" boolean DEFAULT false NOT NULL,
     "isResolvable" boolean DEFAULT false NOT NULL,
@@ -416,12 +417,12 @@ COMMENT ON COLUMN public.data_table_column.index IS 'Column order, starting from
 --
 
 CREATE TABLE public.dynamic_credential_entry (
-    credential_id character varying(16) NOT NULL,
-    subject_id character varying(2048) NOT NULL,
-    resolver_id character varying(16) NOT NULL,
-    data text NOT NULL,
-    "createdAt" timestamp(3) with time zone DEFAULT CURRENT_TIMESTAMP(3) NOT NULL,
-    "updatedAt" timestamp(3) with time zone DEFAULT CURRENT_TIMESTAMP(3) NOT NULL
+    credential_id character varying(16) CONSTRAINT tmp_dynamic_credential_entry_credential_id_not_null NOT NULL,
+    subject_id character varying(2048) CONSTRAINT tmp_dynamic_credential_entry_subject_id_not_null NOT NULL,
+    resolver_id character varying(16) CONSTRAINT tmp_dynamic_credential_entry_resolver_id_not_null NOT NULL,
+    data text CONSTRAINT tmp_dynamic_credential_entry_data_not_null NOT NULL,
+    "createdAt" timestamp(3) with time zone DEFAULT CURRENT_TIMESTAMP(3) CONSTRAINT "tmp_dynamic_credential_entry_createdAt_not_null" NOT NULL,
+    "updatedAt" timestamp(3) with time zone DEFAULT CURRENT_TIMESTAMP(3) CONSTRAINT "tmp_dynamic_credential_entry_updatedAt_not_null" NOT NULL
 );
 
 
@@ -521,7 +522,7 @@ CREATE SEQUENCE public.execution_annotations_id_seq
     CACHE 1;
 
 
-ALTER TABLE public.execution_annotations_id_seq OWNER TO n8n;
+ALTER SEQUENCE public.execution_annotations_id_seq OWNER TO n8n;
 
 --
 -- Name: execution_annotations_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: n8n
@@ -581,7 +582,7 @@ CREATE SEQUENCE public.execution_entity_id_seq
     CACHE 1;
 
 
-ALTER TABLE public.execution_entity_id_seq OWNER TO n8n;
+ALTER SEQUENCE public.execution_entity_id_seq OWNER TO n8n;
 
 --
 -- Name: execution_entity_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: n8n
@@ -595,10 +596,10 @@ ALTER SEQUENCE public.execution_entity_id_seq OWNED BY public.execution_entity.i
 --
 
 CREATE TABLE public.execution_metadata (
-    id integer NOT NULL,
-    "executionId" integer NOT NULL,
-    key character varying(255) NOT NULL,
-    value text NOT NULL
+    id integer CONSTRAINT execution_metadata_temp_id_not_null NOT NULL,
+    "executionId" integer CONSTRAINT "execution_metadata_temp_executionId_not_null" NOT NULL,
+    key character varying(255) CONSTRAINT execution_metadata_temp_key_not_null NOT NULL,
+    value text CONSTRAINT execution_metadata_temp_value_not_null NOT NULL
 );
 
 
@@ -617,7 +618,7 @@ CREATE SEQUENCE public.execution_metadata_temp_id_seq
     CACHE 1;
 
 
-ALTER TABLE public.execution_metadata_temp_id_seq OWNER TO n8n;
+ALTER SEQUENCE public.execution_metadata_temp_id_seq OWNER TO n8n;
 
 --
 -- Name: execution_metadata_temp_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: n8n
@@ -831,7 +832,7 @@ CREATE SEQUENCE public.migrations_id_seq
     CACHE 1;
 
 
-ALTER TABLE public.migrations_id_seq OWNER TO n8n;
+ALTER SEQUENCE public.migrations_id_seq OWNER TO n8n;
 
 --
 -- Name: migrations_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: n8n
@@ -1025,7 +1026,7 @@ ALTER TABLE public.project_relation OWNER TO n8n;
 --
 
 CREATE TABLE public.project_secrets_provider_access (
-    "secretsProviderConnectionId" integer NOT NULL,
+    "secretsProviderConnectionId" integer CONSTRAINT "project_secrets_provider_ac_secretsProviderConnectionI_not_null" NOT NULL,
     "projectId" character varying(36) NOT NULL,
     "createdAt" timestamp(3) with time zone DEFAULT CURRENT_TIMESTAMP(3) NOT NULL,
     "updatedAt" timestamp(3) with time zone DEFAULT CURRENT_TIMESTAMP(3) NOT NULL
@@ -1188,11 +1189,11 @@ ALTER TABLE public.settings OWNER TO n8n;
 --
 
 CREATE TABLE public.shared_credentials (
-    "credentialsId" character varying(36) NOT NULL,
-    "projectId" character varying(36) NOT NULL,
-    role text NOT NULL,
-    "createdAt" timestamp(3) with time zone DEFAULT CURRENT_TIMESTAMP(3) NOT NULL,
-    "updatedAt" timestamp(3) with time zone DEFAULT CURRENT_TIMESTAMP(3) NOT NULL
+    "credentialsId" character varying(36) CONSTRAINT "shared_credentials_2_credentialsId_not_null" NOT NULL,
+    "projectId" character varying(36) CONSTRAINT "shared_credentials_2_projectId_not_null" NOT NULL,
+    role text CONSTRAINT shared_credentials_2_role_not_null NOT NULL,
+    "createdAt" timestamp(3) with time zone DEFAULT CURRENT_TIMESTAMP(3) CONSTRAINT "shared_credentials_2_createdAt_not_null" NOT NULL,
+    "updatedAt" timestamp(3) with time zone DEFAULT CURRENT_TIMESTAMP(3) CONSTRAINT "shared_credentials_2_updatedAt_not_null" NOT NULL
 );
 
 
@@ -1203,11 +1204,11 @@ ALTER TABLE public.shared_credentials OWNER TO n8n;
 --
 
 CREATE TABLE public.shared_workflow (
-    "workflowId" character varying(36) NOT NULL,
-    "projectId" character varying(36) NOT NULL,
-    role text NOT NULL,
-    "createdAt" timestamp(3) with time zone DEFAULT CURRENT_TIMESTAMP(3) NOT NULL,
-    "updatedAt" timestamp(3) with time zone DEFAULT CURRENT_TIMESTAMP(3) NOT NULL
+    "workflowId" character varying(36) CONSTRAINT "shared_workflow_2_workflowId_not_null" NOT NULL,
+    "projectId" character varying(36) CONSTRAINT "shared_workflow_2_projectId_not_null" NOT NULL,
+    role text CONSTRAINT shared_workflow_2_role_not_null NOT NULL,
+    "createdAt" timestamp(3) with time zone DEFAULT CURRENT_TIMESTAMP(3) CONSTRAINT "shared_workflow_2_createdAt_not_null" NOT NULL,
+    "updatedAt" timestamp(3) with time zone DEFAULT CURRENT_TIMESTAMP(3) CONSTRAINT "shared_workflow_2_updatedAt_not_null" NOT NULL
 );
 
 
@@ -1221,7 +1222,7 @@ CREATE TABLE public.tag_entity (
     name character varying(24) NOT NULL,
     "createdAt" timestamp(3) with time zone DEFAULT CURRENT_TIMESTAMP(3) NOT NULL,
     "updatedAt" timestamp(3) with time zone DEFAULT CURRENT_TIMESTAMP(3) NOT NULL,
-    id character varying(36) NOT NULL
+    id character varying(36) CONSTRAINT tag_entity_id_not_null1 NOT NULL
 );
 
 
@@ -1321,7 +1322,7 @@ CREATE TABLE public.variables (
     key character varying(50) NOT NULL,
     type character varying(50) DEFAULT 'string'::character varying NOT NULL,
     value character varying(255),
-    id character varying(36) NOT NULL,
+    id character varying(36) CONSTRAINT variables_id_not_null1 NOT NULL,
     "projectId" character varying(36)
 );
 
@@ -1338,7 +1339,7 @@ CREATE TABLE public.webhook_entity (
     node character varying NOT NULL,
     "webhookId" character varying,
     "pathLength" integer,
-    "workflowId" character varying(36) NOT NULL
+    "workflowId" character varying(36) CONSTRAINT "webhook_entity_workflowId_not_null1" NOT NULL
 );
 
 
@@ -1428,7 +1429,7 @@ CREATE TABLE public.workflow_entity (
     "pinData" json,
     "versionId" character(36) NOT NULL,
     "triggerCount" integer DEFAULT 0 NOT NULL,
-    id character varying(36) NOT NULL,
+    id character varying(36) CONSTRAINT workflow_entity_id_not_null1 NOT NULL,
     meta json,
     "parentFolderId" character varying(36) DEFAULT NULL::character varying,
     "isArchived" boolean DEFAULT false NOT NULL,
@@ -1520,7 +1521,7 @@ CREATE TABLE public.workflow_statistics (
     count bigint DEFAULT 0,
     "latestEvent" timestamp(3) with time zone,
     name character varying(128) NOT NULL,
-    "workflowId" character varying(36) NOT NULL,
+    "workflowId" character varying(36) CONSTRAINT "workflow_statistics_workflowId_not_null1" NOT NULL,
     "rootCount" bigint DEFAULT 0,
     id integer NOT NULL,
     "workflowName" character varying(128)
@@ -1542,7 +1543,7 @@ CREATE SEQUENCE public.workflow_statistics_id_seq
     CACHE 1;
 
 
-ALTER TABLE public.workflow_statistics_id_seq OWNER TO n8n;
+ALTER SEQUENCE public.workflow_statistics_id_seq OWNER TO n8n;
 
 --
 -- Name: workflow_statistics_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: n8n
@@ -1556,8 +1557,8 @@ ALTER SEQUENCE public.workflow_statistics_id_seq OWNED BY public.workflow_statis
 --
 
 CREATE TABLE public.workflows_tags (
-    "workflowId" character varying(36) NOT NULL,
-    "tagId" character varying(36) NOT NULL
+    "workflowId" character varying(36) CONSTRAINT "workflows_tags_workflowId_not_null1" NOT NULL,
+    "tagId" character varying(36) CONSTRAINT "workflows_tags_tagId_not_null1" NOT NULL
 );
 
 
@@ -1968,6 +1969,7 @@ COPY public.migrations (id, "timestamp", name) FROM stdin;
 140	1769433700000	CreateSecretsProviderConnectionTables1769433700000
 141	1769698710000	CreateWorkflowPublishedVersionTable1769698710000
 142	1769784356000	ExpandSubjectIDColumnLength1769784356000
+143	1769900001000	AddWorkflowUnpublishScopeToCustomRoles1769900001000
 \.
 
 
@@ -2024,7 +2026,7 @@ COPY public.processed_data ("workflowId", context, "createdAt", "updatedAt", val
 --
 
 COPY public.project (id, name, type, "createdAt", "updatedAt", icon, description, "creatorId") FROM stdin;
-cXVfjpGovonQGlUS	Soofi User <admin@example.com>	personal	2026-02-10 12:56:59.833+00	2026-02-10 12:58:22.992+00	\N	\N	f2f9466e-366c-4382-85c9-b05fa7c64c94
+7syeGRvNzlKHRCp8	Soofi User <admin@example.com>	personal	2026-02-17 09:21:17.45+00	2026-02-17 09:22:06.978+00	\N	\N	8754d452-7241-4c37-b3de-e13714650a2f
 \.
 
 
@@ -2033,7 +2035,7 @@ cXVfjpGovonQGlUS	Soofi User <admin@example.com>	personal	2026-02-10 12:56:59.833
 --
 
 COPY public.project_relation ("projectId", "userId", role, "createdAt", "updatedAt") FROM stdin;
-cXVfjpGovonQGlUS	f2f9466e-366c-4382-85c9-b05fa7c64c94	project:personalOwner	2026-02-10 12:56:59.833+00	2026-02-10 12:56:59.833+00
+7syeGRvNzlKHRCp8	8754d452-7241-4c37-b3de-e13714650a2f	project:personalOwner	2026-02-17 09:21:17.45+00	2026-02-17 09:21:17.45+00
 \.
 
 
@@ -2050,19 +2052,19 @@ COPY public.project_secrets_provider_access ("secretsProviderConnectionId", "pro
 --
 
 COPY public.role (slug, "displayName", description, "roleType", "systemRole", "createdAt", "updatedAt") FROM stdin;
-global:chatUser	Chat User	Chat User	global	t	2026-02-10 12:57:00.73+00	2026-02-10 12:57:00.73+00
-global:owner	Owner	Owner	global	t	2026-02-10 12:57:00.298+00	2026-02-10 12:57:00.73+00
-global:admin	Admin	Admin	global	t	2026-02-10 12:57:00.298+00	2026-02-10 12:57:00.73+00
-global:member	Member	Member	global	t	2026-02-10 12:57:00.298+00	2026-02-10 12:57:00.73+00
-project:admin	Project Admin	Full control of settings, members, workflows, credentials and executions	project	t	2026-02-10 12:57:00.298+00	2026-02-10 12:57:00.745+00
-project:personalOwner	Project Owner	Project Owner	project	t	2026-02-10 12:57:00.298+00	2026-02-10 12:57:00.745+00
-project:editor	Project Editor	Create, edit, and delete workflows, credentials, and executions	project	t	2026-02-10 12:57:00.298+00	2026-02-10 12:57:00.745+00
-project:viewer	Project Viewer	Read-only access to workflows, credentials, and executions	project	t	2026-02-10 12:57:00.298+00	2026-02-10 12:57:00.745+00
-project:chatUser	Project Chat User	Chat-only access to chatting with workflows that have n8n Chat enabled	project	t	2026-02-10 12:57:00.298+00	2026-02-10 12:57:00.745+00
-credential:owner	Credential Owner	Credential Owner	credential	t	2026-02-10 12:57:00.751+00	2026-02-10 12:57:00.751+00
-credential:user	Credential User	Credential User	credential	t	2026-02-10 12:57:00.751+00	2026-02-10 12:57:00.751+00
-workflow:owner	Workflow Owner	Workflow Owner	workflow	t	2026-02-10 12:57:00.753+00	2026-02-10 12:57:00.753+00
-workflow:editor	Workflow Editor	Workflow Editor	workflow	t	2026-02-10 12:57:00.753+00	2026-02-10 12:57:00.753+00
+global:chatUser	Chat User	Chat User	global	t	2026-02-17 09:21:17.947+00	2026-02-17 09:21:17.947+00
+global:owner	Owner	Owner	global	t	2026-02-17 09:21:17.727+00	2026-02-17 09:21:17.947+00
+global:admin	Admin	Admin	global	t	2026-02-17 09:21:17.727+00	2026-02-17 09:21:17.947+00
+global:member	Member	Member	global	t	2026-02-17 09:21:17.727+00	2026-02-17 09:21:17.947+00
+project:admin	Project Admin	Full control of settings, members, workflows, credentials and executions	project	t	2026-02-17 09:21:17.727+00	2026-02-17 09:21:17.959+00
+project:personalOwner	Project Owner	Project Owner	project	t	2026-02-17 09:21:17.727+00	2026-02-17 09:21:17.959+00
+project:editor	Project Editor	Create, edit, and delete workflows, credentials, and executions	project	t	2026-02-17 09:21:17.727+00	2026-02-17 09:21:17.959+00
+project:viewer	Project Viewer	Read-only access to workflows, credentials, and executions	project	t	2026-02-17 09:21:17.727+00	2026-02-17 09:21:17.959+00
+project:chatUser	Project Chat User	Chat-only access to chatting with workflows that have n8n Chat enabled	project	t	2026-02-17 09:21:17.727+00	2026-02-17 09:21:17.959+00
+credential:owner	Credential Owner	Credential Owner	credential	t	2026-02-17 09:21:17.965+00	2026-02-17 09:21:17.965+00
+credential:user	Credential User	Credential User	credential	t	2026-02-17 09:21:17.965+00	2026-02-17 09:21:17.965+00
+workflow:owner	Workflow Owner	Workflow Owner	workflow	t	2026-02-17 09:21:17.967+00	2026-02-17 09:21:17.967+00
+workflow:editor	Workflow Editor	Workflow Editor	workflow	t	2026-02-17 09:21:17.967+00	2026-02-17 09:21:17.967+00
 \.
 
 
@@ -2071,7 +2073,6 @@ workflow:editor	Workflow Editor	Workflow Editor	workflow	t	2026-02-10 12:57:00.7
 --
 
 COPY public.role_scope ("roleSlug", "scopeSlug") FROM stdin;
-global:owner	workflow:publish
 global:owner	aiAssistant:manage
 global:owner	annotationTag:create
 global:owner	annotationTag:read
@@ -2118,6 +2119,7 @@ global:owner	project:delete
 global:owner	project:list
 global:owner	saml:manage
 global:owner	securityAudit:generate
+global:owner	securitySettings:manage
 global:owner	sourceControl:pull
 global:owner	sourceControl:push
 global:owner	sourceControl:manage
@@ -2191,7 +2193,7 @@ global:owner	credentialResolver:read
 global:owner	credentialResolver:update
 global:owner	credentialResolver:delete
 global:owner	credentialResolver:list
-global:admin	workflow:publish
+global:owner	workflow:publish
 global:admin	aiAssistant:manage
 global:admin	annotationTag:create
 global:admin	annotationTag:read
@@ -2238,6 +2240,7 @@ global:admin	project:delete
 global:admin	project:list
 global:admin	saml:manage
 global:admin	securityAudit:generate
+global:admin	securitySettings:manage
 global:admin	sourceControl:pull
 global:admin	sourceControl:push
 global:admin	sourceControl:manage
@@ -2311,6 +2314,7 @@ global:admin	credentialResolver:read
 global:admin	credentialResolver:update
 global:admin	credentialResolver:delete
 global:admin	credentialResolver:list
+global:admin	workflow:publish
 global:member	annotationTag:create
 global:member	annotationTag:read
 global:member	annotationTag:update
@@ -2342,7 +2346,7 @@ global:chatUser	chatHubAgent:read
 global:chatUser	chatHubAgent:update
 global:chatUser	chatHubAgent:delete
 global:chatUser	chatHubAgent:list
-project:admin	workflow:publish
+project:admin	workflow:unpublish
 project:admin	credential:share
 project:admin	credential:move
 project:admin	credential:create
@@ -2381,7 +2385,8 @@ project:admin	dataTable:delete
 project:admin	dataTable:readRow
 project:admin	dataTable:writeRow
 project:admin	dataTable:listProject
-project:personalOwner	workflow:publish
+project:admin	workflow:publish
+project:personalOwner	workflow:unpublish
 project:personalOwner	credential:share
 project:personalOwner	credential:move
 project:personalOwner	credential:create
@@ -2413,7 +2418,8 @@ project:personalOwner	dataTable:delete
 project:personalOwner	dataTable:readRow
 project:personalOwner	dataTable:writeRow
 project:personalOwner	dataTable:listProject
-project:editor	workflow:publish
+project:personalOwner	workflow:publish
+project:editor	workflow:unpublish
 project:editor	credential:create
 project:editor	credential:read
 project:editor	credential:update
@@ -2445,6 +2451,7 @@ project:editor	dataTable:delete
 project:editor	dataTable:readRow
 project:editor	dataTable:writeRow
 project:editor	dataTable:listProject
+project:editor	workflow:publish
 project:viewer	credential:read
 project:viewer	credential:list
 project:viewer	project:read
@@ -2466,7 +2473,7 @@ credential:owner	credential:read
 credential:owner	credential:update
 credential:owner	credential:delete
 credential:user	credential:read
-workflow:owner	workflow:publish
+workflow:owner	workflow:unpublish
 workflow:owner	workflow:share
 workflow:owner	workflow:execute
 workflow:owner	workflow:execute-chat
@@ -2474,11 +2481,13 @@ workflow:owner	workflow:move
 workflow:owner	workflow:read
 workflow:owner	workflow:update
 workflow:owner	workflow:delete
-workflow:editor	workflow:publish
+workflow:owner	workflow:publish
+workflow:editor	workflow:unpublish
 workflow:editor	workflow:execute
 workflow:editor	workflow:execute-chat
 workflow:editor	workflow:read
 workflow:editor	workflow:update
+workflow:editor	workflow:publish
 \.
 
 
@@ -2487,7 +2496,7 @@ workflow:editor	workflow:update
 --
 
 COPY public.scope (slug, "displayName", description) FROM stdin;
-workflow:publish	Publish Workflow	Allows publishing and unpublishing workflows.
+workflow:unpublish	Unpublish Workflow	Allows unpublishing workflows.
 aiAssistant:manage	Manage AI Usage	Allows managing AI Usage settings.
 aiAssistant:*	aiAssistant:*	\N
 annotationTag:create	Create Annotation Tag	Allows creating new annotation tags.
@@ -2553,6 +2562,8 @@ saml:manage	saml:manage	\N
 saml:*	saml:*	\N
 securityAudit:generate	securityAudit:generate	\N
 securityAudit:*	securityAudit:*	\N
+securitySettings:manage	securitySettings:manage	\N
+securitySettings:*	securitySettings:*	\N
 sourceControl:pull	sourceControl:pull	\N
 sourceControl:push	sourceControl:push	\N
 sourceControl:manage	sourceControl:manage	\N
@@ -2658,6 +2669,7 @@ credentialResolver:delete	credentialResolver:delete	\N
 credentialResolver:list	credentialResolver:list	\N
 credentialResolver:*	credentialResolver:*	\N
 *	*	\N
+workflow:publish	Publish Workflow	Allows publishing workflows.
 \.
 
 
@@ -2725,7 +2737,7 @@ COPY public.test_run (id, "workflowId", status, "errorCode", "errorDetails", "ru
 --
 
 COPY public."user" (id, email, "firstName", "lastName", password, "personalizationAnswers", "createdAt", "updatedAt", settings, disabled, "mfaEnabled", "mfaSecret", "mfaRecoveryCodes", "lastActiveAt", "roleSlug") FROM stdin;
-f2f9466e-366c-4382-85c9-b05fa7c64c94	admin@example.com	Soofi	User	$2a$10$XwllwGucvVZvvD4gQOVZIO2kgEw3HK9sqHVzWArCV80KtdirMluym	\N	2026-02-10 12:56:59.374+00	2026-02-10 12:58:23.052+00	{"userActivated": false}	f	f	\N	\N	2026-02-10	global:owner
+8754d452-7241-4c37-b3de-e13714650a2f	admin@example.com	Soofi	User	$2a$10$Ew/eyJD5KyGvoG5g49mINeRZ87mtlY7LDWL3KIIYBGgfKsNwWd7Xu	\N	2026-02-17 09:21:17.241+00	2026-02-17 09:22:07.03+00	{"userActivated": false}	f	f	\N	\N	2026-02-17	global:owner
 \.
 
 
@@ -2862,7 +2874,7 @@ SELECT pg_catalog.setval('public.insights_raw_id_seq', 1, false);
 -- Name: migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: n8n
 --
 
-SELECT pg_catalog.setval('public.migrations_id_seq', 142, true);
+SELECT pg_catalog.setval('public.migrations_id_seq', 143, true);
 
 
 --
@@ -4358,5 +4370,5 @@ ALTER TABLE ONLY public.project
 -- PostgreSQL database dump complete
 --
 
-\unrestrict VxsSiSnRUAZh296HJdJlcka9FX1bN63GwaDedNEMCTVK9omy9qiVkKSsSEwIzsr
+\unrestrict ZJ1U7EVMNEfqMayh0KHpHaECMigv3TyKhc4tKDVnF4UNidgKfaIrqKjNotnikeq
 
