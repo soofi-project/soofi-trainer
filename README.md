@@ -70,12 +70,15 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 |----------|---------|-------------|
 | `ENV_SECRETS_FILE` | `~/.env.secrets` | Path to secrets file |
 | `WEAVIATE_PORT` | `8070` | Weaviate HTTP port |
+| `WEAVIATE_GRPC_PORT` | `50051` | Weaviate gRPC port |
 | `WEAVIATE_COLLECTION` | `SoofiKnowledge` | Weaviate collection name |
 | `MCPINSPECTOR_CLIENT_PORT` | `6274` | MCP Inspector UI port |
 | `MCPINSPECTOR_PROXY_PORT` | `6277` | MCP Inspector proxy port |
 | `EMBEDDING_MODEL` | `openai:text-embedding-3-large` | Embedding model (provider:model) |
+| `OPENWEBUI_VERSION` | `v0.7.2` | Open WebUI Image version|
 | `OPENWEBUI_PORT` | `3000` | Open WebUI port |
-| `POSTGRES_VERSION` | `18-alpine` | PostgreSQL Version |
+| `POSTGRES_VERSION` | `18-alpine` | PostgreSQL Image version |
+| `N8N_VERSION` | `2.8.3` | N8N Image version |
 | `N8N_HOST` | `localhost` | Host name n8n runs on |
 | `N8N_PROTOCOL` | `http` | The protocol used to reach n8n |
 | `N8N_EXTERNAL_PORT` | `5678` | The HTTP port n8n runs on |
