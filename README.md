@@ -75,9 +75,7 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 | `MCPINSPECTOR_PROXY_PORT` | `6277` | MCP Inspector proxy port |
 | `EMBEDDING_MODEL` | `openai:text-embedding-3-large` | Embedding model (provider:model) |
 | `OPENWEBUI_PORT` | `3000` | Open WebUI port |
-| `POSTGRES_USER` | `n8n` | PostgresQL user |
-| `POSTGRES_DB` | `n8n` | PostgresQL database |
-| `POSTGRES_PASSWORD` | `n8n` | PostgresQL password |
+| `POSTGRES_VERSION` | `18-alpine` | PostgreSQL Version |
 | `N8N_HOST` | `localhost` | Host name n8n runs on |
 | `N8N_PROTOCOL` | `http` | The protocol used to reach n8n |
 | `N8N_EXTERNAL_PORT` | `5678` | The HTTP port n8n runs on |
