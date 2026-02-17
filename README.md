@@ -70,7 +70,6 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 |----------|---------|-------------|
 | `ENV_SECRETS_FILE` | `~/.env.secrets` | Path to secrets file |
 | `WEAVIATE_PORT` | `8070` | Weaviate HTTP port |
-| `WEAVIATE_GRPC_PORT` | `50051` | Weaviate gRPC port |
 | `WEAVIATE_COLLECTION` | `SoofiKnowledge` | Weaviate collection name |
 | `MCPINSPECTOR_CLIENT_PORT` | `6274` | MCP Inspector UI port |
 | `MCPINSPECTOR_PROXY_PORT` | `6277` | MCP Inspector proxy port |
