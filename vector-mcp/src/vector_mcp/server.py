@@ -64,16 +64,20 @@ def get_client() -> weaviate.WeaviateClient:
     if _client is None:
         scheme = os.getenv("WEAVIATE_SCHEME")
         host = os.getenv("WEAVIATE_HOST")
-        port = int(os.getenv("WEAVIATE_PORT"))
+        port_str = os.getenv("WEAVIATE_PORT")
 
         logger.info(f"Connecting to Weaviate at {scheme}://{host}:{port}")
 
+        if not scheme:
+            raise RuntimeError("WEAVIATE_SCHEME env var required.")
         if scheme != "http":
             raise RuntimeError("Only http scheme supported in this setup")
         if not host:
             raise RuntimeError("WEAVIATE_HOST env var required.")
-        if not port:
+        if not port_str:
             raise RuntimeError("WEAVIATE_PORT env var required.")
+
+        port = int(port_str)
 
         _client = weaviate.connect_to_local(
             host=host,

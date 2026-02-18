@@ -54,12 +54,14 @@ MD_HEADERS_TO_SPLIT = [
 def connect_weaviate() -> weaviate.WeaviateClient:
     """Connect to Weaviate with retry logic."""
     host = os.getenv("WEAVIATE_HOST")
-    port = int(os.getenv("WEAVIATE_PORT"))
+    port_str = os.getenv("WEAVIATE_PORT")
 
     if not host:
         raise RuntimeError("WEAVIATE_HOST env var required.")
-    if not port:
+    if not port_str:
         raise RuntimeError("WEAVIATE_PORT env var required.")
+    
+    port = int(port_str)
 
     last_exc: Exception | None = None
     for attempt in range(1, WEAVIATE_CONNECT_RETRIES + 1):
