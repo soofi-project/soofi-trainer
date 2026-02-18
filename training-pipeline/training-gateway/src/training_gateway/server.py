@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from training_gateway import backends, db
 from training_gateway.mcp_tools import mcp
@@ -43,6 +44,14 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+)
+
 # Health check (must be registered before the catch-all MCP mount)
 @app.get("/health")
 async def health() -> dict:
@@ -57,6 +66,10 @@ app.include_router(webhooks_router)
 app.mount("", mcp_app)
 
 
-if __name__ == "__main__":
+def main() -> None:
     port = int(os.getenv("PORT", "8000"))
     uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")
+
+
+if __name__ == "__main__":
+    main()

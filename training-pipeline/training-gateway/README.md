@@ -95,12 +95,24 @@ docker build -t training-gateway .
 docker run -p 8000:8000 -v training_data:/data training-gateway
 ```
 
-### Local development
+### Without Docker (venv)
 
 ```bash
 cd training-pipeline/training-gateway
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -e ".[dev]"
-TRAINING_DB_PATH=./training.db python src/training_gateway/server.py
+
+# Start with local backend (no Docker required)
+TRAINING_BACKEND=local \
+TRAINING_GATEWAY_URL=http://localhost:8000/webhooks \
+soofi-training-gateway
+```
+
+The server starts on `http://localhost:8000`. The local backend runs `simulate.py` as a subprocess — make sure the `training-container` venv is set up or `TRAINING_SIMULATE_SCRIPT` points to `simulate.py` directly:
+
+```bash
+TRAINING_SIMULATE_SCRIPT=../training-container/simulate.py
 ```
 
 ## Configuration
@@ -108,7 +120,7 @@ TRAINING_DB_PATH=./training.db python src/training_gateway/server.py
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PORT` | `8000` | Server port |
-| `TRAINING_DB_PATH` | `/data/training.db` | SQLite database file path |
+| `TRAINING_DB_PATH` | `./training.db` | SQLite database file path |
 
 ### Backend Configuration
 
