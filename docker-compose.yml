@@ -214,19 +214,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # ===========================================
-  # Training Container - Simulation
-  # ===========================================
-  training-container:
-    build: ./training-pipeline/training-container
-    container_name: training-container
-    profiles:
-      - training-sim
-    networks:
-      - soofi-network
-    depends_on:
-      training-gateway:
-        condition: service_healthy
 
 
 # ===========================================
