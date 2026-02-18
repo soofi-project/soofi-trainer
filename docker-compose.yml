@@ -115,11 +115,11 @@ services:
       retries: 5
 
   # ===========================================
-  # Dummy Training Container - Simulation
+  # Training Container - Simulation
   # ===========================================
-  dummy-training:
+  training-container:
     build: ./training-pipeline/training-container
-    container_name: dummy-training
+    container_name: training-container
     profiles:
       - training-sim
     networks:

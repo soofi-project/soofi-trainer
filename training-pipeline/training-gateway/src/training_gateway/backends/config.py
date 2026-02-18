@@ -32,7 +32,7 @@ def load_config() -> BackendConfig:
         backend_type=os.getenv("TRAINING_BACKEND", "local"),
         docker_host=os.getenv("TRAINING_DOCKER_HOST"),
         training_image=os.getenv(
-            "TRAINING_IMAGE", "soofi-trainer-dummy-training:latest"
+            "TRAINING_IMAGE", "soofi/training-container:latest"
         ),
         gpu_device=os.getenv("TRAINING_GPU_DEVICE", "all"),
         container_network=os.getenv(

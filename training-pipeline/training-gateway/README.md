@@ -118,7 +118,7 @@ The gateway supports two backends for running training containers:
 |----------|---------|-------------|
 | `TRAINING_BACKEND` | `local` | Backend type: `local` (subprocess) or `docker` (Docker API) |
 | `TRAINING_DOCKER_HOST` | *(default socket)* | Remote Docker API URL (e.g. `ssh://user@gpu-server`) |
-| `TRAINING_IMAGE` | `soofi-trainer-dummy-training:latest` | Docker image for training containers |
+| `TRAINING_IMAGE` | `soofi/training-container:latest` | Docker image for training containers |
 | `TRAINING_GPU_DEVICE` | `all` | GPU device ID (`all` or specific e.g. `0`) |
 | `TRAINING_GATEWAY_URL` | `http://training-gateway:8000/webhooks` | Webhook callback URL for containers |
 | `TRAINING_CONTAINER_NETWORK` | `soofi-trainer_soofi-network` | Docker network for training containers |
