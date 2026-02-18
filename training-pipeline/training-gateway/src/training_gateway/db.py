@@ -22,7 +22,7 @@ from training_gateway.models import (
 
 logger = logging.getLogger(__name__)
 
-DB_PATH = os.getenv("TRAINING_DB_PATH", "/data/training.db")
+DB_PATH = os.getenv("TRAINING_DB_PATH", "./training.db")
 
 _db: aiosqlite.Connection | None = None
 
@@ -31,7 +31,8 @@ async def get_db() -> aiosqlite.Connection:
     """Get or create the database connection."""
     global _db
     if _db is None:
-        os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+        db_dir = os.path.dirname(os.path.abspath(DB_PATH))
+        os.makedirs(db_dir, exist_ok=True)
         _db = await aiosqlite.connect(DB_PATH)
         _db.row_factory = aiosqlite.Row
         await _db.execute("PRAGMA journal_mode=WAL")

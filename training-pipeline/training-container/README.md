@@ -77,7 +77,24 @@ docker compose run --rm training-container \
   --duration 60
 ```
 
-### Standalone
+### Without Docker (venv)
+
+```bash
+cd training-pipeline/training-container
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+python simulate.py \
+  --method lora \
+  --dataset /data/dataset.jsonl \
+  --base-model meta-llama/Llama-3.1-8B \
+  --webhook-url http://localhost:8000/webhooks \
+  --job-id YOUR_JOB_ID \
+  --duration 60
+```
+
+### Standalone (Docker)
 
 ```bash
 cd training-container
