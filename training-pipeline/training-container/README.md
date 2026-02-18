@@ -80,7 +80,7 @@ docker compose run --rm dummy-training \
 ### Standalone
 
 ```bash
-cd dummy-training-container
+cd training-container
 docker build -t soofi-pipeline/dummy .
 docker run --rm --network soofi-trainer_soofi-network soofi-pipeline/dummy \
   --method lora \

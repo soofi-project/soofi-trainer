@@ -114,7 +114,7 @@ soofi-trainer/
 │   │   ├── tests/          # Pytest test suite (unit, integration, e2e)
 │   │   ├── Dockerfile
 │   │   └── pyproject.toml
-│   └── training-container/ # Training simulator
+│   └── training-container/  # Training simulator (profile: training-sim)
 │       ├── simulate.py
 │       └── Dockerfile
 ├── n8n/
