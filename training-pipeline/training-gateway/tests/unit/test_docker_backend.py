@@ -14,7 +14,7 @@ def _make_config(**overrides) -> BackendConfig:
     defaults = {
         "backend_type": "docker",
         "docker_host": "tcp://gpu-server:2376",
-        "training_image": "soofi-trainer-dummy-training:latest",
+        "training_image": "soofi/training-container:latest",
         "gpu_device": "all",
         "container_network": "soofi-trainer_soofi-network",
         "gateway_url": "http://training-gateway:8000/webhooks",

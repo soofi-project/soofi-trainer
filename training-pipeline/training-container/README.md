@@ -1,4 +1,4 @@
-# Dummy Training Container
+# Training Container
 
 Simulates the training process for each specialization method by progressing through phases and reporting progress via webhooks to the Training Gateway.
 
@@ -6,7 +6,7 @@ Simulates the training process for each specialization method by progressing thr
 
 ```
 ┌──────────────────────────┐         Webhooks          ┌───────────────────┐
-│  Dummy Training Container│ ───────────────────────── │ Training Gateway  │
+│  Training Container      │ ───────────────────────── │ Training Gateway  │
 │                          │  POST /webhooks/           │   (FastAPI +      │
 │  1. data_preparation     │    job-progress            │    FastMCP)       │
 │  2. training             │    job-phase-transition    │                   │
@@ -65,10 +65,10 @@ The container uses a Docker Compose profile and does not start automatically:
 
 ```bash
 # Build the image
-docker compose build dummy-training
+docker compose build training-container
 
 # Run a simulation (requires a running training-gateway with a valid job_id)
-docker compose run --rm dummy-training \
+docker compose run --rm training-container \
   --method lora \
   --dataset /data/dataset.jsonl \
   --base-model meta-llama/Llama-3.1-8B \
@@ -81,8 +81,8 @@ docker compose run --rm dummy-training \
 
 ```bash
 cd training-container
-docker build -t soofi-pipeline/dummy .
-docker run --rm --network soofi-trainer_soofi-network soofi-pipeline/dummy \
+docker build -t soofi/training-container .
+docker run --rm --network soofi-trainer_soofi-network soofi/training-container \
   --method lora \
   --dataset /data/dataset.jsonl \
   --base-model meta-llama/Llama-3.1-8B \
@@ -95,19 +95,19 @@ docker run --rm --network soofi-trainer_soofi-network soofi-pipeline/dummy \
 
 ```bash
 # Normal LoRA run (30 seconds)
-docker compose run --rm dummy-training \
+docker compose run --rm training-container \
   --method lora --dataset /data/d.jsonl --base-model llama-3.1-8B \
   --webhook-url http://training-gateway:8000/webhooks \
   --job-id JOB_ID --duration 30
 
 # RAG (skips training phase)
-docker compose run --rm dummy-training \
+docker compose run --rm training-container \
   --method rag --dataset /data/docs/ --base-model n/a \
   --webhook-url http://training-gateway:8000/webhooks \
   --job-id JOB_ID --duration 15
 
 # Guaranteed failure (for error handling tests)
-docker compose run --rm dummy-training \
+docker compose run --rm training-container \
   --method sft --dataset /data/d.jsonl --base-model llama-3.1-8B \
   --webhook-url http://training-gateway:8000/webhooks \
   --job-id JOB_ID --duration 10 --fail-probability 1.0
