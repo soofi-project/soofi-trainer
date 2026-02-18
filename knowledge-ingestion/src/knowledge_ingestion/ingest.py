@@ -53,8 +53,15 @@ MD_HEADERS_TO_SPLIT = [
 # ---------------------------------------------------------------------------
 def connect_weaviate() -> weaviate.WeaviateClient:
     """Connect to Weaviate with retry logic."""
-    host = os.getenv("WEAVIATE_HOST", "weaviate")
-    port = int(os.getenv("WEAVIATE_PORT", "8080"))
+    host = os.getenv("WEAVIATE_HOST")
+    port_str = os.getenv("WEAVIATE_PORT")
+
+    if not host:
+        raise RuntimeError("WEAVIATE_HOST env var required.")
+    if not port_str:
+        raise RuntimeError("WEAVIATE_PORT env var required.")
+    
+    port = int(port_str)
 
     last_exc: Exception | None = None
     for attempt in range(1, WEAVIATE_CONNECT_RETRIES + 1):
@@ -175,8 +182,12 @@ def delete_by_source(collection: Any, source: str) -> None:
 def ingest() -> None:
     """Run the full ingestion pipeline."""
     # --- Config ---
-    collection_name = os.getenv("WEAVIATE_COLLECTION", "SoofiKnowledge")
+    collection_name = os.getenv("WEAVIATE_COLLECTION")
     embedding_model = os.getenv("EMBEDDING_MODEL")
+
+    if not collection_name:
+        raise RuntimeError("WEAVIATE_COLLECTION env var required.")
+    
     if not embedding_model:
         raise RuntimeError(
             "EMBEDDING_MODEL env var required. "

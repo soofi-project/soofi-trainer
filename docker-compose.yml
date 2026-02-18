@@ -5,12 +5,12 @@ services:
   # Weaviate - Vector Database
   # ===========================================
   weaviate:
-    image: cr.weaviate.io/semitechnologies/weaviate:${WEAVIATE_VERSION:-1.35.7}
+    image: cr.weaviate.io/semitechnologies/weaviate:${WEAVIATE_VERSION}
     container_name: weaviate
     restart: unless-stopped
     ports:
-      - "${WEAVIATE_PORT:-8070}:8080"
-      - "${WEAVIATE_GRPC_PORT:-50051}:50051"
+      - "${WEAVIATE_PORT}:8080"
+      - "50051:50051"
     environment:
       - QUERY_DEFAULTS_LIMIT=25
       - AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=true
@@ -36,12 +36,13 @@ services:
     restart: unless-stopped
     env_file:
       - .env
-      - ${ENV_SECRETS_FILE:-.env.secrets}
+      - ${ENV_SECRETS_FILE}
     environment:
       - WEAVIATE_SCHEME=http
       - WEAVIATE_HOST=weaviate
       - WEAVIATE_PORT=8080
       - WEAVIATE_GRPC_PORT=50051
+      - MCP_SERVER_PORT=8000
     networks:
       - soofi-network
     depends_on:
@@ -57,7 +58,7 @@ services:
     restart: "no"
     env_file:
       - .env
-      - ${ENV_SECRETS_FILE:-.env.secrets}
+      - ${ENV_SECRETS_FILE}
     environment:
       - WEAVIATE_HOST=weaviate
       - WEAVIATE_PORT=8080
@@ -73,15 +74,15 @@ services:
   # MCP Inspector - Debugging Tool
   # ===========================================
   mcp-inspector:
-    image: ghcr.io/modelcontextprotocol/inspector:${MCPINSPECTOR_VERSION:-0.18.0}
+    image: ghcr.io/modelcontextprotocol/inspector:${MCPINSPECTOR_VERSION}
     container_name: mcp-inspector
     restart: unless-stopped
     ports:
-      - "${MCPINSPECTOR_CLIENT_PORT:-6274}:6274"
-      - "${MCPINSPECTOR_PROXY_PORT:-6277}:6277"
+      - "${MCPINSPECTOR_CLIENT_PORT}:6274"
+      - "${MCPINSPECTOR_PROXY_PORT}:6277"
     environment:
       HOST: "0.0.0.0"
-      MCP_PROXY_AUTH_TOKEN: ${MCP_AUTH_TOKEN:-dev-stack-token-12345}
+      MCP_PROXY_AUTH_TOKEN: ${MCP_AUTH_TOKEN}
       MCP_AUTO_OPEN_ENABLED: "false"
     networks:
       - soofi-network
@@ -90,11 +91,11 @@ services:
   # Open WebUI - Chat Interface
   # ===========================================
   open-webui:
-    image: ghcr.io/open-webui/open-webui:${OPENWEBUI_VERSION:-v0.7.2}
+    image: ghcr.io/open-webui/open-webui:${OPENWEBUI_VERSION}
     container_name: open-webui
     restart: unless-stopped
     ports:
-      - "${OPENWEBUI_PORT:-3000}:8080"
+      - "${OPENWEBUI_PORT}:8080"
     environment:
       - WEBUI_AUTH=false
       - ENABLE_SIGNUP=false
@@ -103,7 +104,7 @@ services:
       - RAG_RERANKING_MODEL_AUTO_UPDATE=false
     env_file:
       - .env
-      - ${ENV_SECRETS_FILE:-.env.secrets}
+      - ${ENV_SECRETS_FILE}
     volumes:
       - open_webui_data:/app/backend/data
     networks:
@@ -119,7 +120,7 @@ services:
   # N8N
   # ===========================================
   postgres:
-    image: postgres:${POSTGRES_VERSION:-18-alpine}
+    image: postgres:${POSTGRES_VERSION}
     container_name: postgres
     environment:
       - POSTGRES_DB=n8n
@@ -140,10 +141,10 @@ services:
       - soofi-network
 
   n8n:
-    image: n8nio/n8n:${N8N_VERSION:-2.8.3}
+    image: n8nio/n8n:${N8N_VERSION}
     container_name: n8n
     ports:
-      - "${N8N_EXTERNAL_PORT:-5678}:5678"
+      - "${N8N_EXTERNAL_PORT}:5678"
     environment:
       # Database Configuration
       - DB_TYPE=postgresdb
@@ -159,7 +160,7 @@ services:
       - TZ=${GENERIC_TIMEZONE}
     env_file:
       - .env
-      - ${ENV_SECRETS_FILE:-.env.secrets}
+      - ${ENV_SECRETS_FILE}
     depends_on:
       postgres:
         condition: service_healthy
