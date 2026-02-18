@@ -13,7 +13,7 @@ from training_gateway.models import TrainingMethod
 
 # Resolve simulate.py path relative to this test file
 _SIMULATE_SCRIPT = str(
-    (Path(__file__).parents[3] / "dummy-training-container" / "simulate.py").resolve()
+    (Path(__file__).parents[3] / "training-container" / "simulate.py").resolve()
 )
 
 

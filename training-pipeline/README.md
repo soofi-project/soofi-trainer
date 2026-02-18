@@ -7,7 +7,7 @@ Training infrastructure for the Soofi Trainer stack. Contains the Training Gatew
 | Component | Path | Description |
 |-----------|------|-------------|
 | Training Gateway | `training-gateway/` | FastAPI + FastMCP server for job lifecycle management |
-| Dummy Training Container | `dummy-training-container/` | Simulation container for development and testing |
+| Training Container | `training-container/` | Simulation container for development and testing |
 
 See each component's README for details.
 

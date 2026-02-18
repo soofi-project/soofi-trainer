@@ -32,10 +32,10 @@ class LocalBackend(TrainingBackend):
         if self._config.simulate_script_path:
             return self._config.simulate_script_path
 
-        # Walk up from this file to find the dummy-training-container
+        # Walk up from this file to find the training-container
         candidates = [
-            Path(__file__).parents[4] / "dummy-training-container" / "simulate.py",
-            Path("training-pipeline/dummy-training-container/simulate.py"),
+            Path(__file__).parents[4] / "training-container" / "simulate.py",
+            Path("training-pipeline/training-container/simulate.py"),
         ]
         for candidate in candidates:
             if candidate.is_file():

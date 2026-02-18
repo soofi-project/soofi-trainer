@@ -118,7 +118,7 @@ services:
   # Dummy Training Container - Simulation
   # ===========================================
   dummy-training:
-    build: ./training-pipeline/dummy-training-container
+    build: ./training-pipeline/training-container
     container_name: dummy-training
     profiles:
       - training-sim
