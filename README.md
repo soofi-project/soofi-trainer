@@ -11,6 +11,8 @@ An agentic system that guides users through the LLM specialization process — f
 | MCP Inspector | http://localhost:6274 | MCP debugging tool |
 | Weaviate | http://localhost:8070 | Vector database |
 | N8N | http://localhost:5678 | Workflow Automation Platform |
+| MinIO | http://localhost:9000 | S3-compatible object storage |
+| MinIO Console | http://localhost:9001 | MinIO admin UI |
 
 ## Quick Start
 
@@ -55,6 +57,7 @@ The stack uses named Docker volumes (prefixed with `soofi-trainer_`):
 |--------|---------|
 | `soofi-trainer_weaviate_data` | Weaviate vector database |
 | `soofi-trainer_open_webui_data` | Open WebUI settings & chat history |
+| `soofi-trainer_minio_data` | MinIO object storage |
 
 To delete a single volume (containers must be stopped):
 
@@ -85,6 +88,13 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 | `N8N_PROTOCOL` | `http` | The protocol used to reach n8n |
 | `N8N_EXTERNAL_PORT` | `5678` | The HTTP port n8n runs on |
 | `GENERIC_TIMEZONE` | `Europe/Berlin` | The n8n instance timezone |
+| `MINIO_VERSION` | `RELEASE.2025-09-07T16-13-09Z` | MinIO image version |
+| `MINIO_ACCESS_KEY` | `soofi` | MinIO user name |
+| `MINIO_SECRET_KEY` | `soofi-minio-secret` | MinIO password |
+| `MINIO_BUCKET` | `knowledge` | MinIO bucket name for knowledge data |
+| `MINIO_PORT` | `9000` | MinIO API port |
+| `MINIO_CONSOLE_PORT` | `9001` | MinIO Console UI port |
+| `KNOWLEDGE_BASE_URL` | `http://localhost:9000/knowledge` | Base URL for knowledge source links |
 
 ## Project Structure
 
@@ -121,6 +131,8 @@ The Vector MCP server exposes two tools:
 ### Knowledge base
 
 Knowledge documents live in `knowledge/` as markdown files with YAML metadata. The `knowledge-ingestion` container automatically loads them into Weaviate on `./up.sh`. It runs once, detects changes via SHA-256 hashes, and exits.
+
+> **Note:** If you enable MinIO on an existing stack, run `./down.sh --clean` first. The source URLs in Weaviate change from relative paths to MinIO URLs, so a fresh ingestion is required.
 
 To re-run ingestion after editing documents:
 
