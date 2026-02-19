@@ -143,6 +143,7 @@ services:
       start_period: 120s
 
   # ===========================================
+<<<<<<< HEAD
   # N8N
   # ===========================================
   postgres:
@@ -196,6 +197,8 @@ services:
       - soofi-network
 
   # ===========================================
+=======
+>>>>>>> 1f4cdb2ce97b7b407e72102351dcadf34c5a1e0f
   # Training Gateway - Training Job Management
   # ===========================================
   training-gateway:
@@ -215,7 +218,10 @@ services:
       retries: 5
 
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 1f4cdb2ce97b7b407e72102351dcadf34c5a1e0f
 # ===========================================
 # Networks
 # ===========================================
@@ -230,7 +236,10 @@ networks:
 volumes:
   weaviate_data:
   open_webui_data:
+<<<<<<< HEAD
   postgres_data:
   n8n_data:
   minio_data:
+=======
+>>>>>>> 1f4cdb2ce97b7b407e72102351dcadf34c5a1e0f
   training_gateway_data:

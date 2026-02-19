@@ -58,7 +58,10 @@ The stack uses named Docker volumes (prefixed with `soofi-trainer_`):
 |--------|---------|
 | `soofi-trainer_weaviate_data` | Weaviate vector database |
 | `soofi-trainer_open_webui_data` | Open WebUI settings & chat history |
+<<<<<<< HEAD
 | `soofi-trainer_minio_data` | MinIO object storage |
+=======
+>>>>>>> 1f4cdb2ce97b7b407e72102351dcadf34c5a1e0f
 | `soofi-trainer_training_gateway_data` | Training Gateway job state (SQLite) |
 
 To delete a single volume (containers must be stopped):
@@ -102,6 +105,7 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 
 ```
 soofi-trainer/
+<<<<<<< HEAD
 ├── knowledge/              # Markdown knowledge documents + YAML metadata
 ├── knowledge-ingestion/    # One-shot ingestion container (local build)
 ├── vector-mcp/             # Vector MCP server (local build)
@@ -126,6 +130,22 @@ soofi-trainer/
 │   ├── functions/
 │   └── import_functions.sh
 ├── docker-compose.yml      # Service orchestration
+=======
+├── vector-mcp/                 # Vector MCP server (local build)
+│   ├── src/vector_mcp/         # Python source
+│   ├── Dockerfile
+│   └── pyproject.toml
+├── training-pipeline/          # Training infrastructure
+│   ├── training-gateway/       # Training Gateway MCP server
+│   │   ├── src/training_gateway/
+│   │   ├── tests/              # Pytest test suite (unit, integration, e2e)
+│   │   ├── Dockerfile
+│   │   └── pyproject.toml
+│   └── training-container/  # Training simulator (profile: training-sim)
+│       ├── simulate.py
+│       └── Dockerfile
+├── docker-compose.yml          # Service orchestration
+>>>>>>> 1f4cdb2ce97b7b407e72102351dcadf34c5a1e0f
 ├── up.sh                   # Start stack
 ├── down.sh                 # Stop stack
 ├── .env                    # Configuration (no secrets)
@@ -140,6 +160,16 @@ soofi-trainer/
 - **`list_metadata`** — Discover available metadata fields and values for filtering
 
 ### Training Gateway
+<<<<<<< HEAD
+=======
+
+- **`start_training_job`** — Start a training job for a given specialization method
+- **`get_job_status`** — Get current status, phases, and progress of a training job
+- **`list_training_jobs`** — List all training jobs, optionally filtered by status
+- **`cancel_training_job`** — Cancel a running or queued training job
+
+### Load test data
+>>>>>>> 1f4cdb2ce97b7b407e72102351dcadf34c5a1e0f
 
 - **`start_training_job`** — Start a training job for a given specialization method
 - **`get_job_status`** — Get current status, phases, and progress of a training job
