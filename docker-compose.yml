@@ -130,7 +130,6 @@ services:
       - RAG_EMBEDDING_MODEL_AUTO_UPDATE=false
       - RAG_RERANKING_MODEL_AUTO_UPDATE=false
     env_file:
-      - .env
       - ${ENV_SECRETS_FILE}
     volumes:
       - open_webui_data:/app/backend/data
@@ -153,8 +152,6 @@ services:
       - POSTGRES_DB=n8n
       - POSTGRES_USER=n8n
       - POSTGRES_PASSWORD=n8n
-    env_file:
-      - .env
     volumes:
       - postgres_data:/var/lib/postgresql/data
       # Seed DB with N8N user once since there aren't environment variables to do so
