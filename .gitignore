@@ -35,6 +35,7 @@ Thumbs.db
 
 # Docker
 .docker/
+/.claude/settings.json
 /.claude/settings.local.json
 training-pipeline/training-gateway/training.db
 training-pipeline/training-gateway/training.db-shm
