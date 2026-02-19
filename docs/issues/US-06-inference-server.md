@@ -7,6 +7,7 @@
   - [T-06-4](T-06-4-trainer-integration.md)
   - [T-06-5](T-06-5-model-selection.md)
   - [T-06-6](T-06-6-local-inference.md)
+  - [T-06-7](T-06-7-cleanup.md)
 
 # Story
 
@@ -47,6 +48,7 @@ Reuse the Ansible Docker image pattern from [soofi-cluster](https://mrk40.dfki.d
 - Soofi Trainer integration (env vars, README, `.env`) — [T-06-4](T-06-4-trainer-integration.md)
 - Model evaluation & deployment on Triton (chat + embedding) — [T-06-5](T-06-5-model-selection.md)
 - Local inference with Ollama / LM Studio (dev PCs, 8 GB VRAM) — [T-06-6](T-06-6-local-inference.md)
+- Stack cleanup: remove LiteLLM proxy, remove Kubernetes scaffolding — [T-06-7](T-06-7-cleanup.md)
 - No Kubernetes / Helm — that is a separate concern for the soofi-cluster project
 
 ## Integration with Soofi Trainer
