@@ -8,6 +8,7 @@
   - [T-06-5](T-06-5-model-selection.md)
   - [T-06-6](T-06-6-local-inference.md)
   - [T-06-7](T-06-7-cleanup.md)
+  - [T-06-8](T-06-8-macos-ssh-fix.md)
 
 # Story
 
