@@ -88,7 +88,10 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 | `N8N_PROTOCOL` | `http` | The protocol used to reach n8n |
 | `N8N_EXTERNAL_PORT` | `5678` | The HTTP port n8n runs on |
 | `GENERIC_TIMEZONE` | `Europe/Berlin` | The n8n instance timezone |
-| `MINIO_VERSION` | `RELEASE.2025-04-22T22-12-26Z` | MinIO image version |
+| `MINIO_VERSION` | `RELEASE.2025-09-07T16-13-09Z` | MinIO image version |
+| `MINIO_ACCESS_KEY` | `soofi` | MinIO user name |
+| `MINIO_SECRET_KEY` | `soofi-minio-secret` | MinIO password |
+| `MINIO_BUCKET` | `knowledge` | MinIO bucket name for knowledge data |
 | `MINIO_PORT` | `9000` | MinIO API port |
 | `MINIO_CONSOLE_PORT` | `9001` | MinIO Console UI port |
 | `KNOWLEDGE_BASE_URL` | `http://localhost:9000/knowledge` | Base URL for knowledge source links |
