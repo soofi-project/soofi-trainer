@@ -43,6 +43,20 @@ EOF
 - **Chat (Open WebUI)**: http://localhost:3000
 - **MCP Inspector**: http://localhost:6274/?transport=streamable-http&serverUrl=http://vector-mcp:8000/mcp/&MCP_PROXY_AUTH_TOKEN=dev-stack-token-12345
 
+### 4. Try the Soofi UI
+
+The Soofi UI (http://localhost:3001) uses a mock agent with keyword-based responses. Try these prompts:
+
+| Prompt | Response |
+|--------|----------|
+| "Hallo" | Greeting with available commands |
+| "Zeig mir den MCP Inspector" | Link card to MCP Inspector (semantic search tools) |
+| "Zeig mir N8N" / "Workflows" | Link card to N8N workflow automation |
+| "Welche Methoden gibt es?" | Method recommendation cards (RAG, LoRA, QLoRA) |
+| "RAG auswählen" | Confirmation |
+
+Keywords are matched loosely — "Inspektor", "Vektordatenbank", "Automatisierung", "Empfiehl mir was" etc. all work.
+
 ### Stop the stack
 
 ```bash

@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import os
 import uuid
 from typing import AsyncGenerator
 
@@ -149,7 +150,15 @@ METHOD_SURFACE: list[dict] = [
                         "Button": {
                             "child": "rag-btn-text",
                             "primary": True,
-                            "action": {"name": "select_method", "args": {"method": "rag"}},
+                            "action": {
+                                "name": "select_method",
+                                "context": [
+                                    {
+                                        "key": "method",
+                                        "value": {"literalString": "rag"},
+                                    }
+                                ],
+                            },
                         }
                     },
                 },
@@ -202,7 +211,15 @@ METHOD_SURFACE: list[dict] = [
                     "component": {
                         "Button": {
                             "child": "lora-btn-text",
-                            "action": {"name": "select_method", "args": {"method": "lora"}},
+                            "action": {
+                                "name": "select_method",
+                                "context": [
+                                    {
+                                        "key": "method",
+                                        "value": {"literalString": "lora"},
+                                    }
+                                ],
+                            },
                         }
                     },
                 },
@@ -258,7 +275,15 @@ METHOD_SURFACE: list[dict] = [
                     "component": {
                         "Button": {
                             "child": "qlora-btn-text",
-                            "action": {"name": "select_method", "args": {"method": "qlora"}},
+                            "action": {
+                                "name": "select_method",
+                                "context": [
+                                    {
+                                        "key": "method",
+                                        "value": {"literalString": "qlora"},
+                                    }
+                                ],
+                            },
                         }
                     },
                 },
@@ -276,6 +301,45 @@ METHOD_SURFACE: list[dict] = [
     },
     {"beginRendering": {"surfaceId": "main", "root": "root"}},
 ]
+
+# ---------------------------------------------------------------------------
+# Dashboard embed surfaces (MCP Inspector, N8N)
+# ---------------------------------------------------------------------------
+
+
+def _dashboard_surface(url: str, title: str, description: str) -> list[dict]:
+    """Create an A2UI surface with a DashboardEmbed component (rendered as link card)."""
+    return [
+        {
+            "surfaceUpdate": {
+                "surfaceId": "main",
+                "components": [
+                    {
+                        "id": "root",
+                        "component": {
+                            "Column": {"children": {"explicitList": ["dash-card"]}}
+                        },
+                    },
+                    {
+                        "id": "dash-card",
+                        "component": {"Card": {"child": "dash-embed"}},
+                    },
+                    {
+                        "id": "dash-embed",
+                        "component": {
+                            "DashboardEmbed": {
+                                "url": url,
+                                "title": title,
+                                "description": description,
+                            }
+                        },
+                    },
+                ],
+            }
+        },
+        {"beginRendering": {"surfaceId": "main", "root": "root"}},
+    ]
+
 
 CONFIRMATION_SURFACE: list[dict] = [
     {
@@ -336,7 +400,11 @@ CONFIRMATION_SURFACE: list[dict] = [
 GREETING_TEXT = (
     "Hallo! Ich bin der Soofi Trainer — Ihr Assistent für LLM-Spezialisierung. "
     "Beschreiben Sie mir Ihren Anwendungsfall und ich empfehle Ihnen "
-    "die passende Methode."
+    "die passende Methode.\n\n"
+    "Sie können auch sagen:\n"
+    '- "Zeig mir den MCP Inspector" — Semantic-Search-Tools\n'
+    '- "Zeig mir N8N" — Workflow-Automation\n'
+    '- "Welche Methoden gibt es?" — Methodenempfehlung'
 )
 
 METHOD_TEXT = (
@@ -345,17 +413,77 @@ METHOD_TEXT = (
     "passendste für Ihren Anwendungsfall."
 )
 
+MCP_INSPECTOR_TEXT = (
+    "Hier sehen Sie den MCP Inspector — unser Tool für semantische Suche. "
+    "Darüber kommuniziert der Agent mit der Weaviate-Vektordatenbank, "
+    "um relevantes Domänenwissen abzurufen."
+)
+
+N8N_TEXT = (
+    "Hier sehen Sie N8N — unsere Workflow-Automation-Plattform. "
+    "Damit orchestrieren wir Verarbeitungs-Pipelines und "
+    "können komplexe Abläufe visuell modellieren."
+)
+
+# Direct URLs -- opened in new tab (iframe embedding blocked by X-Frame-Options).
+# Constructed from environment variables set via .env / docker-compose.
+_mcp_port = os.environ["MCPINSPECTOR_CLIENT_PORT"]
+_mcp_token = os.environ["MCP_AUTH_TOKEN"]
+MCP_INSPECTOR_URL = (
+    f"http://localhost:{_mcp_port}"
+    f"/?transport=streamable-http"
+    f"&serverUrl=http://vector-mcp:8000/mcp/"
+    f"&MCP_PROXY_AUTH_TOKEN={_mcp_token}"
+)
+N8N_URL = f"http://localhost:{os.environ['N8N_EXTERNAL_PORT']}"
+
+MCP_INSPECTOR_DESC = (
+    "Der MCP Inspector zeigt die verfügbaren Semantic-Search-Tools "
+    "(search_documents, list_metadata) und ermöglicht Testaufrufe "
+    "gegen die Weaviate-Vektordatenbank."
+)
+N8N_DESC = (
+    "N8N ist unsere visuelle Workflow-Automation-Plattform. "
+    "Hier können Sie Verarbeitungs-Pipelines und "
+    "Integrationen grafisch modellieren und ausführen."
+)
+
 
 def _choose_response(message: str) -> tuple[str, list[dict]]:
     """Pick a demo response based on simple keyword matching."""
     lower = message.lower()
-    if any(kw in lower for kw in ("select_method", "auswählen", "wähle", "nehme")):
+
+    # --- Dashboard embeds (fuzzy matching) ---
+    if any(kw in lower for kw in (
+        "mcp inspector", "mcp inspektor", "inspector", "inspektor",
+        "mcp tools", "mcp-inspector", "semantic search", "semantische suche",
+        "vektordatenbank", "vektor", "weaviate", "suche zeigen",
+    )):
+        return MCP_INSPECTOR_TEXT, _dashboard_surface(
+            MCP_INSPECTOR_URL, "MCP Inspector", MCP_INSPECTOR_DESC
+        )
+    if any(kw in lower for kw in (
+        "n8n", "workflow", "workflows", "pipeline", "automation",
+        "automatisierung", "orchestrierung", "ablauf", "ablaeufe",
+    )):
+        return N8N_TEXT, _dashboard_surface(N8N_URL, "N8N Workflows", N8N_DESC)
+
+    # --- Method selection flow ---
+    if any(kw in lower for kw in (
+        "select_method", "auswählen", "wähle", "nehme", "das nehme",
+        "diese methode", "starten", "konfigur",
+    )):
         return (
             "Ausgezeichnete Wahl! Ich bereite die Konfiguration vor.",
             CONFIRMATION_SURFACE,
         )
-    if any(kw in lower for kw in ("methode", "rag", "lora", "fine-tun", "training")):
+    if any(kw in lower for kw in (
+        "methode", "methoden", "rag", "lora", "fine-tun", "finetuning",
+        "training", "empfehlung", "empfiehl", "vorschlag", "spezialisier",
+        "anwendungsfall", "use case", "usecase",
+    )):
         return METHOD_TEXT, METHOD_SURFACE
+
     return GREETING_TEXT, GREETING_SURFACE
 
 

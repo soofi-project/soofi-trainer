@@ -119,6 +119,7 @@ services:
   # Soofi UI - A2UI Frontend
   # ===========================================
   soofi-ui:
+    image: dfkisoofi/soofi-ui:${SOOFI_UI_VERSION}
     build: ./soofi-ui
     container_name: soofi-ui
     restart: unless-stopped
@@ -133,9 +134,12 @@ services:
   # Interaction Agent - Mock AG-UI Backend
   # ===========================================
   interaction-agent:
+    image: dfkisoofi/soofi-ui-interaction-agent:${SOOFI_UI_INTERACTIONAGENT_VERSION}
     build: ./interaction-agent
     container_name: interaction-agent
     restart: unless-stopped
+    env_file:
+      - .env
     networks:
       - soofi-network
 

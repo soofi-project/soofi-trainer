@@ -23,7 +23,7 @@
 html,
 body {
   height: 100%;
-  font-family: "Google Sans", "Segoe UI", Roboto, sans-serif;
+  font-family: "Segoe UI", Roboto, sans-serif;
   background: var(--color-bg);
   color: var(--color-text);
 }
