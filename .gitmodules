@@ -1,0 +1,3 @@
+[submodule "edc-dev-stack"]
+	path = edc-dev-stack
+	url = https://mrk40.dfki.de/soofi/edc-dev-stack.git 
