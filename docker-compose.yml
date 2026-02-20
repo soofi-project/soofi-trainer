@@ -1,5 +1,11 @@
 name: soofi-trainer
-
+# ===========================================
+# Datspace Components
+# ===========================================
+include:
+  - ./edc-dev-stack/docker-compose-edc.yaml
+  - ./edc-dev-stack/docker-compose-mcp.yaml
+  - ./edc-dev-stack/docker-compose-flowise.yaml
 services:
   # ===========================================
   # Weaviate - Vector Database
@@ -78,6 +84,7 @@ services:
     environment:
       - WEBUI_AUTH=false
       - ENABLE_SIGNUP=false
+      - MCP_ENABLE=true
     env_file:
       - .env
       - ${ENV_SECRETS_FILE:-.env.secrets}
@@ -85,6 +92,31 @@ services:
       - open_webui_data:/app/backend/data
     networks:
       - soofi-network
+
+  # ===========================================
+  # Postgres - Database for Dataspace
+  # ===========================================
+  postgres:
+    container_name: postgres
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: dataspace
+    image: bitnamilegacy/postgresql:17.2.0
+    configs:
+      - source: postgres_init_sql
+        target: /docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+configs:
+  postgres_init_sql:
+    content: |
+      CREATE SCHEMA IF NOT EXISTS consumer;
+      CREATE SCHEMA IF NOT EXISTS provider;
 
 # ===========================================
 # Networks
