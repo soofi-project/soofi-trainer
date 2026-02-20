@@ -4,8 +4,8 @@ version = "0.1.0"
 description = "Mock AG-UI backend for Soofi Trainer"
 requires-python = ">=3.11"
 dependencies = [
-    "fastapi>=0.115.0",
-    "uvicorn[standard]>=0.32.0",
+    "fastapi>=0.129.0",
+    "uvicorn[standard]>=0.41.0",
 ]
 
 [build-system]

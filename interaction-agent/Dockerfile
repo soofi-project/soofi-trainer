@@ -1,10 +1,10 @@
-FROM python:3.11-slim
+FROM python:3.11.14-slim
 
 WORKDIR /app
 
-# Install dependencies (pinned in pyproject.toml but installed directly for layer caching)
+# Install dependencies via pyproject.toml
 COPY pyproject.toml .
-RUN pip install --no-cache-dir fastapi "uvicorn[standard]"
+RUN pip install --no-cache-dir .
 
 # Copy application code
 COPY src/ src/
