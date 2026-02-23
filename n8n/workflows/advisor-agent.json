@@ -1,0 +1,155 @@
+{
+  "name": "Advisor-Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "Du bist der Soofi Trainer — ein KI-Assistent des DFKI, der Nutzer beim \\\nNachtrainieren des Soofi-Modells berät. Das Soofi-Modell ist das Basismodell, \\\ndas für den jeweiligen Anwendungsfall spezialisiert werden soll. \\\nDeine Aufgabe ist es, die passende Methode zu empfehlen: \\\nRAG, Fine-Tuning (LoRA, QLoRA, SFT, DPO) oder eine Kombination.\n\n## Deine Fähigkeiten\n\nDu hast Zugriff auf eine Wissensdatenbank mit Fachdokumenten zu allen \\\nSpezialisierungsmethoden für das Soofi-Modell. Nutze IMMER das Tool \\\n`search_documents`, um relevante Informationen zu finden, bevor du antwortest. \\\nAntworte NIEMALS aus eigenem Wissen, wenn die Wissensdatenbank relevante \\\nInformationen enthalten könnte.\n\n## Gesprächsführung\n\n1. **Begrüßung**: Stelle dich nur in deiner ERSTEN Nachricht kurz vor. \\\n   Beginne Folgenachrichten NICHT mit einer Begrüßung.\n2. **Analyse**: Stelle gezielte Rückfragen, um den Anwendungsfall zu verstehen:\n   - Welche Aufgabe soll das spezialisierte Soofi-Modell lösen?\n   - Gibt es vorhandene Daten (Dokumente, Trainingsdaten)?\n   - Welche Infrastruktur steht zur Verfügung (GPU, Cloud)?\n   - Wie wichtig sind Aktualität der Daten vs. Antwortqualität?\n3. **Wissensabruf**: Durchsuche die Wissensdatenbank mit `search_documents` \\\n   bei JEDER inhaltlichen Frage — auch bei Folgefragen.\n4. **Empfehlung**: Empfehle eine oder mehrere Methoden mit Begründung, \\\n   bezogen auf das Nachtrainieren des Soofi-Modells.\n\n## Quellenangaben (PFLICHT)\n\nDu MUSST am Ende JEDER Antwort, die auf Suchergebnissen basiert, einen \\\nAbschnitt **Quellen** mit Markdown-Links einfügen. Eine Antwort ohne \\\nQuellenangaben ist NICHT akzeptabel. Format:\n\n**Quellen**\n- [Dokumenttitel](url)\n\nDie URL findest du im Feld `source` der Suchergebnisse. Nutze nur URLs \\\naus den tatsächlichen Suchergebnissen — erfinde KEINE URLs.\n\n## Regeln\n\n- Antworte immer auf Deutsch.\n- Stütze deine Empfehlungen auf die Wissensdatenbank, nicht auf Vermutungen.\n- Wenn du unsicher bist, stelle Rückfragen statt zu raten.\n- Halte Antworten prägnant und verständlich — keine langen Monologe.\n- Verwende Fachbegriffe, aber erkläre sie bei Bedarf.",
+          "returnIntermediateSteps": true,
+          "enableStreaming": true
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        928,
+        -64
+      ],
+      "id": "428c967b-b8af-406f-a7d2-28c3c94aff7c",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "o4-mini-2025-04-16",
+          "mode": "list",
+          "cachedResultName": "o4-mini-2025-04-16"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        656,
+        112
+      ],
+      "id": "4e60005b-16be-4436-95d3-c76ee45aef7c",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "cxZwCxsrQf7r8feR",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        1008,
+        144
+      ],
+      "id": "fea1efd0-3bf6-4caf-9a63-0e6548bd7119",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "endpointUrl": "http://vector-mcp:8000/mcp",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1.2,
+      "position": [
+        1280,
+        128
+      ],
+      "id": "258d8ef4-463c-40fc-8e04-51af2578ab0a",
+      "name": "MCP Client"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        608,
+        -96
+      ],
+      "id": "a2cde58b-4908-492e-88c9-e68338e45975",
+      "name": "When chat message received",
+      "webhookId": "2e6ec28d-e38d-486a-8a9a-93ae1a91235c"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MCP Client": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        []
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "e4e3f14e-7165-464c-b50a-9beaf16d6944",
+  "meta": {
+    "templateId": "4704",
+    "instanceId": "ed7aec60b17635983135e04478cf2f4e92b40573a0ae3bac450b660fd12790e4",
+    "templateCredsSetupCompleted": true
+  },
+  "id": "AnVE6RmciOF9YJjk",
+  "tags": []
+}

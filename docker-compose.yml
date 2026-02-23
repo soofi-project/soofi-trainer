@@ -48,6 +48,11 @@ services:
     depends_on:
       weaviate:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/mcp')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # ===========================================
   # MinIO - S3-Compatible Object Storage
@@ -98,6 +103,30 @@ services:
         condition: service_healthy
 
   # ===========================================
+  # Advisor - LangGraph LLM Specialization Advisor
+  # ===========================================
+  advisor:
+    image: dfkisoofi/advisor-agent:${ADVISOR_VERSION}
+    build: ./advisor
+    container_name: advisor
+    restart: unless-stopped
+    env_file:
+      - .env
+      - ${ENV_SECRETS_FILE}
+    environment:
+      - VECTOR_MCP_URL=http://vector-mcp:8000/mcp
+    networks:
+      - soofi-network
+    depends_on:
+      vector-mcp:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # ===========================================
   # MCP Inspector - Debugging Tool
   # ===========================================
   mcp-inspector:
@@ -129,12 +158,15 @@ services:
       - OFFLINE_MODE=true
       - RAG_EMBEDDING_MODEL_AUTO_UPDATE=false
       - RAG_RERANKING_MODEL_AUTO_UPDATE=false
-    env_file:
-      - ${ENV_SECRETS_FILE}
+      - OPENAI_API_BASE_URL=http://advisor:8000/v1
+      - OPENAI_API_KEY=dummy
     volumes:
       - open_webui_data:/app/backend/data
     networks:
       - soofi-network
+    depends_on:
+      advisor:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl --silent --fail http://localhost:8080/health | jq -ne 'input.status == true' || exit 1"]
       interval: 15s
@@ -214,6 +246,7 @@ services:
       - N8N_PERSONALIZATION_ENABLED=false
       - N8N_ONBOARDING_FLOW_DISABLED=true
       - N8N_DIAGNOSTICS_ENABLED=false
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
       # Timezone
       - TZ=${GENERIC_TIMEZONE}
     env_file:
@@ -223,9 +256,9 @@ services:
       postgres:
         condition: service_healthy
     volumes:
-      - n8n_data:/home/node/.n8n   
+      - n8n_data:/home/node/.n8n
       - ./n8n/workflows:/home/node/import-workflows:ro
-      - ./n8n/init_script.sh:/home/node/init_script.sh:ro 
+      - ./n8n/init_script.sh:/home/node/init_script.sh:ro
     networks:
       - soofi-network
 

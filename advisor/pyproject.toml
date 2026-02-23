@@ -1,0 +1,16 @@
+[project]
+name = "soofi-advisor"
+version = "0.1.0"
+description = "Soofi Advisor — LangGraph agent for LLM specialization recommendations"
+requires-python = ">=3.11"
+dependencies = [
+    "langgraph>=1.0.9",
+    "langchain-openai>=1.1.10",
+    "langchain-mcp-adapters>=0.2.1",
+    "fastapi>=0.129.0",
+    "uvicorn[standard]>=0.41.0",
+]
+
+[build-system]
+requires = ["setuptools>=75.0"]
+build-backend = "setuptools.build_meta"
