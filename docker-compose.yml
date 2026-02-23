@@ -120,6 +120,8 @@ services:
     depends_on:
       vector-mcp:
         condition: service_healthy
+      knowledge-ingestion:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
       interval: 15s
