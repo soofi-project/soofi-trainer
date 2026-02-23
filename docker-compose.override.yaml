@@ -1,0 +1,30 @@
+services:
+  edc-provider:
+    networks:
+      - edc-network
+  
+  portal-provider:
+    networks:
+      - edc-network
+
+  edc-consumer:
+    networks:
+      - edc-network
+
+  portal-consumer:
+    networks:
+      - edc-network
+
+  edc-consumer-mcp:
+    networks:
+      - edc-network
+
+  open-webui:
+    networks:
+      - edc-network
+      - soofi-network
+
+
+networks:
+  edc-network:
+    driver: bridge
