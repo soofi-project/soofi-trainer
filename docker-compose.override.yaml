@@ -18,7 +18,3 @@ services:
   edc-consumer-mcp:
     networks:
       - soofi-network
-
-  open-webui:
-    networks:
-      - soofi-network
