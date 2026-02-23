@@ -28,7 +28,7 @@ if [ -n "$BUILD_FLAG" ]; then
 else
     echo "[INFO] Starting containers..."
 fi
-docker compose up -d --wait --remove-orphans $BUILD_FLAG
+docker compose up -d --remove-orphans $BUILD_FLAG
 
 # Check container status
 echo ""
