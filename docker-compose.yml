@@ -110,6 +110,8 @@ services:
       interval: 10s
       timeout: 10s
       retries: 5
+    networks:
+      - soofi-network
 
 configs:
   postgres_init_sql:
