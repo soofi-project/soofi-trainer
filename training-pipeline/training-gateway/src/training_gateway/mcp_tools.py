@@ -55,7 +55,10 @@ async def start_training_job(
         await db.update_job_container_id(job.id, container_id)
     except backends.BackendError as e:
         logger.error("Failed to start container for job %s: %s", job.id, e)
-        await db.fail_job(job.id, f"Container start failed: {e}")
+        try:
+            await db.fail_job(job.id, f"Container start failed: {e}")
+        except (db.JobNotFoundError, db.JobNotRunningError) as db_err:
+            logger.error("Could not mark job %s as failed: %s", job.id, db_err)
         return {
             "job_id": job.id,
             "status": "failed",
@@ -164,9 +167,11 @@ async def cancel_training_job(job_id: str) -> dict[str, Any]:
                 e,
             )
 
-    job = await db.cancel_job(job_id)
+    cancelled_job = await db.cancel_job(job_id)
+    if cancelled_job is None:
+        return {"error": f"Job '{job_id}' not found during cancellation"}
     return {
-        "job_id": job.id,
-        "status": job.status.value,
+        "job_id": cancelled_job.id,
+        "status": cancelled_job.status.value,
         "message": "Job cancelled",
     }

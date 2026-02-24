@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
@@ -9,6 +10,7 @@ import uuid
 from datetime import datetime, timezone
 
 import aiosqlite
+from typing import Any
 
 from training_gateway.models import (
     DEFAULT_PHASES,
@@ -24,7 +26,21 @@ logger = logging.getLogger(__name__)
 
 DB_PATH = os.getenv("TRAINING_DB_PATH", "./training.db")
 
+
+class JobNotFoundError(Exception):
+    def __init__(self, job_id: str) -> None:
+        super().__init__(f"Job '{job_id}' not found")
+        self.job_id = job_id
+
+
+class JobNotRunningError(Exception):
+    def __init__(self, job_id: str, actual_status: JobStatus) -> None:
+        super().__init__(f"Job '{job_id}' is {actual_status.value}, not running")
+        self.job_id = job_id
+        self.actual_status = actual_status
+
 _db: aiosqlite.Connection | None = None
+_write_lock = asyncio.Lock()
 
 
 async def get_db() -> aiosqlite.Connection:
@@ -80,7 +96,7 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def _serialize_job(job: Job) -> dict:
+def _serialize_job(job: Job) -> dict[str, Any]:
     """Serialize a Job to a dict for SQLite storage."""
     return {
         "id": job.id,
@@ -122,7 +138,7 @@ async def create_job(
     method: TrainingMethod,
     dataset_ref: str,
     base_model: str,
-    config: dict | None = None,
+    config: dict[str, Any] | None = None,
 ) -> Job:
     """Create a new training job with initial phases."""
     now = _now()
@@ -197,119 +213,142 @@ async def update_job_progress(
     job_id: str,
     phase: str,
     progress: int,
-    metrics: dict | None = None,
-) -> Job | None:
+    metrics: dict[str, Any] | None = None,
+) -> Job:
     """Update progress for a specific phase."""
-    job = await get_job(job_id)
-    if job is None:
-        return None
+    async with _write_lock:
+        job = await get_job(job_id)
+        if job is None:
+            raise JobNotFoundError(job_id)
+        if job.status != JobStatus.running:
+            raise JobNotRunningError(job_id, job.status)
 
-    now = _now()
-    for p in job.phases:
-        if p.name == phase:
-            p.progress = progress
-            if metrics:
-                # Store metrics in job config under the phase key
-                job.config.setdefault("phase_metrics", {})[phase] = metrics
-            if p.status == PhaseStatus.pending:
-                p.status = PhaseStatus.running
-                p.started_at = now
-            break
+        phase_names = [p.name for p in job.phases]
+        if phase not in phase_names:
+            raise ValueError(f"Phase '{phase}' not found. Valid: {phase_names}")
 
-    job.updated_at = now
-    await _save_job(job)
-    return job
+        now = _now()
+        for p in job.phases:
+            if p.name == phase:
+                p.progress = progress
+                if metrics:
+                    # Store metrics in job config under the phase key
+                    job.config.setdefault("phase_metrics", {})[phase] = metrics
+                if p.status == PhaseStatus.pending:
+                    p.status = PhaseStatus.running
+                    p.started_at = now
+                break
+
+        job.updated_at = now
+        await _save_job(job)
+        return job
 
 
 async def update_job_phase(
     job_id: str,
     from_phase: str,
     to_phase: str,
-) -> Job | None:
+) -> Job:
     """Transition from one phase to another."""
-    job = await get_job(job_id)
-    if job is None:
-        return None
+    async with _write_lock:
+        job = await get_job(job_id)
+        if job is None:
+            raise JobNotFoundError(job_id)
+        if job.status != JobStatus.running:
+            raise JobNotRunningError(job_id, job.status)
 
-    now = _now()
-    for p in job.phases:
-        if p.name == from_phase:
-            p.status = PhaseStatus.completed
-            p.progress = 100
-            p.completed_at = now
-        elif p.name == to_phase:
-            p.status = PhaseStatus.running
-            p.started_at = now
+        phase_names = [p.name for p in job.phases]
+        if from_phase not in phase_names:
+            raise ValueError(f"Phase '{from_phase}' not found. Valid: {phase_names}")
+        if to_phase not in phase_names:
+            raise ValueError(f"Phase '{to_phase}' not found. Valid: {phase_names}")
 
-    job.current_phase = to_phase
-    job.updated_at = now
-    await _save_job(job)
-    logger.info("Job %s: %s → %s", job_id, from_phase, to_phase)
-    return job
+        now = _now()
+        for p in job.phases:
+            if p.name == from_phase:
+                p.status = PhaseStatus.completed
+                p.progress = 100
+                p.completed_at = now
+            elif p.name == to_phase:
+                p.status = PhaseStatus.running
+                p.started_at = now
+
+        job.current_phase = to_phase
+        job.updated_at = now
+        await _save_job(job)
+        logger.info("Job %s: %s → %s", job_id, from_phase, to_phase)
+        return job
 
 
-async def complete_job(job_id: str, result: JobResult | None = None) -> Job | None:
+async def complete_job(job_id: str, result: JobResult | None = None) -> Job:
     """Mark a job as completed."""
-    job = await get_job(job_id)
-    if job is None:
-        return None
+    async with _write_lock:
+        job = await get_job(job_id)
+        if job is None:
+            raise JobNotFoundError(job_id)
+        if job.status != JobStatus.running:
+            raise JobNotRunningError(job_id, job.status)
 
-    now = _now()
-    # Mark the last running phase as completed
-    for p in job.phases:
-        if p.status == PhaseStatus.running:
-            p.status = PhaseStatus.completed
-            p.progress = 100
-            p.completed_at = now
+        now = _now()
+        # Mark the last running phase as completed
+        for p in job.phases:
+            if p.status == PhaseStatus.running:
+                p.status = PhaseStatus.completed
+                p.progress = 100
+                p.completed_at = now
 
-    job.status = JobStatus.completed
-    job.result = result
-    job.updated_at = now
-    await _save_job(job)
-    logger.info("Job %s completed", job_id)
-    return job
+        job.status = JobStatus.completed
+        job.result = result
+        job.updated_at = now
+        await _save_job(job)
+        logger.info("Job %s completed", job_id)
+        return job
 
 
-async def fail_job(job_id: str, error: str) -> Job | None:
+async def fail_job(job_id: str, error: str) -> Job:
     """Mark a job as failed."""
-    job = await get_job(job_id)
-    if job is None:
-        return None
+    async with _write_lock:
+        job = await get_job(job_id)
+        if job is None:
+            raise JobNotFoundError(job_id)
+        if job.status != JobStatus.running:
+            raise JobNotRunningError(job_id, job.status)
 
-    now = _now()
-    for p in job.phases:
-        if p.status == PhaseStatus.running:
-            p.status = PhaseStatus.failed
-            p.completed_at = now
+        now = _now()
+        for p in job.phases:
+            if p.status == PhaseStatus.running:
+                p.status = PhaseStatus.failed
+                p.completed_at = now
 
-    job.status = JobStatus.failed
-    job.error = error
-    job.updated_at = now
-    await _save_job(job)
-    logger.error("Job %s failed: %s", job_id, error)
-    return job
+        job.status = JobStatus.failed
+        job.error = error
+        job.updated_at = now
+        await _save_job(job)
+        logger.error("Job %s failed: %s", job_id, error)
+        return job
 
 
 async def cancel_job(job_id: str) -> Job | None:
     """Mark a job as cancelled."""
-    job = await get_job(job_id)
-    if job is None:
-        return None
+    async with _write_lock:
+        job = await get_job(job_id)
+        if job is None:
+            return None
 
-    if job.status in (JobStatus.completed, JobStatus.failed, JobStatus.cancelled):
-        return job  # Already in terminal state
+        if job.status in (JobStatus.completed, JobStatus.failed, JobStatus.cancelled):
+            return job  # Already in terminal state
 
-    now = _now()
-    for p in job.phases:
-        if p.status == PhaseStatus.running:
-            p.status = PhaseStatus.pending
-            p.completed_at = now
+        now = _now()
+        for p in job.phases:
+            if p.status == PhaseStatus.running:
+                p.status = PhaseStatus.pending
+                p.completed_at = now
 
-    job.status = JobStatus.cancelled
-    job.updated_at = now
-    await _save_job(job)
-    logger.info("Job %s cancelled", job_id)
-    return job
+        job.status = JobStatus.cancelled
+        job.updated_at = now
+        await _save_job(job)
+        logger.info("Job %s cancelled", job_id)
+        return job
 
 
 async def _save_job(job: Job) -> None:

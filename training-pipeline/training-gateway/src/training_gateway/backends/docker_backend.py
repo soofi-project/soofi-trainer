@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 import aiodocker
 
@@ -56,7 +57,7 @@ class DockerBackend(TrainingBackend):
         if fail_prob > 0:
             cmd.extend(["--fail-probability", str(fail_prob)])
 
-        container_config: dict = {
+        container_config: dict[str, Any] = {
             "Image": self._config.training_image,
             "Cmd": cmd,
             "Labels": {
@@ -89,9 +90,9 @@ class DockerBackend(TrainingBackend):
         container_name = f"soofi-training-{job.id[:12]}"
 
         try:
-            container = await docker.containers.create_or_replace(
-                name=container_name,
+            container = await docker.containers.create(
                 config=container_config,
+                name=container_name,
             )
             await container.start()
         except Exception as e:

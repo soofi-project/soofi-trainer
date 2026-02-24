@@ -58,7 +58,7 @@ class TestDockerBackendStart:
         mock_container = AsyncMock()
         mock_container.id = "docker-abc123"
         mock_docker = AsyncMock()
-        mock_docker.containers.create_or_replace.return_value = mock_container
+        mock_docker.containers.create.return_value = mock_container
         mock_docker.version.return_value = {"Version": "24.0"}
         backend._docker = mock_docker
 
@@ -66,7 +66,7 @@ class TestDockerBackendStart:
         container_id = await backend.start_container(job)
 
         assert container_id == "docker-abc123"
-        mock_docker.containers.create_or_replace.assert_called_once()
+        mock_docker.containers.create.assert_called_once()
         mock_container.start.assert_called_once()
 
     @pytest.mark.asyncio
@@ -77,13 +77,13 @@ class TestDockerBackendStart:
         mock_container = AsyncMock()
         mock_container.id = "docker-abc123"
         mock_docker = AsyncMock()
-        mock_docker.containers.create_or_replace.return_value = mock_container
+        mock_docker.containers.create.return_value = mock_container
         backend._docker = mock_docker
 
         job = _make_job()
         await backend.start_container(job)
 
-        call_kwargs = mock_docker.containers.create_or_replace.call_args
+        call_kwargs = mock_docker.containers.create.call_args
         container_config = call_kwargs.kwargs.get("config", call_kwargs[1].get("config", {}))
         cmd = container_config["Cmd"]
 
@@ -102,13 +102,13 @@ class TestDockerBackendStart:
         mock_container = AsyncMock()
         mock_container.id = "docker-abc123"
         mock_docker = AsyncMock()
-        mock_docker.containers.create_or_replace.return_value = mock_container
+        mock_docker.containers.create.return_value = mock_container
         backend._docker = mock_docker
 
         job = _make_job()
         await backend.start_container(job)
 
-        call_kwargs = mock_docker.containers.create_or_replace.call_args
+        call_kwargs = mock_docker.containers.create.call_args
         container_config = call_kwargs.kwargs.get("config", call_kwargs[1].get("config", {}))
         device_requests = container_config["HostConfig"]["DeviceRequests"]
 
@@ -124,13 +124,13 @@ class TestDockerBackendStart:
         mock_container = AsyncMock()
         mock_container.id = "docker-abc123"
         mock_docker = AsyncMock()
-        mock_docker.containers.create_or_replace.return_value = mock_container
+        mock_docker.containers.create.return_value = mock_container
         backend._docker = mock_docker
 
         job = _make_job()
         await backend.start_container(job)
 
-        call_kwargs = mock_docker.containers.create_or_replace.call_args
+        call_kwargs = mock_docker.containers.create.call_args
         container_config = call_kwargs.kwargs.get("config", call_kwargs[1].get("config", {}))
 
         assert container_config["HostConfig"]["NetworkMode"] == "my-network"
@@ -143,13 +143,13 @@ class TestDockerBackendStart:
         mock_container = AsyncMock()
         mock_container.id = "docker-abc123"
         mock_docker = AsyncMock()
-        mock_docker.containers.create_or_replace.return_value = mock_container
+        mock_docker.containers.create.return_value = mock_container
         backend._docker = mock_docker
 
         job = _make_job()
         await backend.start_container(job)
 
-        call_kwargs = mock_docker.containers.create_or_replace.call_args
+        call_kwargs = mock_docker.containers.create.call_args
         container_config = call_kwargs.kwargs.get("config", call_kwargs[1].get("config", {}))
         labels = container_config["Labels"]
 
@@ -163,7 +163,7 @@ class TestDockerBackendStart:
         backend = DockerBackend(config)
 
         mock_docker = AsyncMock()
-        mock_docker.containers.create_or_replace.side_effect = Exception("image not found")
+        mock_docker.containers.create.side_effect = Exception("image not found")
         backend._docker = mock_docker
 
         job = _make_job()
