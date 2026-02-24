@@ -203,7 +203,7 @@ services:
     container_name: training-gateway
     restart: unless-stopped
     ports:
-      - "${TRAINING_GATEWAY_PORT:-8000}:8000"
+      - "${TRAINING_GATEWAY_PORT}:8000"
     env_file:
       - .env
     environment:
@@ -221,6 +221,17 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # ===========================================
+  # Training Container (Build Target)
+  # Not started as part of the default stack — used only to build the image.
+  # up.sh automatically builds it on first run or when --build is passed.
+  # ===========================================
+  training-container:
+    build: ./training-pipeline/training-container
+    image: soofi-trainer-dummy-training:latest
+    profiles:
+      - training  # excludes from default startup
 
 # ===========================================
 # Networks

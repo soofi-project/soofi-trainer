@@ -22,6 +22,13 @@ if [ "$1" == "--build" ]; then
     BUILD_FLAG="--build"
 fi
 
+# Build training container image if needed (not started in stack, built separately)
+TRAINING_IMAGE_NAME="${TRAINING_IMAGE:-soofi-trainer-dummy-training:latest}"
+if [ -n "$BUILD_FLAG" ] || ! docker image inspect "$TRAINING_IMAGE_NAME" >/dev/null 2>&1; then
+    echo "[INFO] Building training container image ($TRAINING_IMAGE_NAME)..."
+    docker compose --profile training build training-container
+fi
+
 # Start containers (build only if --build passed)
 if [ -n "$BUILD_FLAG" ]; then
     echo "[INFO] Building and starting containers..."
@@ -41,9 +48,10 @@ echo "========================================"
 echo "  Services are ready!"
 echo "========================================"
 echo ""
-echo "  Open WebUI:    http://localhost:${OPENWEBUI_PORT}"
-echo "  MCP Inspector: http://localhost:${MCPINSPECTOR_CLIENT_PORT}/?transport=streamable-http&serverUrl=http://vector-mcp:8000/mcp/&MCP_PROXY_AUTH_TOKEN=${MCP_AUTH_TOKEN}"
-echo "  Weaviate:      http://localhost:${WEAVIATE_PORT}"
+echo "  Open WebUI:          http://localhost:${OPENWEBUI_PORT}"
+echo "  Vector MCP Inspector:   http://localhost:${MCPINSPECTOR_CLIENT_PORT}/?transport=streamable-http&serverUrl=http://vector-mcp:8000/mcp/&MCP_PROXY_AUTH_TOKEN=${MCP_AUTH_TOKEN}"
+echo "  Training MCP Inspector: http://localhost:${MCPINSPECTOR_CLIENT_PORT}/?transport=streamable-http&serverUrl=http://training-gateway:8000/mcp/&MCP_PROXY_AUTH_TOKEN=${MCP_AUTH_TOKEN}"
+echo "  Weaviate:            http://localhost:${WEAVIATE_PORT}"
 echo "  N8N:           http://localhost:${N8N_EXTERNAL_PORT} (admin@example.com / S8fi-password)"
 echo "  MinIO Console: http://localhost:${MINIO_CONSOLE_PORT}/browser/${MINIO_BUCKET}  ($MINIO_ACCESS_KEY | $MINIO_SECRET_KEY)"
 echo ""

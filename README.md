@@ -41,7 +41,8 @@ EOF
 ### 3. Open the UI
 
 - **Chat**: http://localhost:3000
-- **MCP Inspector**: http://localhost:6274/?transport=streamable-http&serverUrl=http://vector-mcp:8000/mcp/&MCP_PROXY_AUTH_TOKEN=dev-stack-token-12345
+- **Vector MCP Inspector**: http://localhost:6274/?transport=streamable-http&serverUrl=http://vector-mcp:8000/mcp/&MCP_PROXY_AUTH_TOKEN=dev-stack-token-12345
+- **Training MCP Inspector**: http://localhost:6274/?transport=streamable-http&serverUrl=http://training-gateway:8000/mcp/&MCP_PROXY_AUTH_TOKEN=dev-stack-token-12345
 
 ### Stop the stack
 
@@ -101,8 +102,6 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 | `TRAINING_DOCKER_HOST` | _(unset)_ | Remote Docker API URL — leave unset to use the local socket |
 | `TRAINING_IMAGE` | `soofi-trainer-dummy-training:latest` | Docker image for training containers |
 | `TRAINING_GPU_DEVICE` | `all` | GPU device ID (`all` or e.g. `0`) |
-| `TRAINING_GATEWAY_URL` | `http://training-gateway:8000/webhooks` | Webhook URL for training containers to call back |
-| `TRAINING_CONTAINER_NETWORK` | `soofi-trainer_soofi-network` | Docker network for training containers |
 | `TRAINING_DEFAULT_DURATION` | `120` | Default simulation duration in seconds |
 
 ## Project Structure
@@ -198,7 +197,6 @@ TRAINING_BACKEND=docker
 TRAINING_DOCKER_HOST=ssh://user@gpu-server
 # or: TRAINING_DOCKER_HOST=tcp://gpu-server:2376
 TRAINING_IMAGE=soofi/training-container:latest
-TRAINING_GATEWAY_URL=http://<gateway-host>:8000/webhooks
 ```
 
 > **Note:** For SSH, the gateway container needs the SSH private key mounted and `ssh-agent` or `~/.ssh/config` configured.
