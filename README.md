@@ -96,7 +96,11 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 | `MCPINSPECTOR_VERSION` | `0.18.0` | MCP Inspector Image version |
 | `MCPINSPECTOR_CLIENT_PORT` | `6274` | MCP Inspector UI port |
 | `MCPINSPECTOR_PROXY_PORT` | `6277` | MCP Inspector proxy port |
+<<<<<<< HEAD
 | `MCP_AUTH_TOKEN` | `dev-stack-token-12345` | MCP Auth token |
+=======
+| `EMBEDDING_MODEL` | `openai:text-embedding-3-large` | Embedding model (provider:model) |
+>>>>>>> 85350bd71802d15294829821d7e94fbf76e7de25
 | `SOOFI_UI_PORT` | `3001` | Soofi UI (A2UI frontend) port |
 | `OPENWEBUI_VERSION` | `v0.7.2` | Open WebUI Image version|
 | `OPENWEBUI_PORT` | `3000` | Open WebUI port |
