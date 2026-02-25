@@ -115,6 +115,7 @@ services:
       - ${ENV_SECRETS_FILE}
     environment:
       - VECTOR_MCP_URL=http://vector-mcp:8000/mcp
+      - ADVISOR_NAME=soofi-advisor
     networks:
       - soofi-network
     depends_on:
@@ -123,7 +124,7 @@ services:
       knowledge-ingestion:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
+      test: ["CMD-SHELL", "python -c \"import socket; s=socket.create_connection(('localhost',8000),2); s.close()\""]
       interval: 15s
       timeout: 5s
       retries: 5

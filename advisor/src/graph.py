@@ -13,7 +13,9 @@ from .prompts import SYSTEM_PROMPT
 
 logger = logging.getLogger(__name__)
 
-model = os.environ["ADVISOR_MODEL"]
+model = os.getenv("ADVISOR_MODEL")
+if not model:
+    raise RuntimeError("ADVISOR_MODEL env var required.")
 
 
 def build_graph(tools: list[BaseTool]) -> CompiledStateGraph:
@@ -36,6 +38,8 @@ def build_graph(tools: list[BaseTool]) -> CompiledStateGraph:
         return result
 
     def should_continue(state: MessagesState) -> str:
+        if not state["messages"]:
+            return "__end__"
         last = state["messages"][-1]
         if hasattr(last, "tool_calls") and last.tool_calls:
             return "tools"

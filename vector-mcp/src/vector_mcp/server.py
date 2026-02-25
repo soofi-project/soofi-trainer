@@ -222,10 +222,12 @@ def list_metadata() -> dict[str, Any]:
 # -------------------------------------------------
 if __name__ == "__main__":
     app = mcp.http_app()
-    port = int(os.getenv("MCP_SERVER_PORT"))
+    port_str = os.getenv("MCP_SERVER_PORT")
 
-    if not port:
+    if not port_str:
         raise RuntimeError("MCP_SERVER_PORT env var required.")
+
+    port = int(port_str)
 
     uvicorn.run(
         app,

@@ -12,6 +12,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage
+from langgraph.graph.state import CompiledStateGraph
 
 from .graph import build_graph
 from .tools import mcp_client
@@ -19,10 +20,12 @@ from .tools import mcp_client
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-MODEL_NAME = os.environ["ADVISOR_NAME"]
+MODEL_NAME = os.getenv("ADVISOR_NAME")
+if not MODEL_NAME:
+    raise RuntimeError("ADVISOR_NAME env var required.")
 
 # Initialized at startup
-graph = None
+graph: CompiledStateGraph | None = None
 
 
 @asynccontextmanager
@@ -93,9 +96,11 @@ async def _stream_completion(messages: list[dict]) -> AsyncGenerator[str, None]:
             "object": "chat.completion.chunk",
             "created": created,
             "model": MODEL_NAME,
-            "choices": [{"index": 0, "delta": delta, "finish_reason": None}],
+            "choices": [{"index": 0, "delta": delta, "finish_reason": "stop"}],
         }
         yield f"data: {json.dumps(data)}\n\n"
+        yield "data: [DONE]\n\n"
+        return
 
     # Final chunk with finish_reason
     data = {
@@ -152,4 +157,6 @@ async def list_models() -> dict:
 
 @app.get("/health")
 async def health() -> dict:
+    if graph is None:
+        return {"status": "error", "detail": "Graph not initialized"}
     return {"status": "ok"}
