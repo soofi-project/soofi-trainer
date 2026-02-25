@@ -216,6 +216,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - soofi-network
+      - soofi-training-network
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
       interval: 10s
@@ -243,6 +244,9 @@ networks:
   soofi-network:
     driver: bridge
     name: soofi-network
+  soofi-training-network:
+    driver: bridge
+    name: soofi-training-network
 
 # ===========================================
 # Volumes

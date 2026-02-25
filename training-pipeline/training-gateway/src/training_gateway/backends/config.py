@@ -39,9 +39,9 @@ def load_config() -> BackendConfig:
             "TRAINING_IMAGE_VERSION", "latest"
         ),
         gpu_device=os.getenv("TRAINING_GPU_DEVICE", "all"),
-        container_network=os.getenv(
-            "TRAINING_CONTAINER_NETWORK", "soofi-trainer_soofi-network"
-        ),
+        container_network="soofi-training-network",  #os.getenv(
+        #    "TRAINING_CONTAINER_NETWORK", "soofi-trainer_soofi-network"
+        #),
         gateway_url=os.getenv(
             "TRAINING_GATEWAY_URL", "http://training-gateway:8000/webhooks"
         ),
