@@ -6,7 +6,9 @@ An agentic system that guides users through the LLM specialization process — f
 
 | Service | URL | Description |
 |---------|-----|-------------|
+| Soofi UI | http://localhost:3001 | A2UI chat frontend |
 | Open WebUI | http://localhost:3000 | Chat interface |
+| Interaction Agent | docker-internal (interaction-agent:8000) | Mock AG-UI backend |
 | Vector MCP | docker-internal (vector-mcp:8000) | Knowledge base search |
 | MCP Inspector | http://localhost:6274 | MCP debugging tool |
 | Weaviate | http://localhost:8070 | Vector database |
@@ -39,8 +41,23 @@ EOF
 
 ### 3. Open the UI
 
-- **Chat**: http://localhost:3000
+- **Soofi UI (A2UI)**: http://localhost:3001
+- **Chat (Open WebUI)**: http://localhost:3000
 - **MCP Inspector**: http://localhost:6274/?transport=streamable-http&serverUrl=http://vector-mcp:8000/mcp/&MCP_PROXY_AUTH_TOKEN=dev-stack-token-12345
+
+### 4. Try the Soofi UI
+
+The Soofi UI (http://localhost:3001) uses a mock agent with keyword-based responses. Try these prompts:
+
+| Prompt | Response |
+|--------|----------|
+| "Hallo" | Greeting with available commands |
+| "Zeig mir den MCP Inspector" | Link card to MCP Inspector (semantic search tools) |
+| "Zeig mir N8N" / "Workflows" | Link card to N8N workflow automation |
+| "Welche Methoden gibt es?" | Method recommendation cards (RAG, LoRA, QLoRA) |
+| "RAG auswählen" | Confirmation |
+
+Keywords are matched loosely — "Inspektor", "Vektordatenbank", "Automatisierung", "Empfiehl mir was" etc. all work.
 
 ### Stop the stack
 
@@ -79,7 +96,12 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 | `MCPINSPECTOR_VERSION` | `0.18.0` | MCP Inspector Image version |
 | `MCPINSPECTOR_CLIENT_PORT` | `6274` | MCP Inspector UI port |
 | `MCPINSPECTOR_PROXY_PORT` | `6277` | MCP Inspector proxy port |
+<<<<<<< HEAD
 | `MCP_AUTH_TOKEN` | `dev-stack-token-12345` | MCP Auth token |
+=======
+| `EMBEDDING_MODEL` | `openai:text-embedding-3-large` | Embedding model (provider:model) |
+>>>>>>> 85350bd71802d15294829821d7e94fbf76e7de25
+| `SOOFI_UI_PORT` | `3001` | Soofi UI (A2UI frontend) port |
 | `OPENWEBUI_VERSION` | `v0.7.2` | Open WebUI Image version|
 | `OPENWEBUI_PORT` | `3000` | Open WebUI port |
 | `POSTGRES_VERSION` | `18-alpine` | PostgreSQL Image version |
@@ -106,7 +128,15 @@ soofi-trainer/
 │   ├── src/vector_mcp/     # Python source
 │   ├── Dockerfile
 │   └── pyproject.toml
-├── n8n/                   
+├── soofi-ui/              # A2UI Lit frontend (local build)
+│   ├── src/               # TypeScript source (Lit components)
+│   ├── Dockerfile
+│   └── package.json
+├── interaction-agent/     # Mock AG-UI backend (local build)
+│   ├── src/               # Python source (FastAPI)
+│   ├── Dockerfile
+│   └── pyproject.toml
+├── n8n/
 │   ├── initdb/     
 │   ├── workflows/
 │   ├── import_workflows.sh
