@@ -4,7 +4,7 @@ import asyncio
 import json
 import os
 import uuid
-from typing import AsyncGenerator
+from typing import Any, AsyncGenerator
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,7 +23,7 @@ app.add_middleware(
 # A2UI surface helpers
 # ---------------------------------------------------------------------------
 
-GREETING_SURFACE: list[dict] = [
+GREETING_SURFACE: list[dict[str, Any]] = [
     {
         "surfaceUpdate": {
             "surfaceId": "main",
@@ -76,7 +76,7 @@ GREETING_SURFACE: list[dict] = [
     {"beginRendering": {"surfaceId": "main", "root": "root"}},
 ]
 
-METHOD_SURFACE: list[dict] = [
+METHOD_SURFACE: list[dict[str, Any]] = [
     {
         "surfaceUpdate": {
             "surfaceId": "main",
@@ -307,7 +307,7 @@ METHOD_SURFACE: list[dict] = [
 # ---------------------------------------------------------------------------
 
 
-def _dashboard_surface(url: str, title: str, description: str) -> list[dict]:
+def _dashboard_surface(url: str, title: str, description: str) -> list[dict[str, Any]]:
     """Create an A2UI surface with a DashboardEmbed component (rendered as link card)."""
     return [
         {
@@ -341,7 +341,7 @@ def _dashboard_surface(url: str, title: str, description: str) -> list[dict]:
     ]
 
 
-CONFIRMATION_SURFACE: list[dict] = [
+CONFIRMATION_SURFACE: list[dict[str, Any]] = [
     {
         "surfaceUpdate": {
             "surfaceId": "main",
@@ -449,7 +449,7 @@ N8N_DESC = (
 )
 
 
-def _choose_response(message: str) -> tuple[str, list[dict]]:
+def _choose_response(message: str) -> tuple[str, list[dict[str, Any]]]:
     """Pick a demo response based on simple keyword matching."""
     lower = message.lower()
 
@@ -526,7 +526,7 @@ async def _stream_ag_ui_events(
     yield _sse({"type": "RUN_FINISHED", "threadId": thread_id, "runId": run_id})
 
 
-def _sse(event: dict) -> str:
+def _sse(event: dict[str, Any]) -> str:
     return f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
 
 
@@ -558,5 +558,5 @@ async def agent_endpoint(request: Request) -> StreamingResponse:
 
 
 @app.get("/health")
-async def health() -> dict:
+async def health() -> dict[str, str]:
     return {"status": "ok"}
