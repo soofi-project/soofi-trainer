@@ -66,7 +66,7 @@ def get_client() -> weaviate.WeaviateClient:
         host = os.getenv("WEAVIATE_HOST")
         port_str = os.getenv("WEAVIATE_PORT")
 
-        logger.info(f"Connecting to Weaviate at {scheme}://{host}:{port}")
+        logger.info(f"Connecting to Weaviate at {scheme}://{host}:{port_str}")
 
         if not scheme:
             raise RuntimeError("WEAVIATE_SCHEME env var required.")
@@ -222,10 +222,12 @@ def list_metadata() -> dict[str, Any]:
 # -------------------------------------------------
 if __name__ == "__main__":
     app = mcp.http_app()
-    port = int(os.getenv("MCP_SERVER_PORT"))
+    port_str = os.getenv("MCP_SERVER_PORT")
 
-    if not port:
+    if not port_str:
         raise RuntimeError("MCP_SERVER_PORT env var required.")
+
+    port = int(port_str)
 
     uvicorn.run(
         app,
