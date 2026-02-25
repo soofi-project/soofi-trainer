@@ -265,6 +265,48 @@ services:
     networks:
       - soofi-network
 
+  # ===========================================
+  # Training Gateway - Training Job Management
+  # ===========================================
+  training-gateway:
+    build: ./training-pipeline/training-gateway
+    container_name: training-gateway
+    restart: unless-stopped
+    ports:
+      - "${TRAINING_GATEWAY_PORT}:8000"
+    env_file:
+      - .env
+    environment:
+      # Internal values — not user-configurable
+      - TRAINING_GATEWAY_URL=http://training-gateway:8000/webhooks
+      - TRAINING_CONTAINER_NETWORK=soofi-trainer_soofi-network
+    volumes:
+      - training_gateway_data:/data
+      # Mount Docker socket to allow starting training containers on the host daemon
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - soofi-network
+      - soofi-training-network
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      training-container:
+        condition: service_completed_successfully
+
+  # ===========================================
+  # Training Container (Build Target)
+  # Not started as part of the default stack — used only to build the image.
+  # up.sh automatically builds it on first run or when --build is passed.
+  # ===========================================
+  training-container:
+    build: ./training-pipeline/training-container
+    image: ${TRAINING_IMAGE_NAME}:${TRAINING_IMAGE_VERSION}
+    container_name: training-container
+    entrypoint: echo image ${TRAINING_IMAGE_NAME}:${TRAINING_IMAGE_VERSION} available
+
 # ===========================================
 # Networks
 # ===========================================
@@ -272,6 +314,9 @@ networks:
   soofi-network:
     driver: bridge
     name: soofi-network
+  soofi-training-network:
+    driver: bridge
+    name: soofi-training-network
 
 # ===========================================
 # Volumes
@@ -282,3 +327,4 @@ volumes:
   postgres_data:
   n8n_data:
   minio_data:
+  training_gateway_data:

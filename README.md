@@ -11,6 +11,7 @@ An agentic system that guides users through the LLM specialization process — f
 | Advisor | docker-internal (advisor:8000) | LangGraph LLM specialization advisor |
 | Interaction Agent | docker-internal (interaction-agent:8000) | Mock AG-UI backend |
 | Vector MCP | docker-internal (vector-mcp:8000) | Knowledge base search |
+| Training Gateway | docker-internal (training-gateway:8000) | Training job management |
 | MCP Inspector | http://localhost:6274 | MCP debugging tool |
 | Weaviate | http://localhost:8070 | Vector database |
 | N8N | http://localhost:5678 | Workflow Automation Platform |
@@ -43,8 +44,9 @@ EOF
 ### 3. Open the UI
 
 - **Soofi UI (A2UI)**: http://localhost:3001
-- **Chat (Open WebUI)**: http://localhost:3000
-- **MCP Inspector**: http://localhost:6274/?transport=streamable-http&serverUrl=http://vector-mcp:8000/mcp/&MCP_PROXY_AUTH_TOKEN=dev-stack-token-12345
+- **Chat**: http://localhost:3000
+- **Vector MCP Inspector**: http://localhost:6274/?transport=streamable-http&serverUrl=http://vector-mcp:8000/mcp/&MCP_PROXY_AUTH_TOKEN=dev-stack-token-12345
+- **Training MCP Inspector**: http://localhost:6274/?transport=streamable-http&serverUrl=http://training-gateway:8000/mcp/&MCP_PROXY_AUTH_TOKEN=dev-stack-token-12345
 
 ### 4. Try the Soofi UI
 
@@ -76,8 +78,12 @@ The stack uses named Docker volumes (prefixed with `soofi-trainer_`):
 | `soofi-trainer_weaviate_data` | Weaviate vector database |
 | `soofi-trainer_open_webui_data` | Open WebUI settings & chat history |
 | `soofi-trainer_minio_data` | MinIO object storage |
+<<<<<<< README.md
+| `soofi-trainer_training_gateway_data` | Training Gateway job state (SQLite) |
+=======
 | `soofi-trainer_postgres_data` | N8N PostgreSQL database |
 | `soofi-trainer_n8n_data` | N8N encryption keys & config |
+>>>>>>> README.md
 
 To delete a single volume (containers must be stopped):
 
@@ -118,6 +124,11 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 | `MINIO_PORT` | `9000` | MinIO API port |
 | `MINIO_CONSOLE_PORT` | `9001` | MinIO Console UI port |
 | `KNOWLEDGE_BASE_URL` | `http://localhost:9000/knowledge` | Base URL for knowledge source links |
+| `TRAINING_BACKEND` | `local` | Training backend: `local` (subprocess) or `docker` (Docker API) |
+| `TRAINING_DOCKER_HOST` | _(unset)_ | Remote Docker API URL — leave unset to use the local socket |
+| `TRAINING_IMAGE` | `soofi-trainer-dummy-training:latest` | Docker image for training containers |
+| `TRAINING_GPU_DEVICE` | `all` | GPU device ID (`all` or e.g. `0`) |
+| `TRAINING_DEFAULT_DURATION` | `120` | Default simulation duration in seconds |
 
 ## Project Structure
 
@@ -133,6 +144,17 @@ soofi-trainer/
 │   ├── src/vector_mcp/     # Python source
 │   ├── Dockerfile
 │   └── pyproject.toml
+<<<<<<< README.md
+├── training-pipeline/      # Training infrastructure
+│   ├── training-gateway/   # Training Gateway MCP server
+│   │   ├── src/training_gateway/
+│   │   ├── tests/          # Pytest test suite (unit, integration, e2e)
+│   │   ├── Dockerfile
+│   │   └── pyproject.toml
+│   └── training-container/ # Training simulator
+│       ├── simulate.py
+│       └── Dockerfile
+=======
 ├── soofi-ui/              # A2UI Lit frontend (local build)
 │   ├── src/               # TypeScript source (Lit components)
 │   ├── Dockerfile
@@ -141,6 +163,7 @@ soofi-trainer/
 │   ├── src/               # Python source (FastAPI)
 │   ├── Dockerfile
 │   └── pyproject.toml
+>>>>>>> README.md
 ├── n8n/
 │   ├── initdb/
 │   ├── workflows/
@@ -158,10 +181,17 @@ soofi-trainer/
 
 ## MCP Tools
 
-The Vector MCP server exposes two tools:
+### Vector MCP
 
 - **`search_documents`** — Semantic search over the knowledge base, with optional metadata filters
 - **`list_metadata`** — Discover available metadata fields and values for filtering
+
+### Training Gateway
+
+- **`start_training_job`** — Start a training job for a given specialization method
+- **`get_job_status`** — Get current status, phases, and progress of a training job
+- **`list_training_jobs`** — List all training jobs, optionally filtered by status
+- **`cancel_training_job`** — Cancel a running or queued training job
 
 ### Knowledge base
 
@@ -174,6 +204,43 @@ To re-run ingestion after editing documents:
 ```bash
 docker compose up knowledge-ingestion
 ```
+
+## Training Backend
+
+The Training Gateway supports two backends, configured via `TRAINING_BACKEND` in `.env`.
+
+### Local backend (default)
+
+Runs the training script as a subprocess on the gateway container. No Docker access needed. Useful for development.
+
+```env
+TRAINING_BACKEND=local
+```
+
+### Docker backend — same host
+
+Starts training containers on the same Docker daemon that runs the stack. The gateway container accesses the Docker socket via a volume mount (already configured in `docker-compose.yml`).
+
+```env
+TRAINING_BACKEND=docker
+# TRAINING_DOCKER_HOST is left unset — uses /var/run/docker.sock
+TRAINING_IMAGE=soofi-trainer-training-container:latest
+```
+
+Training containers are started as siblings on `soofi-trainer_soofi-network` and call back to `http://training-gateway:8000/webhooks` when done.
+
+### Docker backend — remote host (GPU server)
+
+Points the gateway to a remote Docker daemon, e.g. the H200 GPU server, via SSH or TCP.
+
+```env
+TRAINING_BACKEND=docker
+TRAINING_DOCKER_HOST=ssh://user@gpu-server
+# or: TRAINING_DOCKER_HOST=tcp://gpu-server:2376
+TRAINING_IMAGE=soofi/training-container:latest
+```
+
+> **Note:** For SSH, the gateway container needs the SSH private key mounted and `ssh-agent` or `~/.ssh/config` configured.
 
 ## N8N
 
