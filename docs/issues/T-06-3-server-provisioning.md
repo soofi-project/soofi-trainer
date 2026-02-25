@@ -6,7 +6,8 @@
 
 **Server Provisioning Playbooks**
 
-Create the Ansible playbooks that configure a bare GPU server from scratch. This task uses the Ansible setup from [T-06-2](T-06-2-ansible-setup.md) and writes the actual provisioning logic.
+Create the Ansible playbooks that configure a bare GPU server from scratch. This task uses the Ansible
+setup from [T-06-2](T-06-2-ansible-setup.md) and writes the actual provisioning logic.
 
 Repository: [soofi-inference-server](https://mrk40.dfki.de/soofi/soofi-inference-server)
 
@@ -22,6 +23,7 @@ Repository: [soofi-inference-server](https://mrk40.dfki.de/soofi/soofi-inference
 - `nvidia-driver-590-server` — skipped if `nvidia-smi` already works (idempotent precheck)
 - NVIDIA Container Toolkit + `nvidia-ctk runtime configure --runtime=docker`
 - CUDA Toolkit optional via `install_cuda_toolkit` variable (not needed for Docker workloads)
+- `nvidia-persistenced` enabled for reduced GPU initialization latency
 
 ### 3. Docker (`docker_setup.yaml`)
 - Docker Engine + Compose plugin (skip if already installed)
@@ -31,15 +33,17 @@ Repository: [soofi-inference-server](https://mrk40.dfki.de/soofi/soofi-inference
 ### 4. Triton Deployment (`triton_deploy.yaml`)
 - Deploys docker-compose.yml, litellm-config.yaml, triton-start.sh
 - Templates `.env` from `triton.env.j2` with vault secrets
-- **Model config from single source**: `model_name` + `triton_model_name` in `group_vars/gpu_nodes/vars.yaml`
-  drive both `config.pbtxt` and `model.json` via Jinja2 templates — no hardcoded values anywhere
+- **Model config from single source**: `models` list in `group_vars/gpu_nodes/vars.yaml`
+  drives both `config.pbtxt` and `model.json` via Jinja2 templates — no hardcoded values anywhere
+- **Automatic cleanup**: removes config directories for models no longer in `vars.yaml`
 - **Explicit model pre-download**: `huggingface-cli download` runs inside the Triton container before
   `docker compose up`, so the health check is not blocked by a multi-hour initial download
-- Health check: `/v2/health/ready` (retries: 40 x 30s after 300s grace period = up to 25 min)
+- Health check: `/v2/health/ready` (retries: 40 x 30s = up to 20 min)
+- Final verification: queries `/v1/models` to confirm deployed models
 
 ### 5. Triton Startup (`docker/triton-start.sh`)
 - Locates the OpenAI-compatible frontend in the Triton image at runtime
-- Starts Triton with `--enable-kserve-frontends`: KServe V2 on port 8000 (LiteLLM) + OpenAI API on port 9000 (direct clients)
+- Starts Triton with KServe V2 on port 8000 + OpenAI API on port 9000
 - Falls back to plain `tritonserver` if the frontend is not found
 
 ## Secrets & Configuration

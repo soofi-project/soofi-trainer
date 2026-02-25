@@ -31,11 +31,16 @@ OpenAI frontend (port 9000) does this natively — LiteLLM is no longer needed.
 ### `ansible/inventory/group_vars/gpu_nodes/vault.yaml`
 - Remove `litellm_master_key` from the vault:
   ```
-  docker compose exec -it ansible ansible-vault edit ansible/inventory/group_vars/gpu_nodes/vault.yaml
+  ./scripts/edit-vault.sh
   ```
 
 ### `ansible/playbooks/triton_deploy.yaml`
 - Remove the "Copy litellm-config.yaml" task
+
+### `models/model_repository/mistral-7b-awq/`
+- Remove the static example config — Ansible generates all model configs from templates
+- `config.pbtxt` should be minimal: just `backend: "vllm"` + `instance_group [{kind: KIND_MODEL}]`
+- All vLLM parameters belong in `model.json`, not in the `parameters` block of `config.pbtxt`
 
 ## Remove Open WebUI
 
@@ -96,38 +101,13 @@ incomplete:
 | 8002 | Triton Metrics (Prometheus) |
 | 9000 | Triton OpenAI-compatible API — the only external endpoint |
 
-## Upgrade Triton + NVIDIA Driver
-
-Currently blocked on driver version. Triton 25.01 is used as a workaround.
-
-### NVIDIA Driver
-
-`ansible/playbooks/nvidia_setup.yaml` currently installs `nvidia-driver-580-server`.
-The skip condition (`when: nvidia_smi_precheck.rc != 0`) prevents upgrades if any driver is
-already present — this needs to be reworked for the upgrade.
-
-1. Schedule a maintenance window (requires server reboot)
-2. In `nvidia_setup.yaml`: change `nvidia-driver-580-server` → `nvidia-driver-590-server`
-   (or newer) and remove or adjust the skip condition
-3. In `vars.yaml` + `docker/.env`: update `triton_image` to `26.01-vllm-python-py3`
-
-### Triton Image
-
-After the driver upgrade:
-- `vars.yaml`: `triton_image: nvcr.io/nvidia/tritonserver:26.01-vllm-python-py3`
-- `docker/.env`: same
-- `README.md`: mark 26.01 as current, remove the workaround note
-
-> Background: Triton 26.01 requires driver ≥ 590.48 (NVIDIA's release notes incorrectly state ≥ 580).
-> Forward Compatibility mode was UNAVAILABLE when starting vLLM — the container crashed silently.
-> Triton 25.01 (requires ≥ 570) works with the current 580 driver.
-
 ## Acceptance Criteria
 
 - [ ] LiteLLM service and config removed
 - [ ] Open WebUI service and volume removed
 - [ ] `litellm_master_key` removed from vault
 - [ ] `kubernetes/` directory deleted
+- [ ] Static model example (`mistral-7b-awq/`) cleaned up or removed
 - [ ] `docker-compose.yml` contains only the `triton` service
 - [ ] `docker-compose.dev.yml` adds Open WebUI for local testing
 - [ ] README updated: architecture diagram, port table, clean description

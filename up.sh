@@ -28,7 +28,7 @@ if [ -n "$BUILD_FLAG" ]; then
 else
     echo "[INFO] Starting containers..."
 fi
-docker compose up -d --wait $BUILD_FLAG
+docker compose up -d --wait --remove-orphans $BUILD_FLAG
 
 # Check container status
 echo ""
@@ -41,6 +41,7 @@ echo "========================================"
 echo "  Services are ready!"
 echo "========================================"
 echo ""
+echo "  Soofi UI:      http://localhost:${SOOFI_UI_PORT}"
 echo "  Open WebUI:          http://localhost:${OPENWEBUI_PORT}"
 echo "  Vector MCP Inspector:   http://localhost:${MCPINSPECTOR_CLIENT_PORT}/?transport=streamable-http&serverUrl=http://vector-mcp:8000/mcp/&MCP_PROXY_AUTH_TOKEN=${MCP_AUTH_TOKEN}"
 echo "  Training MCP Inspector: http://localhost:${MCPINSPECTOR_CLIENT_PORT}/?transport=streamable-http&serverUrl=http://training-gateway:8000/mcp/&MCP_PROXY_AUTH_TOKEN=${MCP_AUTH_TOKEN}"

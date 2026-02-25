@@ -6,7 +6,10 @@ An agentic system that guides users through the LLM specialization process — f
 
 | Service | URL | Description |
 |---------|-----|-------------|
+| Soofi UI | http://localhost:3001 | A2UI chat frontend |
 | Open WebUI | http://localhost:3000 | Chat interface |
+| Advisor | docker-internal (advisor:8000) | LangGraph LLM specialization advisor |
+| Interaction Agent | docker-internal (interaction-agent:8000) | Mock AG-UI backend |
 | Vector MCP | docker-internal (vector-mcp:8000) | Knowledge base search |
 | Training Gateway | docker-internal (training-gateway:8000) | Training job management |
 | MCP Inspector | http://localhost:6274 | MCP debugging tool |
@@ -40,9 +43,24 @@ EOF
 
 ### 3. Open the UI
 
+- **Soofi UI (A2UI)**: http://localhost:3001
 - **Chat**: http://localhost:3000
 - **Vector MCP Inspector**: http://localhost:6274/?transport=streamable-http&serverUrl=http://vector-mcp:8000/mcp/&MCP_PROXY_AUTH_TOKEN=dev-stack-token-12345
 - **Training MCP Inspector**: http://localhost:6274/?transport=streamable-http&serverUrl=http://training-gateway:8000/mcp/&MCP_PROXY_AUTH_TOKEN=dev-stack-token-12345
+
+### 4. Try the Soofi UI
+
+The Soofi UI (http://localhost:3001) uses a mock agent with keyword-based responses. Try these prompts:
+
+| Prompt | Response |
+|--------|----------|
+| "Hallo" | Greeting with available commands |
+| "Zeig mir den MCP Inspector" | Link card to MCP Inspector (semantic search tools) |
+| "Zeig mir N8N" / "Workflows" | Link card to N8N workflow automation |
+| "Welche Methoden gibt es?" | Method recommendation cards (RAG, LoRA, QLoRA) |
+| "RAG auswählen" | Confirmation |
+
+Keywords are matched loosely — "Inspektor", "Vektordatenbank", "Automatisierung", "Empfiehl mir was" etc. all work.
 
 ### Stop the stack
 
@@ -60,7 +78,12 @@ The stack uses named Docker volumes (prefixed with `soofi-trainer_`):
 | `soofi-trainer_weaviate_data` | Weaviate vector database |
 | `soofi-trainer_open_webui_data` | Open WebUI settings & chat history |
 | `soofi-trainer_minio_data` | MinIO object storage |
+<<<<<<< README.md
 | `soofi-trainer_training_gateway_data` | Training Gateway job state (SQLite) |
+=======
+| `soofi-trainer_postgres_data` | N8N PostgreSQL database |
+| `soofi-trainer_n8n_data` | N8N encryption keys & config |
+>>>>>>> README.md
 
 To delete a single volume (containers must be stopped):
 
@@ -79,10 +102,13 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 | `WEAVIATE_PORT` | `8070` | Weaviate HTTP port |
 | `WEAVIATE_COLLECTION` | `SoofiKnowledge` | Weaviate collection name |
 | `EMBEDDING_MODEL` | `openai:text-embedding-3-large` | Embedding model (provider:model) |
+| `ADVISOR_NAME` | `soofi-advisor` | Model name shown in Open WebUI |
+| `ADVISOR_MODEL` | `gpt-4o-mini` | LLM model for the advisor agent |
 | `MCPINSPECTOR_VERSION` | `0.18.0` | MCP Inspector Image version |
 | `MCPINSPECTOR_CLIENT_PORT` | `6274` | MCP Inspector UI port |
 | `MCPINSPECTOR_PROXY_PORT` | `6277` | MCP Inspector proxy port |
 | `MCP_AUTH_TOKEN` | `dev-stack-token-12345` | MCP Auth token |
+| `SOOFI_UI_PORT` | `3001` | Soofi UI (A2UI frontend) port |
 | `OPENWEBUI_VERSION` | `v0.7.2` | Open WebUI Image version|
 | `OPENWEBUI_PORT` | `3000` | Open WebUI port |
 | `POSTGRES_VERSION` | `18-alpine` | PostgreSQL Image version |
@@ -110,10 +136,15 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 soofi-trainer/
 ├── knowledge/              # Markdown knowledge documents + YAML metadata
 ├── knowledge-ingestion/    # One-shot ingestion container (local build)
+├── advisor/                # LangGraph advisor agent (local build)
+│   ├── src/               # Python source (LangGraph + FastAPI)
+│   ├── Dockerfile
+│   └── pyproject.toml
 ├── vector-mcp/             # Vector MCP server (local build)
 │   ├── src/vector_mcp/     # Python source
 │   ├── Dockerfile
 │   └── pyproject.toml
+<<<<<<< README.md
 ├── training-pipeline/      # Training infrastructure
 │   ├── training-gateway/   # Training Gateway MCP server
 │   │   ├── src/training_gateway/
@@ -123,6 +154,16 @@ soofi-trainer/
 │   └── training-container/ # Training simulator
 │       ├── simulate.py
 │       └── Dockerfile
+=======
+├── soofi-ui/              # A2UI Lit frontend (local build)
+│   ├── src/               # TypeScript source (Lit components)
+│   ├── Dockerfile
+│   └── package.json
+├── interaction-agent/     # Mock AG-UI backend (local build)
+│   ├── src/               # Python source (FastAPI)
+│   ├── Dockerfile
+│   └── pyproject.toml
+>>>>>>> README.md
 ├── n8n/
 │   ├── initdb/
 │   ├── workflows/
@@ -209,6 +250,12 @@ N8N starts without workflows. Execute the following to load all workflows from `
 ```bash
 ./n8n/import_workflows.sh
 ```
+
+### Set up credentials
+Workflows that use OpenAI (e.g. Advisor-Agent) need credentials. These are not exported with workflows and must be created manually:
+
+1. Go to **Settings → Credentials → Add Credential → OpenAI API**
+2. Set the API Key to `{{ $env.OPENAI_API_KEY }}` (pulls the key from the environment)
 
 ### Backup N8N DB
 Create a new database dump if the existing SQL cannot be imported anymore (e.g. due to N8N updates).

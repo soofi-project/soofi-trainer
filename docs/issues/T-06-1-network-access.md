@@ -6,34 +6,43 @@
 
 **Network Access & Connectivity**
 
-Ensure the GPU server in the data center is reachable from the Soofi Trainer development environment. This is a prerequisite for all other tasks in this user story.
+Ensure the GPU server in the data center is reachable from the development environment and ready for
+Ansible provisioning. This is a prerequisite for all other tasks in this user story.
 
 Repository: [soofi-inference-server](https://mrk40.dfki.de/soofi/soofi-inference-server)
 
 ## Scope
 
-- DNS entry for the GPU server (e.g. `triton.mrk40.dfki.de`)
-- Reverse proxy with TLS termination (HTTPS)
-- Firewall rules: allow HTTPS (443) from Trainer network, SSH (22) for Ansible
-- SSH access for Ansible provisioning ([T-06-2](T-06-2-ansible-setup.md) depends on this)
-- Connectivity test: verify Triton API is reachable via `https://triton.mrk40.dfki.de/v2/health/ready`
+### Data Center Access
 
-## Network Requirements
+The H200 server is located in the data center. Physical access is required to:
+- Boot the server and verify hardware (GPUs, storage, network)
+- Connect to the lab network
+- Ensure the server is reachable via VPN from outside
+
+### Network Connectivity
 
 | Port | Protocol | Purpose | Direction |
 |------|----------|---------|-----------|
-| 22 | TCP | SSH (Ansible provisioning) | Trainer → GPU Server |
-| 443 | TCP | HTTPS (Reverse proxy → Triton) | Trainer → GPU Server |
-| 8000 | TCP | Triton HTTP API (internal, behind proxy) | Reverse Proxy → Triton |
-| 8001 | TCP | Triton gRPC API (internal) | Internal only |
-| 8002 | TCP | Triton Metrics (internal) | Internal only |
+| 22 | TCP | SSH (Ansible provisioning) | Dev machine → GPU server |
+| 8000 | TCP | Triton KServe V2 HTTP | Clients → GPU server |
+| 8001 | TCP | Triton gRPC | Clients → GPU server |
+| 8002 | TCP | Triton Metrics (Prometheus) | Monitoring → GPU server |
+| 9000 | TCP | Triton OpenAI-compatible API | Clients → GPU server |
+
+Access is via VPN + direct IP (`10.2.10.33`). UFW firewall rules are managed by Ansible
+([T-06-3](T-06-3-server-provisioning.md), `os_setup.yaml`).
+
+### Optional: DNS & Reverse Proxy
+
+For production use, a DNS entry (e.g. `triton.mrk40.dfki.de`) with TLS termination via reverse
+proxy would be desirable but is not required for the current lab setup.
 
 ## Acceptance Criteria
 
-- [ ] GPU server has a DNS name (e.g. `triton.mrk40.dfki.de`)
-- [ ] Reverse proxy with TLS termination is configured
-- [ ] SSH access from development machine to GPU server works
-- [ ] Triton API reachable via HTTPS from the Trainer network
-- [ ] Connectivity verified: `curl https://triton.mrk40.dfki.de/v2/health/ready`
+- [x] SSH access from development machine to GPU server works
+- [x] GPU server reachable via VPN from outside the lab
+- [x] Triton ports (8000, 9000) accessible from the Trainer network
+- [ ] Server physically set up in the data center and connected to the lab network
 
 # Branches

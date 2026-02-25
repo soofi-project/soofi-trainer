@@ -6,25 +6,35 @@
 
 **Model Evaluation & Deployment on Triton**
 
-Evaluate, download, and deploy suitable models on the Triton inference server (H200 GPU). This covers both the chat model and the embedding model for the Soofi Trainer demo.
+Evaluate and deploy suitable models on the Triton inference server (2x H200 NVL, 282 GB VRAM total).
+This covers both the chat model and the embedding model for the Soofi Trainer.
 
 Repository: [soofi-inference-server](https://mrk40.dfki.de/soofi/soofi-inference-server)
 
 ## Chat Model
 
-Evaluate models for the conversational agent. Requirements:
-- German language capability (agent speaks German)
-- Instruction-following / chat format
-- Fits on a single H200 (80 GB VRAM)
-- Served via vLLM with OpenAI-compatible API
+Qwen 2.5 72B Instruct is currently deployed and running on both H200 GPUs via pipeline parallelism.
+This task should evaluate whether the model meets the quality requirements for the Soofi Trainer
+agent (German language, instruction following, tool use). If not, alternative models can be deployed
+by editing `vars.yaml` — Ansible handles download and configuration automatically.
 
-Candidates to evaluate:
-| Model | Size | Quantization | Notes |
-|-------|------|-------------|-------|
-| `mistralai/Mistral-7B-Instruct-v0.3` | 7B | AWQ | Lightweight, good baseline |
-| `mistralai/Mixtral-8x7B-Instruct-v0.1` | 8x7B | AWQ | MoE, strong multilingual |
-| `meta-llama/Llama-3.1-8B-Instruct` | 8B | AWQ | Strong instruction following |
-| `Qwen/Qwen2.5-7B-Instruct` | 7B | AWQ | Excellent multilingual |
+**Current deployment:**
+
+| Model | Size | GPUs | Parallelism | Status |
+|-------|------|------|-------------|--------|
+| `Qwen/Qwen2.5-72B-Instruct` | 72B | 2x H200 | pipeline (pp=2) | deployed |
+
+**Alternative candidates** (if Qwen 72B does not meet requirements):
+
+| Model | Size | Notes |
+|-------|------|-------|
+| `meta-llama/Llama-3.3-70B-Instruct` | 70B | Strong instruction following, tool use |
+| `mistralai/Mixtral-8x22B-Instruct-v0.1` | 8x22B | MoE, fits in 282 GB |
+| `Qwen/Qwen2.5-72B-Instruct-AWQ` | 72B | AWQ quantized, frees VRAM for second model |
+
+To deploy a different model, edit only `ansible/inventory/group_vars/gpu_nodes/vars.yaml` and
+re-run `./scripts/deploy.sh`. Ansible downloads the weights, generates `config.pbtxt` and
+`model.json` from templates, and restarts Triton.
 
 ## Embedding Model
 
@@ -34,6 +44,7 @@ Evaluate embedding models for semantic search over the German knowledge base. Re
 - Servable via Triton or accessible as OpenAI-compatible endpoint
 
 Candidates to evaluate:
+
 | Model | Dimensions | Multilingual | Notes |
 |-------|-----------|-------------|-------|
 | `intfloat/multilingual-e5-large` | 1024 | Yes | Strong multilingual retrieval |
@@ -41,21 +52,19 @@ Candidates to evaluate:
 | `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` | 384 | Yes | Lightweight, good German support |
 | `jinaai/jina-embeddings-v3` | 1024 | Yes | State-of-the-art multilingual |
 
-## Deployment Steps
+## Evaluation Steps
 
-1. **Select models**: Run benchmarks / qualitative tests to pick one chat and one embedding model
-2. **Download**: Use the existing `download-model.sh` script in soofi-inference-server
-3. **Configure**: Create or update `config.pbtxt` for each model in the Triton model repository
-4. **Verify**: Confirm models load on the H200 and respond correctly via the OpenAI-compatible API
-5. **Document**: Record chosen models, VRAM usage, and any quantization details
+1. **Chat model**: Test Qwen 72B qualitatively — German conversation, instruction following, tool use
+2. **Embedding model**: Select and deploy on Triton, evaluate retrieval quality on German knowledge base
+3. **Verify**: Confirm both models respond correctly via OpenAI-compatible API (`/v1/chat/completions`, `/v1/embeddings`)
+4. **Document**: Record chosen models, VRAM usage, and quality assessment
 
 ## Acceptance Criteria
 
-- [ ] Chat model selected and deployed on Triton (serves German conversation)
+- [ ] Chat model evaluated for German quality, instruction following, and tool use
 - [ ] Embedding model selected and deployed on Triton (multilingual, works with German text)
-- [ ] Models downloaded via `download-model.sh`
-- [ ] `config.pbtxt` configured for each model
-- [ ] Models verified working via OpenAI-compatible API endpoint
+- [ ] Both models verified working via OpenAI-compatible API
 - [ ] Model choices and rationale documented
+- [ ] VRAM usage documented (can both models coexist on 282 GB?)
 
 # Branches
