@@ -151,7 +151,7 @@ services:
     container_name: soofi-ui
     restart: unless-stopped
     ports:
-      - "${SOOFI_UI_PORT:-3001}:80"
+      - "${SOOFI_UI_PORT}:80"
     networks:
       - soofi-network
     depends_on:
