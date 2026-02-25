@@ -14,7 +14,8 @@ class BackendConfig:
 
     # Docker-specific
     docker_host: str | None
-    training_image: str
+    training_image_name: str
+    training_image_version: str
     gpu_device: str
     container_network: str
 
@@ -31,8 +32,11 @@ def load_config() -> BackendConfig:
     return BackendConfig(
         backend_type=os.getenv("TRAINING_BACKEND", "local"),
         docker_host=os.getenv("TRAINING_DOCKER_HOST"),
-        training_image=os.getenv(
-            "TRAINING_IMAGE", "soofi/training-container:latest"
+        training_image_name=os.getenv(
+            "TRAINING_IMAGE_NAME", "soofi/training-container"
+        ),
+        training_image_version=os.getenv(
+            "TRAINING_IMAGE_VERSION", "latest"
         ),
         gpu_device=os.getenv("TRAINING_GPU_DEVICE", "all"),
         container_network=os.getenv(

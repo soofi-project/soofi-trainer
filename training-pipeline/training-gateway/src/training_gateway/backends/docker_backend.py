@@ -58,7 +58,7 @@ class DockerBackend(TrainingBackend):
             cmd.extend(["--fail-probability", str(fail_prob)])
 
         container_config: dict[str, Any] = {
-            "Image": self._config.training_image,
+            "Image": self._config.training_image_name + ":" + self._config.training_image_version,
             "Cmd": cmd,
             "Labels": {
                 "soofi.job_id": job.id,

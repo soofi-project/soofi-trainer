@@ -221,6 +221,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    depends_on:
+      training-container:
+        condition: service_completed_successfully
 
   # ===========================================
   # Training Container (Build Target)
@@ -229,9 +232,9 @@ services:
   # ===========================================
   training-container:
     build: ./training-pipeline/training-container
-    image: soofi-trainer-dummy-training:latest
-    profiles:
-      - training  # excludes from default startup
+    image: ${TRAINING_IMAGE_NAME}:${TRAINING_IMAGE_VERSION}
+    container_name: training-container
+    entrypoint: echo image ${TRAINING_IMAGE_NAME}:${TRAINING_IMAGE_VERSION} available
 
 # ===========================================
 # Networks

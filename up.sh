@@ -22,13 +22,6 @@ if [ "$1" == "--build" ]; then
     BUILD_FLAG="--build"
 fi
 
-# Build training container image if needed (not started in stack, built separately)
-TRAINING_IMAGE_NAME="${TRAINING_IMAGE:-soofi-trainer-dummy-training:latest}"
-if [ -n "$BUILD_FLAG" ] || ! docker image inspect "$TRAINING_IMAGE_NAME" >/dev/null 2>&1; then
-    echo "[INFO] Building training container image ($TRAINING_IMAGE_NAME)..."
-    docker compose --profile training build training-container
-fi
-
 # Start containers (build only if --build passed)
 if [ -n "$BUILD_FLAG" ]; then
     echo "[INFO] Building and starting containers..."
