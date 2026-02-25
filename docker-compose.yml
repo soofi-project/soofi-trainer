@@ -155,7 +155,8 @@ services:
     networks:
       - soofi-network
     depends_on:
-      - interaction-agent
+      interaction-agent:
+        condition: service_healthy
 
   # ===========================================
   # Interaction Agent - Mock AG-UI Backend
@@ -169,6 +170,11 @@ services:
       - .env
     networks:
       - soofi-network
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket; s=socket.create_connection(('localhost',8000),2); s.close()\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # ===========================================
   # N8N
