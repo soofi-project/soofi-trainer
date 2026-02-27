@@ -1,0 +1,10 @@
+[project]
+name = "soofi-stt"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.133",
+    "uvicorn[standard]>=0.41",
+    "openai>=1.58,<2.0",
+    "python-multipart>=0.0.22",
+]

@@ -6,11 +6,13 @@ An agentic system that guides users through the LLM specialization process — f
 
 | Service | URL | Description |
 |---------|-----|-------------|
-| Soofi UI | http://localhost:3001 | A2UI chat frontend |
+| Soofi UI | http://localhost:3001 | A2UI chat frontend (Lit Web Components) |
 | Open WebUI | http://localhost:3000 | Chat interface |
-| Advisor | docker-internal (advisor:8000) | LangGraph LLM specialization advisor |
-| Interaction Agent | docker-internal (interaction-agent:8000) | Mock AG-UI backend |
-| Vector MCP | docker-internal (vector-mcp:8000) | Knowledge base search |
+| Interaction Agent | docker-internal (interaction-agent:8000) | LangGraph ReAct agent, AG-UI SSE, A2A orchestrator |
+| Advisor | docker-internal (advisor:8000) | LangGraph LLM specialization advisor (A2A) |
+| STT | http://localhost:8010 | Speech-to-text service (OpenAI Whisper-1) |
+| TTS | http://localhost:8011 | Text-to-speech service (OpenAI tts-1) |
+| Vector MCP | docker-internal (vector-mcp:8000) | Knowledge base search (MCP) |
 | MCP Inspector | http://localhost:6274 | MCP debugging tool |
 | Weaviate | http://localhost:8070 | Vector database |
 | N8N | http://localhost:5678 | Workflow Automation Platform |
@@ -48,17 +50,7 @@ EOF
 
 ### 4. Try the Soofi UI
 
-The Soofi UI (http://localhost:3001) uses a mock agent with keyword-based responses. Try these prompts:
-
-| Prompt | Response |
-|--------|----------|
-| "Hallo" | Greeting with available commands |
-| "Zeig mir den MCP Inspector" | Link card to MCP Inspector (semantic search tools) |
-| "Zeig mir N8N" / "Workflows" | Link card to N8N workflow automation |
-| "Welche Methoden gibt es?" | Method recommendation cards (RAG, LoRA, QLoRA) |
-| "RAG auswählen" | Confirmation |
-
-Keywords are matched loosely — "Inspektor", "Vektordatenbank", "Automatisierung", "Empfiehl mir was" etc. all work.
+Open http://localhost:3001 and ask the agent about LLM specialization methods (RAG, LoRA, QLoRA, SFT, DPO, …). Push-to-talk: hold **Space** to record, release to send. The agent searches the knowledge base and streams a spoken response.
 
 ### Stop the stack
 
@@ -118,6 +110,22 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 | `MINIO_PORT` | `9000` | MinIO API port |
 | `MINIO_CONSOLE_PORT` | `9001` | MinIO Console UI port |
 | `KNOWLEDGE_BASE_URL` | `http://localhost:9000/knowledge` | Base URL for knowledge source links |
+| `INTERACTION_MODEL` | `gpt-4o-mini` | LLM model for the interaction agent |
+| `STT_PROVIDER` | `openai` | STT provider (`openai`) |
+| `STT_LANGUAGE` | `de` | Whisper transcription language |
+| `STT_PORT` | `8010` | STT service external port |
+| `STT_VERSION` | `0.1.0` | STT service image version |
+| `WHISPER_PROMPT` | `RAG, LoRA, …` | Domain vocabulary bias for Whisper |
+| `TTS_PROVIDER` | `openai` | TTS provider (`openai`) |
+| `TTS_MODEL` | `tts-1` | OpenAI TTS model |
+| `TTS_VOICE` | `alloy` | OpenAI TTS voice |
+| `TTS_SPEED` | `1.3` | TTS playback speed |
+| `TTS_PORT` | `8011` | TTS service external port |
+| `TTS_VERSION` | `0.1.0` | TTS service image version |
+| `VITE_VOICE_CONTROLS_VISIBLE` | `true` | Show on-screen mic button ¹ |
+| `VITE_VOICE_ACTIVATION` | `push-to-talk` | Voice activation mode (`push-to-talk` \| `toggle`) ¹ |
+
+> ¹ These are Vite build args, not runtime environment variables. Changing them requires a rebuild (`./up.sh --build`).
 
 ## Project Structure
 
@@ -137,8 +145,16 @@ soofi-trainer/
 │   ├── src/               # TypeScript source (Lit components)
 │   ├── Dockerfile
 │   └── package.json
-├── interaction-agent/     # Mock AG-UI backend (local build)
-│   ├── src/               # Python source (FastAPI)
+├── interaction-agent/     # LangGraph ReAct agent, AG-UI SSE, A2A orchestrator (local build)
+│   ├── src/               # Python source (LangGraph + FastAPI)
+│   ├── Dockerfile
+│   └── pyproject.toml
+├── stt/                   # Speech-to-text service (local build)
+│   ├── src/               # Python source (FastAPI + OpenAI Whisper)
+│   ├── Dockerfile
+│   └── pyproject.toml
+├── tts/                   # Text-to-speech service (local build)
+│   ├── src/               # Python source (FastAPI + OpenAI tts-1)
 │   ├── Dockerfile
 │   └── pyproject.toml
 ├── n8n/

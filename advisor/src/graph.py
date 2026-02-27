@@ -5,6 +5,7 @@ import os
 
 from langchain_core.tools import BaseTool
 from langchain_openai import ChatOpenAI
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import MessagesState, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import ToolNode
@@ -54,4 +55,5 @@ def build_graph(tools: list[BaseTool]) -> CompiledStateGraph:
     )
     graph_builder.add_edge("tools", "agent")
 
-    return graph_builder.compile()
+    memory = MemorySaver()
+    return graph_builder.compile(checkpointer=memory)
