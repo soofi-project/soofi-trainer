@@ -1,4 +1,4 @@
-"""FastAPI server exposing an OpenAI-compatible chat completions API."""
+"""FastAPI server exposing an OpenAI-compatible chat completions API and A2A protocol."""
 
 import json
 import logging
@@ -8,12 +8,17 @@ import uuid
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
+from a2a.server.apps import A2AFastAPIApplication
+from a2a.server.request_handlers import DefaultRequestHandler
+from a2a.server.tasks import InMemoryTaskStore
+from a2a.types import AgentCapabilities, AgentCard, AgentSkill
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage
 from langgraph.graph.state import CompiledStateGraph
 
+from .a2a_handler import AdvisorAgentExecutor
 from .graph import build_graph
 from .tools import mcp_client
 
@@ -46,6 +51,40 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ---------------------------------------------------------------------------
+# A2A server (mounted as sub-app; graph is resolved lazily at request time)
+# ---------------------------------------------------------------------------
+
+agent_card = AgentCard(
+    name="Soofi Advisor",
+    description=(
+        "LLM specialization advisor — analyzes use cases and recommends "
+        "methods such as RAG, LoRA, or QLoRA (language: German)"
+    ),
+    url="http://advisor:8000/a2a/",
+    version="0.1.0",
+    capabilities=AgentCapabilities(streaming=True),
+    skills=[
+        AgentSkill(
+            id="llm_specialization",
+            name="LLM Specialization",
+            description=(
+                "Analyzes use cases and recommends "
+                "LLM specialization methods"
+            ),
+            tags=["llm", "rag", "lora", "fine-tuning"],
+        )
+    ],
+    default_input_modes=["text/plain"],
+    default_output_modes=["text/plain"],
+)
+
+_a2a_handler = DefaultRequestHandler(
+    agent_executor=AdvisorAgentExecutor(lambda: graph),
+    task_store=InMemoryTaskStore(),
+)
+app.mount("/a2a", A2AFastAPIApplication(agent_card, _a2a_handler).build())
 
 
 # ---------------------------------------------------------------------------
