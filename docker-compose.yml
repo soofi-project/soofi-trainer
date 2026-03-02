@@ -5,6 +5,9 @@ name: soofi-trainer
 include:
   - ./edc-dev-stack/docker-compose-edc.yaml
   - ./edc-dev-stack/docker-compose-mcp.yaml
+  - ./edc-dev-stack/docker-compose-flowise.yaml
+  - ./edc-dev-stack/docker-compose-aas.yaml
+
 services:
   # ===========================================
   # Weaviate - Vector Database
