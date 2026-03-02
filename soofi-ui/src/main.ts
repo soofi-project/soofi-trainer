@@ -610,6 +610,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
         const input = this.shadowRoot?.querySelector<HTMLInputElement>(".input-bar input");
         input?.focus();
       }
+      this._voiceSession = false;
     }
   }
 
@@ -847,7 +848,6 @@ class SoofiChat extends SignalWatcher(LitElement) {
       this.messages = msgs;
     } finally {
       this.streaming = false;
-      this._voiceSession = false;
     }
   }
 
