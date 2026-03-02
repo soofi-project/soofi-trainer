@@ -1,5 +1,6 @@
 """A2A AgentExecutor that delegates to the LangGraph advisor graph."""
 
+import json
 import logging
 from typing import Callable
 
@@ -11,6 +12,10 @@ from langchain_core.messages import AIMessageChunk, HumanMessage
 from langgraph.graph.state import CompiledStateGraph
 
 logger = logging.getLogger(__name__)
+
+# Protocol constants for the soofi event envelope shared with interaction-agent/graph.py
+_SOOFI_EVENT_KEY = "__soofi_event"
+_EVENT_SEARCH_STATUS = "search_status"
 
 
 class AdvisorAgentExecutor(AgentExecutor):
@@ -84,7 +89,26 @@ class AdvisorAgentExecutor(AgentExecutor):
                 version="v2",
                 config=config,
             ):
-                if event["event"] == "on_chat_model_stream":
+                if event["event"] == "on_tool_start" and "search_documents" in event.get("name", ""):
+                    status_json = json.dumps(
+                        {_SOOFI_EVENT_KEY: _EVENT_SEARCH_STATUS, "text": "Suche in der Wissensdatenbank"},
+                        ensure_ascii=False,
+                    )
+                    await event_queue.enqueue_event(
+                        TaskStatusUpdateEvent(
+                            task_id=context.task_id,
+                            context_id=context.context_id,
+                            status=TaskStatus(
+                                state=TaskState.working,
+                                message=new_agent_text_message(
+                                    status_json, context.context_id, context.task_id
+                                ),
+                            ),
+                            final=False,
+                        )
+                    )
+
+                elif event["event"] == "on_chat_model_stream":
                     chunk = event["data"]["chunk"]
                     if isinstance(chunk, AIMessageChunk) and chunk.content:
                         collected.append(chunk.content)

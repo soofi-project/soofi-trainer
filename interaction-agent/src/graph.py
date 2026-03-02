@@ -15,6 +15,12 @@ from langgraph.prebuilt import ToolNode
 from .a2a_client import ask_advisor as _ask_advisor
 from .a2a_client import stream_advisor as _stream_advisor
 from .a2ui_surfaces import mcp_inspector_surface, n8n_surface
+from .constants import (
+    ADVISOR_KEY_CHUNK,
+    ADVISOR_KEY_SEARCH_STATUS,
+    SOOFI_EVENT_KEY,
+    SOOFI_EVENT_SEARCH_STATUS,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -68,8 +74,18 @@ async def ask_advisor_tool(question: str) -> str:
     full_text = ""
 
     async for chunk in _stream_advisor(question, context_id=ctx_id):
-        full_text += chunk
-        write({"advisor_chunk": chunk})
+        # Detect special event envelopes from the advisor
+        try:
+            parsed = json.loads(chunk)
+            event_type = parsed.get(SOOFI_EVENT_KEY) if isinstance(parsed, dict) else None
+        except (json.JSONDecodeError, ValueError):
+            event_type = None
+
+        if event_type == SOOFI_EVENT_SEARCH_STATUS:
+            write({ADVISOR_KEY_SEARCH_STATUS: parsed["text"]})
+        else:
+            full_text += chunk
+            write({ADVISOR_KEY_CHUNK: chunk})
 
     # Fallback to blocking call if streaming yielded nothing
     if not full_text:

@@ -8,12 +8,7 @@ from openai import AsyncOpenAI
 
 STT_PROVIDER = os.getenv("STT_PROVIDER", "openai")
 STT_LANGUAGE = os.getenv("STT_LANGUAGE", "de")
-WHISPER_PROMPT = os.getenv(
-    "WHISPER_PROMPT",
-    "RAG, Retrieval-Augmented Generation, LoRA, QLoRA, SFT, DPO, Fine-Tuning, LLM, "
-    "DFKI, Soofi, LangGraph, Weaviate, Embedding, Wissensdatenbank, Sprachmodell, "
-    "FastAPI, Python, Transformer, Tokenizer, Inferenz, Quantisierung.",
-)
+WHISPER_PROMPT = os.getenv("WHISPER_PROMPT", "")
 
 _client: AsyncOpenAI | None = None
 
