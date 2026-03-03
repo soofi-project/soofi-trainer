@@ -18,6 +18,8 @@ from fastapi.responses import StreamingResponse
 from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage
 from langgraph.graph.state import CompiledStateGraph
 
+from langchain_mcp_adapters.tools import load_mcp_tools
+
 from .a2a_handler import AdvisorAgentExecutor
 from .graph import build_graph
 from .tools import mcp_client
@@ -37,10 +39,11 @@ graph: CompiledStateGraph | None = None
 async def lifespan(app: FastAPI):
     """Load MCP tools and build the graph on startup."""
     global graph
-    tools = await mcp_client.get_tools()
-    logger.info(f"Loaded {len(tools)} MCP tools: {[t.name for t in tools]}")
-    graph = build_graph(tools)
-    yield
+    async with mcp_client.session("knowledge") as session:
+        tools = await load_mcp_tools(session)
+        logger.info(f"Loaded {len(tools)} MCP tools: {[t.name for t in tools]}")
+        graph = build_graph(tools)
+        yield
 
 
 app = FastAPI(title="Soofi Advisor", lifespan=lifespan)

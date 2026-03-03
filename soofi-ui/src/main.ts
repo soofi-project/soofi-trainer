@@ -11,6 +11,9 @@ import * as UI from "@a2ui/lit/ui";
 // Import side-effects: registers all <a2ui-*> custom elements
 import "@a2ui/lit/ui";
 
+import "./components/agent-flow.js";
+import type { FlowState } from "./components/agent-flow.js";
+
 // Configure marked: synchronous, open links in new tab
 marked.use({
   async: false,
@@ -432,6 +435,8 @@ class SoofiChat extends SignalWatcher(LitElement) {
   @state() private isRecording = false;
   @state() private searching = false;
   @state() private searchStatusLabel = "";
+  @state() private flowState: FlowState = "idle";
+  private _flowTimer: ReturnType<typeof setTimeout> | null = null;
 
   // Stable session ID for advisor conversation memory (persists across messages)
   private sessionId = crypto.randomUUID();
@@ -528,6 +533,8 @@ class SoofiChat extends SignalWatcher(LitElement) {
             `
           : nothing}
       </div>
+
+      <soofi-agent-flow .flowState=${this.flowState}></soofi-agent-flow>
 
       ${this.searching
         ? html`
@@ -870,17 +877,28 @@ class SoofiChat extends SignalWatcher(LitElement) {
         break;
 
       case "TOOL_CALL_START":
+        if (this._flowTimer) clearTimeout(this._flowTimer);
         this.searching = true;
         this.searchStatusLabel = "";
+        this.flowState = "asking-advisor";
         break;
 
       case "TOOL_CALL_END":
         this.searching = false;
         this.searchStatusLabel = "";
+        if (this._flowTimer) clearTimeout(this._flowTimer);
+        this.flowState = "mcp-returning";
+        this._flowTimer = setTimeout(() => {
+          this.flowState = "a2a-returning";
+          this._flowTimer = setTimeout(() => {
+            this.flowState = "idle";
+          }, 900);
+        }, 900);
         break;
 
       case "SEARCH_STATUS":
         this.searchStatusLabel = (event.label as string) || "";
+        this.flowState = "searching";
         break;
 
       case "SPEECH_TEXT":
@@ -891,6 +909,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
         this.currentMsgId = null;
         this.searching = false;
         break;
+
 
       case "RUN_FINISHED":
         this.searching = false;
@@ -918,7 +937,6 @@ class SoofiChat extends SignalWatcher(LitElement) {
         break;
       }
 
-      // RUN_STARTED — no UI action needed
     }
   }
 

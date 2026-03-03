@@ -40,8 +40,9 @@ Gesprächsverlauf, du kannst Folgefragen direkt weiterleiten.
 - **show_dashboard**: Zeigt Link-Karten (z.B. MCP Inspector, N8N).
 
 ## Ablauf
-1. Begrüße den Nutzer einmalig und frage nach seinem Anwendungsfall.
-2. Bei Fachfragen oder Anwendungsbeschreibungen: SOFORT ask_advisor_tool aufrufen.
+1. Enthält die Nachricht eine Fachfrage oder ein Thema (z.B. LoRA, RAG, Fine-Tuning): \
+SOFORT ask_advisor_tool aufrufen — auch beim allerersten Satz, auch mit Begrüßung.
+2. Nur reine Begrüßung ohne Thema → einmalig begrüßen und nach dem Anwendungsfall fragen.
 3. Die Antwort von ask_advisor_tool DIREKT und VOLLSTÄNDIG an den Nutzer weitergeben. \
 NICHT umformulieren, NICHT zusammenfassen, NICHT kürzen. Die Antwort ist bereits \
 für den Nutzer geschrieben. Gib sie 1:1 aus — inklusive Quellen-Abschnitt.
@@ -50,7 +51,6 @@ für den Nutzer geschrieben. Gib sie 1:1 aus — inklusive Quellen-Abschnitt.
 
 ## Regeln
 - Deutsch. Nur einmal begrüßen.
-- Kein Anwendungsfall bekannt → zuerst nachfragen, nicht erfinden.
 - Dashboard-Links nur auf Anfrage (z.B. "Zeig mir den MCP Inspector").
 """
 
