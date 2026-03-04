@@ -23,6 +23,15 @@ marked.use({
 });
 
 // ---------------------------------------------------------------------------
+// Voice config — baked in at build time via Vite (VITE_VOICE_* in .env)
+// ---------------------------------------------------------------------------
+
+const voiceControlsVisible: boolean =
+  import.meta.env.VITE_VOICE_CONTROLS_VISIBLE !== "false";
+const voiceActivation: "push-to-talk" | "toggle" =
+  import.meta.env.VITE_VOICE_ACTIVATION === "toggle" ? "toggle" : "push-to-talk";
+
+// ---------------------------------------------------------------------------
 // AG-UI event types we handle (text streaming layer)
 // ---------------------------------------------------------------------------
 
@@ -293,6 +302,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
       padding: 12px 24px;
       background: var(--color-surface, #fff);
       border-top: 1px solid var(--color-border, #dadce0);
+      align-items: center;
     }
     .input-bar input {
       flex: 1;
@@ -306,7 +316,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
     .input-bar input:focus {
       border-color: var(--color-primary, #1a73e8);
     }
-    .input-bar button {
+    .input-bar button.send-btn {
       padding: 10px 20px;
       font-size: 15px;
       font-family: inherit;
@@ -316,12 +326,81 @@ class SoofiChat extends SignalWatcher(LitElement) {
       border-radius: 24px;
       cursor: pointer;
     }
-    .input-bar button:hover {
+    .input-bar button.send-btn:hover {
       background: var(--color-primary-hover, #1557b0);
     }
-    .input-bar button:disabled {
+    .input-bar button.send-btn:disabled {
       opacity: 0.5;
       cursor: not-allowed;
+    }
+
+    /* Searching status bar */
+    .searching-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 24px;
+      background: var(--color-surface, #fff);
+      border-top: 1px solid var(--color-border, #dadce0);
+      color: var(--color-text-secondary, #5f6368);
+      font-size: 14px;
+    }
+    .searching-bar__dots span {
+      animation: dot-blink 1.2s infinite;
+      opacity: 0;
+    }
+    .searching-bar__dots span:nth-child(2) { animation-delay: 0.2s; }
+    .searching-bar__dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes dot-blink {
+      0%, 80%, 100% { opacity: 0; }
+      40%            { opacity: 1; }
+    }
+
+    /* Recording status bar */
+    .recording-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 24px;
+      background: #e53935;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .recording-bar svg {
+      flex-shrink: 0;
+      animation: pulse-icon 1s infinite;
+    }
+    @keyframes pulse-icon {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.4; }
+    }
+
+    /* Push-to-talk button */
+    .ptt-button {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 1px solid var(--color-border, #dadce0);
+      background: var(--color-surface, #fff);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.15s, border-color 0.15s;
+      touch-action: none;
+      user-select: none;
+    }
+    .ptt-button:hover {
+      background: #f1f3f4;
+    }
+    .ptt-button.recording {
+      background: #e53935;
+      border-color: #e53935;
+    }
+    .ptt-button.recording svg {
+      fill: #fff;
     }
 
     /* Streaming indicator */
@@ -350,12 +429,47 @@ class SoofiChat extends SignalWatcher(LitElement) {
   @state() private streaming = false;
   @state() private surfaceEntries: Array<[string, v0_8.Types.Surface]> = [];
   @state() private dashboardEmbed: DashboardEmbedInfo | null = null;
+  @state() private isRecording = false;
+  @state() private searching = false;
 
   // Stable session ID for advisor conversation memory (persists across messages)
   private sessionId = crypto.randomUUID();
 
   // Current assistant message being streamed
   private currentMsgId: string | null = null;
+
+  // Voice recording state
+  private mediaRecorder: MediaRecorder | null = null;
+  private audioChunks: Blob[] = [];
+
+  // TTS audio queue — reset on each new message to cancel pending clips
+  private audioQueue: Promise<void> = Promise.resolve();
+  private ttsGeneration = 0;
+  private currentAudio: HTMLAudioElement | null = null;
+
+  // Sentence buffer for streaming TTS — accumulates deltas until a sentence boundary
+  private sentenceBuffer = '';
+  private ttsSentenceCount = 0;
+  private static readonly TTS_MAX_SENTENCES = 2;
+
+  // Set to true when the last message was sent via voice recording
+  private lastMessageWasVoice = false;
+
+  // -----------------------------------------------------------------------
+  // Lifecycle
+  // -----------------------------------------------------------------------
+
+  connectedCallback(): void {
+    super.connectedCallback();
+    window.addEventListener("keydown", this.onGlobalKeydown);
+    window.addEventListener("keyup", this.onGlobalKeyup);
+  }
+
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+    window.removeEventListener("keydown", this.onGlobalKeydown);
+    window.removeEventListener("keyup", this.onGlobalKeyup);
+  }
 
   // -----------------------------------------------------------------------
   // Render
@@ -419,6 +533,31 @@ class SoofiChat extends SignalWatcher(LitElement) {
           : nothing}
       </div>
 
+      ${this.searching
+        ? html`
+            <div class="searching-bar">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+              </svg>
+              Suche in der Wissensdatenbank
+              <span class="searching-bar__dots">
+                <span>.</span><span>.</span><span>.</span>
+              </span>
+            </div>
+          `
+        : nothing}
+
+      ${this.isRecording
+        ? html`
+            <div class="recording-bar">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#fff">
+                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/>
+              </svg>
+              Aufnahme läuft…
+            </div>
+          `
+        : nothing}
+
       <div class="input-bar">
         <input
           type="text"
@@ -428,7 +567,34 @@ class SoofiChat extends SignalWatcher(LitElement) {
           @keydown=${this.onKeydown}
           ?disabled=${this.streaming}
         />
+        ${voiceControlsVisible
+          ? html`
+              <button
+                class="ptt-button ${this.isRecording ? "recording" : ""}"
+                title=${voiceActivation === "push-to-talk"
+                  ? "Gedrückt halten zum Sprechen"
+                  : "Klicken zum Starten/Stoppen"}
+                @pointerdown=${voiceActivation === "push-to-talk"
+                  ? this.startRecording
+                  : nothing}
+                @pointerup=${voiceActivation === "push-to-talk"
+                  ? this.stopRecording
+                  : nothing}
+                @pointercancel=${voiceActivation === "push-to-talk"
+                  ? this.stopRecording
+                  : nothing}
+                @click=${voiceActivation === "toggle"
+                  ? this.toggleRecording
+                  : nothing}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/>
+                </svg>
+              </button>
+            `
+          : nothing}
         <button
+          class="send-btn"
           @click=${this.sendMessage}
           ?disabled=${this.streaming || !this.inputValue.trim()}
         >
@@ -438,16 +604,17 @@ class SoofiChat extends SignalWatcher(LitElement) {
     `;
   }
 
-  updated() {
-    // Scroll to bottom
+  updated(changedProperties: Map<string, unknown>) {
+    // Scroll to bottom on every update
     const messagesDiv = this.shadowRoot?.getElementById("messages");
     if (messagesDiv) {
       messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
-    // Keep focus on input field
-    const input = this.shadowRoot?.querySelector<HTMLInputElement>(".input-bar input");
-    if (input && !this.streaming) {
-      input.focus();
+    // Restore focus to input only when streaming just finished —
+    // not on every update, so Space-key PTT can work when input is blurred
+    if (changedProperties.has("streaming") && !this.streaming) {
+      const input = this.shadowRoot?.querySelector<HTMLInputElement>(".input-bar input");
+      input?.focus();
     }
   }
 
@@ -510,6 +677,96 @@ class SoofiChat extends SignalWatcher(LitElement) {
   }
 
   // -----------------------------------------------------------------------
+  // Global keyboard listeners for push-to-talk (Space key)
+  // -----------------------------------------------------------------------
+
+  private onGlobalKeydown = (e: KeyboardEvent): void => {
+    if (voiceActivation !== "push-to-talk") return;
+    if (e.code !== "Space" || e.repeat) return;
+    // Only trigger when focus is outside the text input (shadow DOM: check shadowRoot.activeElement)
+    const inputEl = this.shadowRoot?.querySelector<HTMLInputElement>(".input-bar input");
+    if (this.shadowRoot?.activeElement === inputEl) return;
+    if (!this.isRecording) {
+      e.preventDefault();
+      this.startRecording();
+    }
+  };
+
+  private onGlobalKeyup = (e: KeyboardEvent): void => {
+    if (voiceActivation !== "push-to-talk") return;
+    if (e.code !== "Space") return;
+    if (this.isRecording) {
+      this.stopRecording();
+    }
+  };
+
+  // -----------------------------------------------------------------------
+  // Voice recording
+  // -----------------------------------------------------------------------
+
+  private async startRecording(event?: PointerEvent): Promise<void> {
+    if (this.isRecording) return;
+    if (event) {
+      (event.currentTarget as Element).setPointerCapture(event.pointerId);
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      this.audioChunks = [];
+      this.mediaRecorder = new MediaRecorder(stream);
+      this.mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) this.audioChunks.push(e.data);
+      };
+      this.mediaRecorder.onstop = () => this.onRecordingStop(stream);
+      this.mediaRecorder.start();
+      this.isRecording = true;
+    } catch {
+      this.inputValue = "⚠ Mikrofon nicht verfügbar";
+    }
+  }
+
+  private stopRecording(): void {
+    if (!this.isRecording || !this.mediaRecorder) return;
+    this.mediaRecorder.stop();
+    this.isRecording = false;
+  }
+
+  private toggleRecording(): void {
+    if (this.isRecording) {
+      this.stopRecording();
+    } else {
+      this.startRecording();
+    }
+  }
+
+  private async onRecordingStop(stream: MediaStream): Promise<void> {
+    // Stop all microphone tracks
+    stream.getTracks().forEach((t) => t.stop());
+
+    if (this.audioChunks.length === 0) return;
+
+    const blob = new Blob(this.audioChunks, { type: "audio/webm" });
+    const formData = new FormData();
+    formData.append("file", blob, "audio.webm");
+
+    try {
+      const resp = await fetch("/api/stt/transcribe", {
+        method: "POST",
+        body: formData,
+      });
+      if (!resp.ok) return;
+      const data = (await resp.json()) as { text: string };
+      const text = data.text?.trim();
+      if (text) {
+        this.inputValue = text;
+        this.lastMessageWasVoice = true;
+        this.sendMessage();
+      }
+    } catch {
+      // Network error — text input remains empty, user can type manually
+    }
+  }
+
+  // -----------------------------------------------------------------------
   // Send message & process SSE stream
   // -----------------------------------------------------------------------
 
@@ -533,6 +790,12 @@ class SoofiChat extends SignalWatcher(LitElement) {
     this.surfaceEntries = [];
     this.dashboardEmbed = null;
 
+    // Cancel any queued/playing TTS from the previous response
+    this.ttsGeneration++;
+    this.currentAudio?.pause();
+    this.currentAudio = null;
+    this.audioQueue = Promise.resolve();
+
     // Add placeholder assistant message
     this.messages = [...this.messages, { role: "assistant", text: "" }];
 
@@ -542,10 +805,17 @@ class SoofiChat extends SignalWatcher(LitElement) {
         .filter((m) => m.text) // skip empty placeholder
         .map((m) => ({ role: m.role, content: m.text }));
 
+      const isVoice = this.lastMessageWasVoice;
+      this.lastMessageWasVoice = false;
+
       const response = await fetch("/api/agent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: history, session_id: this.sessionId }),
+        body: JSON.stringify({
+          messages: history,
+          session_id: this.sessionId,
+          voice_input: isVoice,
+        }),
       });
 
       if (!response.ok || !response.body) {
@@ -573,7 +843,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
 
           try {
             const event: AgUiEvent = JSON.parse(jsonStr);
-            this.handleAgUiEvent(event);
+            this.handleAgUiEvent(event, isVoice);
           } catch {
             // Skip malformed events
           }
@@ -592,25 +862,69 @@ class SoofiChat extends SignalWatcher(LitElement) {
     }
   }
 
-  private handleAgUiEvent(event: AgUiEvent): void {
+  private handleAgUiEvent(event: AgUiEvent, isVoice = false): void {
     switch (event.type) {
       case "TEXT_MESSAGE_START":
         this.currentMsgId = event.messageId as string;
+        this.sentenceBuffer = '';
+        this.ttsSentenceCount = 0;
         break;
 
       case "TEXT_MESSAGE_CONTENT":
         if (event.messageId === this.currentMsgId) {
+          const delta = event.delta as string;
           const msgs = [...this.messages];
           const lastAssistant = msgs[msgs.length - 1];
           if (lastAssistant?.role === "assistant") {
-            lastAssistant.text += event.delta as string;
+            lastAssistant.text += delta;
           }
           this.messages = msgs;
+
+          // TTS: buffer deltas and enqueue each complete sentence immediately
+          // Stop after TTS_MAX_SENTENCES to avoid reading the full response aloud
+          if (isVoice && this.ttsSentenceCount < SoofiChat.TTS_MAX_SENTENCES) {
+            this.sentenceBuffer += delta;
+            let pos: number;
+            while ((pos = this.sentenceBuffer.search(/[.!?]+\s/)) !== -1) {
+              const match = this.sentenceBuffer.slice(pos).match(/[.!?]+\s/)!;
+              const endPos = pos + match[0].length;
+              const sentence = this.sentenceBuffer.slice(0, endPos).trim();
+              this.sentenceBuffer = this.sentenceBuffer.slice(endPos);
+              const clean = this.cleanForTTS(sentence);
+              if (clean) {
+                this.enqueueTTS(clean);
+                this.ttsSentenceCount++;
+                if (this.ttsSentenceCount >= SoofiChat.TTS_MAX_SENTENCES) {
+                  this.sentenceBuffer = '';
+                  break;
+                }
+              }
+            }
+          }
         }
         break;
 
+      case "TOOL_CALL_START":
+        this.searching = true;
+        break;
+
+      case "TOOL_CALL_END":
+        this.searching = false;
+        break;
+
       case "TEXT_MESSAGE_END":
+        // Flush remainder only if we haven't hit the sentence limit yet
+        if (isVoice && this.sentenceBuffer.trim() && this.ttsSentenceCount < SoofiChat.TTS_MAX_SENTENCES) {
+          const clean = this.cleanForTTS(this.sentenceBuffer);
+          if (clean) this.enqueueTTS(clean);
+          this.sentenceBuffer = '';
+        }
         this.currentMsgId = null;
+        this.searching = false;
+        break;
+
+      case "RUN_FINISHED":
+        this.searching = false;
         break;
 
       case "STATE_SNAPSHOT": {
@@ -635,8 +949,61 @@ class SoofiChat extends SignalWatcher(LitElement) {
         break;
       }
 
-      // RUN_STARTED, RUN_FINISHED — no UI action needed
+      // RUN_STARTED — no UI action needed
     }
+  }
+
+  // -----------------------------------------------------------------------
+  // TTS audio queue
+  // -----------------------------------------------------------------------
+
+  private cleanForTTS(text: string): string {
+    return text
+      .replace(/\n?(?:Quellen?|Sources?|Referenzen?)[\s:：][\s\S]*/i, '') // stop at sources
+      .replace(/```[\s\S]*?```/g, '')      // code blocks
+      .replace(/^#{1,6}\s+/gm, '')         // headings
+      .replace(/\*{1,3}(.+?)\*{1,3}/gs, '$1') // bold / italic
+      .replace(/_{1,2}(.+?)_{1,2}/gs, '$1')   // underscore emphasis
+      .replace(/`[^`]+`/g, '')             // inline code
+      .replace(/^\d+\.\s+/gm, '')          // numbered list markers (avoid "eins punkt")
+      .replace(/^[-*•]\s+/gm, '')          // bullet points
+      .replace(/https?:\/\/\S+/g, '')      // URLs
+      .trim();
+  }
+
+  private enqueueTTS(text: string): void {
+    if (!text.trim()) return;
+    const gen = this.ttsGeneration;
+    const audioBlobPromise = this.fetchAudio(text);
+    this.audioQueue = this.audioQueue.then(() => this.playBlob(audioBlobPromise, gen));
+  }
+
+  private async fetchAudio(text: string): Promise<Blob | null> {
+    try {
+      const resp = await fetch("/api/tts/synthesize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      if (!resp.ok) return null;
+      return await resp.blob();
+    } catch {
+      return null;
+    }
+  }
+
+  private async playBlob(blobPromise: Promise<Blob | null>, generation: number): Promise<void> {
+    const blob = await blobPromise;
+    if (!blob || generation !== this.ttsGeneration) return;
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    this.currentAudio = audio;
+    await new Promise<void>((resolve) => {
+      audio.onended = () => { URL.revokeObjectURL(url); resolve(); };
+      audio.onerror = () => { URL.revokeObjectURL(url); resolve(); };
+      audio.play().catch(() => resolve());
+    });
+    if (this.currentAudio === audio) this.currentAudio = null;
   }
 
   // -----------------------------------------------------------------------

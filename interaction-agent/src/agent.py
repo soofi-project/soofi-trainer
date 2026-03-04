@@ -3,6 +3,7 @@
 import asyncio
 import json
 import logging
+import os
 import uuid
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator
@@ -12,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage, ToolMessage
 from langgraph.graph.state import CompiledStateGraph
+from openai import AsyncOpenAI
 
 from .graph import build_graph, set_advisor_context_id
 
@@ -20,15 +22,21 @@ logger = logging.getLogger(__name__)
 
 # Initialized at startup
 graph: CompiledStateGraph | None = None
+_openai_client: AsyncOpenAI | None = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """Build the LangGraph agent on startup."""
-    global graph
+    global graph, _openai_client
+
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise RuntimeError("OPENAI_API_KEY is not set")
+    _openai_client = AsyncOpenAI(api_key=api_key)
     graph = build_graph()
     logger.info("Interaction Agent graph built successfully")
     yield
+    await _openai_client.close()
 
 
 app = FastAPI(title="Soofi Interaction Agent", lifespan=lifespan)
@@ -39,6 +47,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
 
 
 # ---------------------------------------------------------------------------
@@ -83,35 +93,22 @@ async def _stream_ag_ui_events(
     messages: list[dict[str, str]],
     session_id: str | None = None,
 ) -> AsyncGenerator[str, None]:
-    """Run the LangGraph agent and yield AG-UI SSE events.
-
-    Accepts the full conversation history so the agent has context from
-    previous turns. Streams text tokens and extracts A2UI surfaces from
-    tool results.
-
-    Args:
-        messages: Full conversation history from the UI.
-        session_id: Stable session ID used as A2A context_id for advisor memory.
-    """
+    """Run the LangGraph agent and yield AG-UI SSE events."""
     assert graph is not None
 
     thread_id = str(uuid.uuid4())
     run_id = str(uuid.uuid4())
     msg_id = str(uuid.uuid4())
 
-    # Set the A2A context_id so the advisor can maintain conversation memory
     set_advisor_context_id(session_id)
-
     lc_messages = _build_lc_messages(messages)
 
-    # --- RUN_STARTED ---
     yield _sse({"type": "RUN_STARTED", "threadId": thread_id, "runId": run_id})
-
-    # --- TEXT_MESSAGE streaming ---
     yield _sse({"type": "TEXT_MESSAGE_START", "messageId": msg_id, "role": "assistant"})
 
     result_messages: list[Any] = []
-    advisor_searching = False  # True once we've shown the search indicator
+    advisor_searching = False
+    advisor_streamed = False  # True once advisor chunks have been forwarded to browser
 
     try:
         async for event in graph.astream_events(
@@ -119,32 +116,44 @@ async def _stream_ag_ui_events(
         ):
             kind = event["event"]
 
-            # Detect when the advisor tool starts — show a search indicator
             if kind == "on_tool_start" and not advisor_searching:
-                tool_name = event.get("name", "")
-                if tool_name == "ask_advisor_tool":
+                if event.get("name") == "ask_advisor_tool":
                     advisor_searching = True
+                    advisor_streamed = False
+                    yield _sse({"type": "TOOL_CALL_START", "tool": "ask_advisor_tool"})
+
+            elif kind == "on_custom_event":
+                # Stream-Delegation: advisor chunks arrive here via get_stream_writer()
+                chunk = event.get("data", {}).get("advisor_chunk")
+                if chunk:
+                    if not advisor_streamed:
+                        # First chunk — hide the searching indicator
+                        advisor_streamed = True
+                        advisor_searching = False
+                        yield _sse({"type": "TOOL_CALL_END", "tool": "ask_advisor_tool"})
                     yield _sse(
                         {
                             "type": "TEXT_MESSAGE_CONTENT",
                             "messageId": msg_id,
-                            "delta": "*Suche in der Wissensdatenbank\u2026*\n\n",
+                            "delta": chunk,
                         }
                     )
 
+            elif kind == "on_tool_end":
+                # Fallback: if streaming yielded nothing, emit TOOL_CALL_END here
+                if event.get("name") == "ask_advisor_tool" and advisor_searching:
+                    advisor_searching = False
+                    yield _sse({"type": "TOOL_CALL_END", "tool": "ask_advisor_tool"})
+
             elif kind == "on_chat_model_stream":
                 chunk = event["data"]["chunk"]
-                # Only stream content from the final LLM response (not tool-call decisions).
-                # Tool-call chunks have tool_calls set; skip those.
                 if (
                     isinstance(chunk, AIMessageChunk)
                     and chunk.content
                     and not chunk.tool_calls
                     and not chunk.tool_call_chunks
+                    and not advisor_streamed  # suppress if advisor already streamed
                 ):
-                    # Replace the search indicator once real content arrives
-                    if advisor_searching:
-                        advisor_searching = False
                     yield _sse(
                         {
                             "type": "TEXT_MESSAGE_CONTENT",
@@ -154,7 +163,6 @@ async def _stream_ag_ui_events(
                     )
                     await asyncio.sleep(STREAM_DELAY)
 
-            # Capture final graph output for A2UI extraction
             elif kind == "on_chain_end":
                 output = event.get("data", {}).get("output", {})
                 if isinstance(output, dict) and "messages" in output:
@@ -172,14 +180,10 @@ async def _stream_ag_ui_events(
 
     yield _sse({"type": "TEXT_MESSAGE_END", "messageId": msg_id})
 
-    # --- Extract A2UI surface from tool results (only if a tool set one) ---
     surface = _extract_a2ui_from_tool_results(result_messages)
-
-    # --- STATE_SNAPSHOT with A2UI surface (only if there is one) ---
     if surface is not None:
         yield _sse({"type": "STATE_SNAPSHOT", "snapshot": {"a2ui": surface}})
 
-    # --- RUN_FINISHED ---
     yield _sse({"type": "RUN_FINISHED", "threadId": thread_id, "runId": run_id})
 
 
@@ -192,9 +196,6 @@ async def _stream_ag_ui_events(
 async def agent_endpoint(request: Request) -> StreamingResponse:
     body = await request.json()
 
-    # Build message list from request.
-    # Accept {messages: [{role, content}]} (full history from UI)
-    # or legacy {message: "..."} (single turn).
     messages: list[dict[str, str]] = []
     if "messages" in body and body["messages"]:
         for msg in body["messages"]:
@@ -205,7 +206,6 @@ async def agent_endpoint(request: Request) -> StreamingResponse:
     elif "message" in body:
         messages.append({"role": "user", "content": body["message"]})
 
-    # Stable session ID for A2A conversation memory with the advisor
     session_id = body.get("session_id")
 
     return StreamingResponse(

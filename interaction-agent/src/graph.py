@@ -7,11 +7,13 @@ import os
 
 from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
+from langgraph.config import get_stream_writer
 from langgraph.graph import MessagesState, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import ToolNode
 
 from .a2a_client import ask_advisor as _ask_advisor
+from .a2a_client import stream_advisor as _stream_advisor
 from .a2ui_surfaces import mcp_inspector_surface, n8n_surface
 
 logger = logging.getLogger(__name__)
@@ -61,8 +63,23 @@ async def ask_advisor_tool(question: str) -> str:
     Args:
         question: The domain question to send to the Advisor (in German).
     """
+    write = get_stream_writer()
     ctx_id = _advisor_context_id.get()
-    return await _ask_advisor(question, context_id=ctx_id)
+    full_text = ""
+
+    try:
+        async for chunk in _stream_advisor(question, context_id=ctx_id):
+            full_text += chunk
+            write({"advisor_chunk": chunk})
+    except Exception:
+        logger.exception("Advisor streaming failed after %d chars", len(full_text))
+        if not full_text:
+            # No content received yet — fall back to blocking call
+            logger.warning("Falling back to blocking ask_advisor call")
+            full_text = await _ask_advisor(question, context_id=ctx_id)
+        # Partial content already streamed — return what we have to avoid duplicates
+
+    return full_text
 
 
 @tool

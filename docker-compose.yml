@@ -178,11 +178,59 @@ services:
       start_period: 120s
 
   # ===========================================
+  # STT - Speech-to-Text Service
+  # ===========================================
+  stt:
+    image: dfkisoofi/soofi-stt:${STT_VERSION}
+    build: ./stt
+    container_name: stt
+    restart: unless-stopped
+    env_file:
+      - .env
+      - ${ENV_SECRETS_FILE}
+    ports:
+      - "${STT_PORT}:8000"
+    networks:
+      - soofi-network
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket; s=socket.create_connection(('localhost',8000),2); s.close()\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===========================================
+  # TTS - Text-to-Speech Service
+  # ===========================================
+  tts:
+    image: dfkisoofi/soofi-tts:${TTS_VERSION}
+    build: ./tts
+    container_name: tts
+    restart: unless-stopped
+    env_file:
+      - .env
+      - ${ENV_SECRETS_FILE}
+    ports:
+      - "${TTS_PORT}:8000"
+    networks:
+      - soofi-network
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket; s=socket.create_connection(('localhost',8000),2); s.close()\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===========================================
   # Soofi UI - A2UI Frontend
   # ===========================================
   soofi-ui:
     image: dfkisoofi/soofi-ui:${SOOFI_UI_VERSION}
-    build: ./soofi-ui
+    build:
+      context: ./soofi-ui
+      args:
+        # VITE_* vars must be build args, not environment — Vite bakes them
+        # into the JS bundle at build time. Changing them requires ./up.sh --build.
+        VITE_VOICE_CONTROLS_VISIBLE: ${VITE_VOICE_CONTROLS_VISIBLE}
+        VITE_VOICE_ACTIVATION: ${VITE_VOICE_ACTIVATION}
     container_name: soofi-ui
     restart: unless-stopped
     ports:
@@ -191,6 +239,10 @@ services:
       - soofi-network
     depends_on:
       interaction-agent:
+        condition: service_healthy
+      stt:
+        condition: service_healthy
+      tts:
         condition: service_healthy
 
   # ===========================================
