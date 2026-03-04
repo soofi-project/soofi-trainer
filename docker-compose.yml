@@ -194,7 +194,7 @@ services:
         condition: service_healthy
 
   # ===========================================
-  # Interaction Agent - Mock AG-UI Backend
+  # Interaction Agent - LangGraph + A2A
   # ===========================================
   interaction-agent:
     image: dfkisoofi/soofi-ui-interaction-agent:${SOOFI_UI_INTERACTIONAGENT_VERSION}
@@ -203,8 +203,15 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+      - ${ENV_SECRETS_FILE}
+    environment:
+      - ADVISOR_A2A_URL=http://advisor:8000
+      - INTERACTION_MODEL=${INTERACTION_MODEL}
     networks:
       - soofi-network
+    depends_on:
+      advisor:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import socket; s=socket.create_connection(('localhost',8000),2); s.close()\""]
       interval: 10s

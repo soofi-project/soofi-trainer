@@ -4,10 +4,8 @@ WORKDIR /app
 
 # Install dependencies via pyproject.toml
 COPY pyproject.toml .
+COPY src/ ./src/
 RUN pip install --no-cache-dir .
 
-# Copy application code
-COPY src/ src/
-
 EXPOSE 8000
-CMD ["uvicorn", "src.mock_agent:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "src.agent:app", "--host", "0.0.0.0", "--port", "8000"]

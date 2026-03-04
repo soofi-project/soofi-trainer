@@ -3,11 +3,24 @@ import { provide } from "@lit/context";
 import { LitElement, html, css, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
+import { unsafeHTML } from "lit/directives/unsafe-html.js";
+import { marked } from "marked";
 import { v0_8 } from "@a2ui/lit";
 import * as UI from "@a2ui/lit/ui";
 
 // Import side-effects: registers all <a2ui-*> custom elements
 import "@a2ui/lit/ui";
+
+// Configure marked: synchronous, open links in new tab
+marked.use({
+  async: false,
+  renderer: {
+    link({ href, title, text }) {
+      const titleAttr = title ? ` title="${title}"` : "";
+      return `<a href="${href}"${titleAttr} target="_blank" rel="noopener">${text}</a>`;
+    },
+  },
+});
 
 // ---------------------------------------------------------------------------
 // AG-UI event types we handle (text streaming layer)
@@ -165,18 +178,68 @@ class SoofiChat extends SignalWatcher(LitElement) {
       padding: 12px 16px;
       border-radius: var(--radius, 12px);
       line-height: 1.5;
-      white-space: pre-wrap;
       word-break: break-word;
     }
     .message--user {
       align-self: flex-end;
       background: var(--color-user-bg, #e8f0fe);
       color: var(--color-text, #202124);
+      white-space: pre-wrap;
     }
     .message--assistant {
       align-self: flex-start;
       background: var(--color-assistant-bg, #fff);
       box-shadow: var(--shadow, 0 1px 3px rgba(0, 0, 0, 0.12));
+    }
+
+    /* Markdown inside assistant messages */
+    .message--assistant p { margin: 0 0 8px 0; }
+    .message--assistant p:last-child { margin-bottom: 0; }
+    .message--assistant h1,
+    .message--assistant h2,
+    .message--assistant h3,
+    .message--assistant h4 {
+      margin: 16px 0 8px 0;
+      line-height: 1.3;
+    }
+    .message--assistant h1:first-child,
+    .message--assistant h2:first-child,
+    .message--assistant h3:first-child {
+      margin-top: 0;
+    }
+    .message--assistant ul,
+    .message--assistant ol {
+      margin: 4px 0 8px 0;
+      padding-left: 24px;
+    }
+    .message--assistant li { margin-bottom: 4px; }
+    .message--assistant a {
+      color: var(--color-primary, #1a73e8);
+      text-decoration: none;
+    }
+    .message--assistant a:hover { text-decoration: underline; }
+    .message--assistant code {
+      background: #f1f3f4;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.9em;
+    }
+    .message--assistant pre {
+      background: #f1f3f4;
+      padding: 12px;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 8px 0;
+    }
+    .message--assistant pre code {
+      background: none;
+      padding: 0;
+    }
+    .message--assistant strong { font-weight: 600; }
+    .message--assistant hr {
+      border: none;
+      border-top: 1px solid var(--color-border, #dadce0);
+      margin: 12px 0;
     }
 
     /* A2UI surface container */
@@ -288,6 +351,9 @@ class SoofiChat extends SignalWatcher(LitElement) {
   @state() private surfaceEntries: Array<[string, v0_8.Types.Surface]> = [];
   @state() private dashboardEmbed: DashboardEmbedInfo | null = null;
 
+  // Stable session ID for advisor conversation memory (persists across messages)
+  private sessionId = crypto.randomUUID();
+
   // Current assistant message being streamed
   private currentMsgId: string | null = null;
 
@@ -308,7 +374,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
               ? html`<div class="message message--user">${m.text}</div>`
               : html`
                   <div class="message message--assistant">
-                    ${m.text}${this.streaming && i === this.messages.length - 1
+                    ${unsafeHTML(marked.parse(m.text) as string)}${this.streaming && i === this.messages.length - 1
                       ? html`<span class="streaming-dot"></span>`
                       : ""}
                   </div>
@@ -471,10 +537,15 @@ class SoofiChat extends SignalWatcher(LitElement) {
     this.messages = [...this.messages, { role: "assistant", text: "" }];
 
     try {
+      // Send full conversation history so the agent has context
+      const history = this.messages
+        .filter((m) => m.text) // skip empty placeholder
+        .map((m) => ({ role: m.role, content: m.text }));
+
       const response = await fetch("/api/agent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify({ messages: history, session_id: this.sessionId }),
       });
 
       if (!response.ok || !response.body) {
