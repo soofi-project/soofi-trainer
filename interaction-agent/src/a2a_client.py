@@ -1,5 +1,6 @@
 """A2A client wrapper for calling the Advisor agent."""
 
+import asyncio
 import logging
 import os
 import uuid
@@ -24,6 +25,7 @@ ADVISOR_A2A_URL = os.getenv("ADVISOR_A2A_URL", "http://advisor:8000")
 # Resolved once and reused across calls
 _client: A2AClient | None = None
 _httpx_client: httpx.AsyncClient | None = None
+_init_lock = asyncio.Lock()
 
 
 async def _get_client() -> A2AClient:
@@ -33,14 +35,18 @@ async def _get_client() -> A2AClient:
     if _client is not None:
         return _client
 
-    base_url = f"{ADVISOR_A2A_URL}/a2a/"
-    logger.info("Resolving advisor agent card at %s", base_url)
+    async with _init_lock:
+        if _client is not None:
+            return _client
 
-    _httpx_client = httpx.AsyncClient(timeout=120.0)
-    resolver = A2ACardResolver(_httpx_client, base_url)
-    agent_card = await resolver.get_agent_card()
-    _client = A2AClient(httpx_client=_httpx_client, agent_card=agent_card)
-    return _client
+        base_url = f"{ADVISOR_A2A_URL}/a2a/"
+        logger.info("Resolving advisor agent card at %s", base_url)
+
+        _httpx_client = httpx.AsyncClient(timeout=120.0)
+        resolver = A2ACardResolver(_httpx_client, base_url)
+        agent_card = await resolver.get_agent_card()
+        _client = A2AClient(httpx_client=_httpx_client, agent_card=agent_card)
+        return _client
 
 
 async def ask_advisor(question: str, context_id: str | None = None) -> str:
