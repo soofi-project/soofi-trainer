@@ -67,14 +67,17 @@ async def ask_advisor_tool(question: str) -> str:
     ctx_id = _advisor_context_id.get()
     full_text = ""
 
-    async for chunk in _stream_advisor(question, context_id=ctx_id):
-        full_text += chunk
-        write({"advisor_chunk": chunk})
-
-    # Fallback to blocking call if streaming yielded nothing
-    if not full_text:
-        logger.warning("Advisor streaming yielded no content, falling back to blocking call")
-        full_text = await _ask_advisor(question, context_id=ctx_id)
+    try:
+        async for chunk in _stream_advisor(question, context_id=ctx_id):
+            full_text += chunk
+            write({"advisor_chunk": chunk})
+    except Exception:
+        logger.exception("Advisor streaming failed after %d chars", len(full_text))
+        if not full_text:
+            # No content received yet — fall back to blocking call
+            logger.warning("Falling back to blocking ask_advisor call")
+            full_text = await _ask_advisor(question, context_id=ctx_id)
+        # Partial content already streamed — return what we have to avoid duplicates
 
     return full_text
 

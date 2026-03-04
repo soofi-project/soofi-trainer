@@ -7,10 +7,22 @@ from fastapi.responses import StreamingResponse
 from openai import AsyncOpenAI
 from pydantic import BaseModel
 
-TTS_PROVIDER = os.getenv("TTS_PROVIDER", "openai")
-TTS_MODEL = os.getenv("TTS_MODEL", "tts-1")
-TTS_VOICE = os.getenv("TTS_VOICE", "alloy")
-TTS_SPEED = float(os.getenv("TTS_SPEED", "1.2"))
+TTS_PROVIDER = os.getenv("TTS_PROVIDER")
+if not TTS_PROVIDER:
+    raise RuntimeError("TTS_PROVIDER is not set")
+
+TTS_MODEL = os.getenv("TTS_MODEL")
+if not TTS_MODEL:
+    raise RuntimeError("TTS_MODEL is not set")
+
+TTS_VOICE = os.getenv("TTS_VOICE")
+if not TTS_VOICE:
+    raise RuntimeError("TTS_VOICE is not set")
+
+_tts_speed_raw = os.getenv("TTS_SPEED")
+if not _tts_speed_raw:
+    raise RuntimeError("TTS_SPEED is not set")
+TTS_SPEED = float(_tts_speed_raw)
 
 _client: AsyncOpenAI | None = None
 
@@ -45,7 +57,8 @@ async def synthesize(req: SynthesizeRequest) -> StreamingResponse:
     if TTS_PROVIDER != "openai":
         raise HTTPException(status_code=501, detail=f"TTS provider '{TTS_PROVIDER}' not supported")
 
-    assert _client is not None
+    if _client is None:
+        raise HTTPException(status_code=503, detail="Service not initialized")
     try:
         response = await _client.audio.speech.create(
             model=TTS_MODEL,

@@ -71,7 +71,9 @@ async def stream_advisor(
     """Stream tokens from the Advisor via A2A streaming.
 
     Yields text chunks as they arrive from the Advisor's LangGraph stream.
-    Falls back to an empty generator on error (caller should use ask_advisor as fallback).
+    Returns an empty generator if the initial connection fails.
+    Raises on mid-stream errors so the caller can distinguish between
+    no content (fallback possible) and truncated content (fallback would duplicate).
     """
     try:
         client = await _get_client()
@@ -99,6 +101,7 @@ async def stream_advisor(
                     yield text
     except Exception:
         logger.exception("Error during A2A streaming from advisor")
+        raise
 
 
 async def ask_advisor(question: str, context_id: str | None = None) -> str:

@@ -580,6 +580,9 @@ class SoofiChat extends SignalWatcher(LitElement) {
                 @pointerup=${voiceActivation === "push-to-talk"
                   ? this.stopRecording
                   : nothing}
+                @pointercancel=${voiceActivation === "push-to-talk"
+                  ? this.stopRecording
+                  : nothing}
                 @click=${voiceActivation === "toggle"
                   ? this.toggleRecording
                   : nothing}
@@ -701,8 +704,11 @@ class SoofiChat extends SignalWatcher(LitElement) {
   // Voice recording
   // -----------------------------------------------------------------------
 
-  private async startRecording(): Promise<void> {
+  private async startRecording(event?: PointerEvent): Promise<void> {
     if (this.isRecording) return;
+    if (event) {
+      (event.currentTarget as Element).setPointerCapture(event.pointerId);
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       this.audioChunks = [];
@@ -837,7 +843,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
 
           try {
             const event: AgUiEvent = JSON.parse(jsonStr);
-            this.handleAgUiEvent(event);
+            this.handleAgUiEvent(event, isVoice);
           } catch {
             // Skip malformed events
           }
@@ -856,7 +862,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
     }
   }
 
-  private handleAgUiEvent(event: AgUiEvent): void {
+  private handleAgUiEvent(event: AgUiEvent, isVoice = false): void {
     switch (event.type) {
       case "TEXT_MESSAGE_START":
         this.currentMsgId = event.messageId as string;
@@ -876,7 +882,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
 
           // TTS: buffer deltas and enqueue each complete sentence immediately
           // Stop after TTS_MAX_SENTENCES to avoid reading the full response aloud
-          if (this.ttsSentenceCount < SoofiChat.TTS_MAX_SENTENCES) {
+          if (isVoice && this.ttsSentenceCount < SoofiChat.TTS_MAX_SENTENCES) {
             this.sentenceBuffer += delta;
             let pos: number;
             while ((pos = this.sentenceBuffer.search(/[.!?]+\s/)) !== -1) {
@@ -908,7 +914,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
 
       case "TEXT_MESSAGE_END":
         // Flush remainder only if we haven't hit the sentence limit yet
-        if (this.sentenceBuffer.trim() && this.ttsSentenceCount < SoofiChat.TTS_MAX_SENTENCES) {
+        if (isVoice && this.sentenceBuffer.trim() && this.ttsSentenceCount < SoofiChat.TTS_MAX_SENTENCES) {
           const clean = this.cleanForTTS(this.sentenceBuffer);
           if (clean) this.enqueueTTS(clean);
           this.sentenceBuffer = '';

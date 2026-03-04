@@ -49,38 +49,6 @@ app.add_middleware(
 )
 
 
-# ---------------------------------------------------------------------------
-# STT text refiner — corrects domain-specific ASR errors before the graph
-# ---------------------------------------------------------------------------
-
-_REFINER_SYSTEM = (
-    "Korrigiere ausschließlich technische Fachbegriffe aus der KI/ML-Domäne "
-    "(z.B. RAG, LoRA, QLoRA, SFT, DPO, Fine-Tuning, LLM, Weaviate, LangGraph, "
-    "Transformer, Embedding, Quantisierung, DFKI, Soofi, Inferenz, Tokenizer). "
-    "Gib ausschließlich den korrigierten Text zurück — keine Erklärungen, keine Änderungen "
-    "an Grammatik oder Stil, nur Fachbegriff-Korrekturen."
-)
-
-
-async def _refine_stt_text(raw_text: str, context: list[dict[str, str]]) -> str:
-    """Correct domain-specific ASR recognition errors using a fast LLM."""
-    assert _openai_client is not None
-    recent = "\n".join(f"{m['role']}: {m['content']}" for m in context[-4:] if m["content"])
-    try:
-        response = await _openai_client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": _REFINER_SYSTEM},
-                {"role": "user", "content": f"Kontext:\n{recent}\n\nText: {raw_text}"},
-            ],
-            max_tokens=200,
-            temperature=0.0,
-        )
-        return (response.choices[0].message.content or raw_text).strip()
-    except Exception:
-        logger.exception("STT refiner failed, using raw text")
-        return raw_text
-
 
 
 # ---------------------------------------------------------------------------
@@ -239,12 +207,6 @@ async def agent_endpoint(request: Request) -> StreamingResponse:
         messages.append({"role": "user", "content": body["message"]})
 
     session_id = body.get("session_id")
-
-    # STT refiner: correct domain-specific ASR errors in the last user message
-    if body.get("voice_input") and messages and messages[-1].get("role") == "user":
-        raw = messages[-1]["content"]
-        messages[-1]["content"] = await _refine_stt_text(raw, messages[:-1])
-        logger.info("STT refined: %r → %r", raw, messages[-1]["content"])
 
     return StreamingResponse(
         _stream_ag_ui_events(messages, session_id=session_id),
