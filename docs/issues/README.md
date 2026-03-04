@@ -52,8 +52,9 @@ n8n is replaced by a LangGraph agent that handles the full conversation flow inc
 | US-04 | [Dataset Search](US-04-dataset-search.md) | 3 | Dataset search via separate MCP servers (HuggingFace, Eclipse Dataspace) |
 | US-05 | [Integration](US-05-integration.md) | 1 | End-to-end testing and documentation |
 | US-06 | [Inference Server](US-06-inference-server.md) | 6 | Ansible-based Triton + vLLM deployment on H200 GPU hardware |
-| US-07 | [Voice Agent UI](US-07-voice-agent-ui.md) | 6 | A2UI + Lit frontend with voice input/output and A2A orchestration |
+| US-07 | [Voice Agent UI](US-07-voice-agent-ui.md) | 7 | A2UI + Lit frontend with voice pipeline (cloud ✅, H200 pending), push-to-talk, A2A orchestration |
 | US-08 | [Training Pipeline](US-08-training-pipeline.md) | 5 | Dummy training pipeline with gateway, remote containers, and progress tracking |
+| US-09 | [Agent Observability](US-09-agent-observability.md) | 3 | Real-time agent flow visualization, LLM tracing via Langfuse, RAG transparency panel |
 
 ## Tasks
 
@@ -112,10 +113,11 @@ n8n is replaced by a LangGraph agent that handles the full conversation flow inc
 |----|-------|-------------|
 | T-07-1 | [A2UI + Lit Frontend](T-07-1-a2ui-frontend.md) | A2UI + Lit frontend scaffold |
 | T-07-2 | [Custom Components](T-07-2-custom-components.md) | Custom components & theming |
-| T-07-3 | [Voice Pipeline](T-07-3-voice-local.md) | Voice pipeline (local/cloud) |
-| T-07-4 | [Voice on H200](T-07-4-voice-h200.md) | Voice production deployment on H200 |
+| T-07-3 | [Voice Pipeline (Cloud)](T-07-3-voice-local.md) | STT + TTS via OpenAI APIs, push-to-talk, stream delegation, sentence-buffer TTS ✅ |
+| T-07-4 | [Voice on H200](T-07-4-voice-h200.md) | Local STT (faster-whisper-server) + TTS (Piper) on H200, Ansible deployment |
 | T-07-5 | [Dashboard Embedding](T-07-5-dashboard-embedding.md) | Dashboard embedding (exploration) |
 | T-07-6 | [Interaction Agent](T-07-6-interaction-agent.md) | Interaction Agent (A2A orchestrator) |
+| T-07-7 | [Async A2A Status Push](T-07-7-a2a-status-push.md) | Advisor pushes intermediate status + speech intro before RAG results arrive |
 
 ### US-08: Training Pipeline
 
@@ -155,5 +157,13 @@ The agent provides recommendations for these methods:
 | RAG | Dynamic knowledge, no training |
 | Knowledge Distillation | Deployment constraints |
 
-## Total: 8 User Stories, 30 Tasks
+### US-09: Agent Observability
+
+| ID | Title | Description |
+|----|-------|-------------|
+| T-09-1 | [Langfuse](T-09-1-langfuse.md) | Local Langfuse Docker service + LangGraph callback integration |
+| T-09-2 | [Agent Flow UI](T-09-2-agent-flow-ui.md) | Animated SVG architecture diagram in A2UI frontend, driven by TOOL_CALL events |
+| T-09-3 | [RAG Transparency Panel](T-09-3-rag-transparency.md) | Source document preview + reranker relevance scores during Advisor retrieval |
+
+## Total: 9 User Stories, 34 Tasks
 

@@ -7,6 +7,7 @@
   - [T-07-4](T-07-4-voice-h200.md)
   - [T-07-5](T-07-5-dashboard-embedding.md)
   - [T-07-6](T-07-6-interaction-agent.md)
+  - [T-07-7](T-07-7-a2a-status-push.md)
 
 # Story
 
@@ -57,6 +58,7 @@ The A2UI frontend (`soofi-ui`) is added as a new service alongside Open WebUI in
 | [T-07-4](T-07-4-voice-h200.md) | Voice on H200 (Production) | [T-07-3](T-07-3-voice-local.md) |
 | [T-07-5](T-07-5-dashboard-embedding.md) | Dashboard Embedding (Exploration) | [T-07-1](T-07-1-a2ui-frontend.md) |
 | [T-07-6](T-07-6-interaction-agent.md) | Interaction Agent (A2A Orchestrator) | [T-07-1](T-07-1-a2ui-frontend.md) |
+| [T-07-7](T-07-7-a2a-status-push.md) | Async A2A Status Push | [T-07-6](T-07-6-interaction-agent.md) |
 
 ## Future Extensions
 
