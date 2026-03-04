@@ -576,6 +576,9 @@ class SoofiChat extends SignalWatcher(LitElement) {
                 @pointerup=${voiceActivation === "push-to-talk"
                   ? this.stopRecording
                   : nothing}
+                @pointercancel=${voiceActivation === "push-to-talk"
+                  ? this.stopRecording
+                  : nothing}
                 @click=${voiceActivation === "toggle"
                   ? this.toggleRecording
                   : nothing}
@@ -700,8 +703,11 @@ class SoofiChat extends SignalWatcher(LitElement) {
   // Voice recording
   // -----------------------------------------------------------------------
 
-  private async startRecording(): Promise<void> {
+  private async startRecording(event?: PointerEvent): Promise<void> {
     if (this.isRecording) return;
+    if (event) {
+      (event.currentTarget as Element).setPointerCapture(event.pointerId);
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       this.audioChunks = [];
@@ -767,10 +773,10 @@ class SoofiChat extends SignalWatcher(LitElement) {
     const text = this.inputValue.trim();
     if (!text || this.streaming) return;
     this.inputValue = "";
-    this.sendMessageText(text);
+    this.sendMessageText(text, this._voiceSession);
   }
 
-  private async sendMessageText(text: string): Promise<void> {
+  private async sendMessageText(text: string, isVoice = false): Promise<void> {
     if (!text || this.streaming) return;
 
     // Add user message
@@ -832,7 +838,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
 
           try {
             const event: AgUiEvent = JSON.parse(jsonStr);
-            this.handleAgUiEvent(event);
+            this.handleAgUiEvent(event, isVoice);
           } catch {
             // Skip malformed events
           }
@@ -851,7 +857,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
     }
   }
 
-  private handleAgUiEvent(event: AgUiEvent): void {
+  private handleAgUiEvent(event: AgUiEvent, isVoice = false): void {
     switch (event.type) {
       case "TEXT_MESSAGE_START":
         this.currentMsgId = event.messageId as string;

@@ -12,6 +12,7 @@ An agentic system that guides users through the LLM specialization process — f
 | Advisor | docker-internal (advisor:8000) | LangGraph LLM specialization advisor (A2A) |
 | STT | http://localhost:8010 | Speech-to-text service (OpenAI Whisper-1) |
 | TTS | http://localhost:8011 | Text-to-speech service (OpenAI tts-1) |
+| Training Gateway | docker-internal (training-gateway:8000) | Training job management (MCP) |
 | Vector MCP | docker-internal (vector-mcp:8000) | Knowledge base search (MCP) |
 | MCP Inspector | http://localhost:6274 | MCP debugging tool |
 | Weaviate | http://localhost:8070 | Vector database |
@@ -124,6 +125,11 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 | `TTS_VERSION` | `0.1.0` | TTS service image version |
 | `VITE_VOICE_CONTROLS_VISIBLE` | `true` | Show on-screen mic button ¹ |
 | `VITE_VOICE_ACTIVATION` | `push-to-talk` | Voice activation mode (`push-to-talk` \| `toggle`) ¹ |
+| `TRAINING_BACKEND` | `local` | Training backend: `local` (subprocess) or `docker` (Docker API) |
+| `TRAINING_DOCKER_HOST` | _(unset)_ | Remote Docker API URL — leave unset to use the local socket |
+| `TRAINING_IMAGE` | `soofi-trainer-dummy-training:latest` | Docker image for training containers |
+| `TRAINING_GPU_DEVICE` | `all` | GPU device ID (`all` or e.g. `0`) |
+| `TRAINING_DEFAULT_DURATION` | `120` | Default simulation duration in seconds |
 
 > ¹ These are Vite build args, not runtime environment variables. Changing them requires a rebuild (`./up.sh --build`).
 
@@ -157,6 +163,9 @@ soofi-trainer/
 │   ├── src/               # Python source (FastAPI + OpenAI tts-1)
 │   ├── Dockerfile
 │   └── pyproject.toml
+├── training-pipeline/         # Training job orchestration
+│   ├── training-container/    # Simulated training workload
+│   └── training-gateway/      # MCP server for training job management
 ├── n8n/
 │   ├── initdb/
 │   ├── workflows/

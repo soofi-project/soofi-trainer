@@ -1,7 +1,7 @@
 # Task
 
 - user story: [US-08](US-08-training-pipeline.md)
-- depends on: [T-08-1](T-08-1-training-gateway.md), [T-08-3](T-08-3-agent-training-flow.md)
+- depends on: [T-08-1](T-08-1-training-gateway.md), [T-08-3](T-08-3-agent-training-flow.md), [T-07-1](T-07-1-a2ui-frontend.md)
 
 /label ~UserStory_US-08
 /label ~Task
@@ -11,85 +11,92 @@
 
 **Training Progress UI**
 
-Visualize training job progress for the user. Supports two modes: text-based progress in Open WebUI (baseline) and rich visual progress via A2UI (if [US-07](US-07-voice-agent-ui.md) is available).
+A `<soofi-training-progress>` Lit Web Component that displays all training jobs and their live
+progress. The component operates independently of the ongoing chat conversation — the user can
+start a job, come back minutes later, and still see the current state.
 
-## Mode 1: Open WebUI (Text-Based)
+The component appears in the A2UI frontend when the Interaction Agent sends a custom component
+message after a training job is started ([T-08-3](T-08-3-agent-training-flow.md)).
 
-The agent formats training progress as structured text messages in the chat:
+## Data Source
+
+The Training Gateway exposes a lightweight REST status API (new, in addition to the existing
+MCP endpoint) that the frontend component can poll directly:
 
 ```
-🔄 Training Job: abc-123
-Method: LoRA | Base Model: Llama-3.1-8B
-
-Phase 1/3: Data Preparation ............. ✅ complete
-Phase 2/3: Model Training ............... ⏳ 67%
-  ├─ Epoch: 3/5
-  ├─ Loss: 0.42
-  └─ ETA: ~4 min
-Phase 3/3: Model Upload ................. ⏸ pending
+GET /jobs          → list of all jobs with current status
+GET /jobs/{id}     → single job details (phases, metrics, progress)
 ```
 
-- Works immediately with the existing Open WebUI setup
-- Agent constructs the message from `get_job_status` response
-- Periodic updates as new messages in the chat
+The component polls every 3 s while a job is active, stops when all jobs reach a terminal state.
+No long-lived SSE connection needed — training jobs run for minutes to hours.
 
-## Mode 2: A2UI (Rich Visual — depends on US-07)
+The `TRAINING_GATEWAY_PORT` is already configurable in `.env`. The soofi-ui Dockerfile receives
+the URL as a Vite build arg (`VITE_TRAINING_GATEWAY_URL`).
 
-If the A2UI frontend ([T-07-1](T-07-1-a2ui-frontend.md)) is available, the Interaction Agent ([T-07-6](T-07-6-interaction-agent.md)) renders training progress as dynamic A2UI components:
+## Component: `<soofi-training-progress>`
 
-### A2UI Component: `soofi-training-progress`
+### Layout
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Training Jobs                                        [hide] │
+├─────────────────────────────────────────────────────────────┤
+│  abc-123  LoRA · Llama-3.1-8B                 ⏳ running    │
+│                                                              │
+│  ① Data Preparation  ──────────────────────────────  ✅     │
+│  ② Model Training    ████████████░░░░░░░░░░░░░░░░░  67%    │
+│     Epoch 3/5 · Loss 0.42 · ETA ~4 min                      │
+│  ③ Model Upload      ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  —      │
+│                                              [Cancel]        │
+├─────────────────────────────────────────────────────────────┤
+│  def-456  QLoRA · Mistral-7B                  ✅ complete   │
+│  Completed 14:32 · Duration 23 min                          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+- All jobs are listed, newest first
+- Completed/failed jobs are shown collapsed by default
+- Active job is expanded with phase progress bars and metrics
+
+### Phase States
+
+| State | Visual |
+|-------|--------|
+| `pending` | Grey, empty bar |
+| `running` | Blue, animated progress bar |
+| `completed` | Green checkmark |
+| `failed` | Red ✗ with error message |
+
+### Cancel Button
+
+- Only visible on running/queued jobs
+- Sends `DELETE /jobs/{id}` or calls the IA with "cancel job {id}"
+- Confirms visually when cancelled
+
+## Visibility
+
+The component slides in from below the chat input when the IA sends:
 
 ```json
-{
-  "type": "custom",
-  "component": "soofi-training-progress",
-  "props": {
-    "jobId": "abc-123",
-    "method": "LoRA",
-    "baseModel": "Llama-3.1-8B",
-    "phases": [
-      { "name": "Data Preparation", "status": "completed", "progress": 100 },
-      { "name": "Model Training", "status": "running", "progress": 67,
-        "metrics": { "epoch": "3/5", "loss": 0.42 } },
-      { "name": "Model Upload", "status": "pending", "progress": 0 }
-    ],
-    "eta": "~4 min"
-  }
-}
+{ "type": "custom", "component": "soofi-training-progress" }
 ```
 
-### Visual Design
-
-- Step indicator (horizontal or vertical) showing all phases
-- Progress bar per active phase with percentage
-- Metrics panel (loss curve, epoch, ETA) for training phase
-- Status badges: pending (gray), running (blue/animated), completed (green), failed (red)
-- Cancel button with confirmation dialog
-
-### Real-Time Updates
-
-- Interaction Agent receives status updates via SSE from the Training Gateway
-- Pushes A2UI component updates to the frontend
-- Progress bar and metrics animate smoothly between updates
-
-## Agent Prompt Extensions
-
-Add prompt instructions for the agent to format training progress appropriately:
-- Use structured text format in Open WebUI mode
-- Send A2UI components in A2UI mode
-- Include relevant metrics (loss, epoch) when available
-- Provide ETA estimates
+It can be hidden via `[hide]` but persists in DOM so polling continues.
+It re-shows automatically if a new job starts.
 
 ## Acceptance Criteria
 
-- [ ] Text-based progress display works in Open WebUI chat
-- [ ] Progress shows phase names, status, and percentages
-- [ ] Training metrics (loss, epoch) are displayed when available
-- [ ] Completion and failure states are clearly communicated
-- [ ] A2UI `soofi-training-progress` component renders phases and progress (when US-07 available)
-- [ ] Real-time updates work without page refresh (A2UI mode)
-- [ ] Cancel button available in both modes
-- [ ] Agent formats progress appropriately based on available frontend
+- [ ] `<soofi-training-progress>` Lit component renders all training jobs
+- [ ] Component polls `GET /jobs` every 3 s while jobs are active
+- [ ] Phase names, progress percentages, and status are displayed
+- [ ] Training metrics (loss, epoch, ETA) shown for active training phase
+- [ ] Completed and failed jobs are shown (collapsed by default)
+- [ ] Cancel button available on active jobs
+- [ ] Component appears when IA sends `soofi-training-progress` custom component message
+- [ ] Component is hideable but continues polling in background
+- [ ] Training Gateway exposes `GET /jobs` and `GET /jobs/{id}` REST endpoints
+- [ ] `VITE_TRAINING_GATEWAY_URL` passed as Vite build arg to soofi-ui
 
 # Branches
 
