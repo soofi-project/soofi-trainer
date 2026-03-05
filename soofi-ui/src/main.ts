@@ -583,6 +583,9 @@ class SoofiChat extends SignalWatcher(LitElement) {
                 @pointerup=${voiceActivation === "push-to-talk"
                   ? this.stopRecording
                   : nothing}
+                @pointercancel=${voiceActivation === "push-to-talk"
+                  ? this.stopRecording
+                  : nothing}
                 @click=${voiceActivation === "toggle"
                   ? this.toggleRecording
                   : nothing}
@@ -707,8 +710,11 @@ class SoofiChat extends SignalWatcher(LitElement) {
   // Voice recording
   // -----------------------------------------------------------------------
 
-  private async startRecording(): Promise<void> {
+  private async startRecording(event?: PointerEvent): Promise<void> {
     if (this.isRecording) return;
+    if (event) {
+      (event.currentTarget as Element).setPointerCapture(event.pointerId);
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       this.audioChunks = [];
@@ -902,6 +908,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
         break;
 
       case "SPEECH_TEXT":
+        // TTS plays for all responses (text and voice) — intentional: the system always speaks.
         if (event.text) this.enqueueTTS(event.text as string);
         break;
 

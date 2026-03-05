@@ -56,7 +56,7 @@ _RE_MD_LINK = re.compile(r"\[([^\]]+)\]\([^)]+\)")
 _RE_MD_FORMAT = re.compile(r"[*_`]+")
 _RE_WHITESPACE = re.compile(r"\s+")
 _SPEECH_MIN_CHARS = 15  # don't speak trivially short responses
-_RE_SENTENCE_END = re.compile(r"[.!?]\s")  # sentence boundary for early TTS trigger
+_RE_SENTENCE_END = re.compile(r"(?<![A-Z0-9])[.!?]\s")  # sentence boundary for early TTS trigger
 # Lines that start a structured markdown block — stop collecting intro before these
 _RE_STRUCTURE_LINE = re.compile(r"^\s*(?:#{1,6}\s|[-*]\s|\d+\.\s)")
 # Spoken when the response starts directly with structure (no intro prose)

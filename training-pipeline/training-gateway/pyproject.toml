@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=75.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "soofi-training-gateway"
+version = "0.1.0"
+description = "Training Gateway MCP Server for the Soofi Trainer"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+dependencies = [
+    "fastmcp>=2.14.5",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.40.0",
+    "aiosqlite>=0.21.0",
+    "pydantic>=2.10.0",
+    "aiodocker>=0.23.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-asyncio>=0.25.0",
+    "pytest-cov>=7.0.0",
+    "httpx>=0.28.0",
+    "black>=26.1.0",
+    "ruff>=0.15.0",
+    "mypy>=1.19.1",
+]
+
+[project.scripts]
+soofi-training-gateway = "training_gateway.server:main"
+
+[tool.setuptools]
+packages = ["training_gateway", "training_gateway.backends"]
+package-dir = {"" = "src"}
+
+[tool.black]
+line-length = 100
+
+[tool.ruff]
+line-length = 100
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+    "unit: Unit tests (models, db logic)",
+    "integration: Integration tests (API endpoints, MCP tools)",
+    "e2e: End-to-end workflow tests",
+]
+addopts = "--strict-markers --tb=short -v -ra"
