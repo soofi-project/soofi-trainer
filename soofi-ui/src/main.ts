@@ -773,10 +773,10 @@ class SoofiChat extends SignalWatcher(LitElement) {
     const text = this.inputValue.trim();
     if (!text || this.streaming) return;
     this.inputValue = "";
-    this.sendMessageText(text, this._voiceSession);
+    this.sendMessageText(text);
   }
 
-  private async sendMessageText(text: string, isVoice = false): Promise<void> {
+  private async sendMessageText(text: string): Promise<void> {
     if (!text || this.streaming) return;
 
     // Add user message
@@ -838,7 +838,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
 
           try {
             const event: AgUiEvent = JSON.parse(jsonStr);
-            this.handleAgUiEvent(event, isVoice);
+            this.handleAgUiEvent(event);
           } catch {
             // Skip malformed events
           }
@@ -857,7 +857,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
     }
   }
 
-  private handleAgUiEvent(event: AgUiEvent, isVoice = false): void {
+  private handleAgUiEvent(event: AgUiEvent): void {
     switch (event.type) {
       case "TEXT_MESSAGE_START":
         this.currentMsgId = event.messageId as string;
@@ -890,6 +890,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
         break;
 
       case "SPEECH_TEXT":
+        // TTS plays for all responses (text and voice) — intentional: the system always speaks.
         if (event.text) this.enqueueTTS(event.text as string);
         break;
 
