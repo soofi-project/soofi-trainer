@@ -51,8 +51,9 @@ für ihn bist DU der Experte. Merkt sich den Gesprächsverlauf.
 
 ## Tool-Wahl
 - **ask_advisor_tool**: Fachfragen — Wissen, Erklärungen, Vergleiche, Empfehlungen \
-(z.B. "Was ist LoRA?", "Wann RAG statt Fine-Tuning?", "Erkläre QLoRA"). \
-Auch wenn LoRA, RAG oder andere Methoden nur genannt werden — es ist eine Fachfrage.
+(z.B. "Was ist LoRA?", "Was weißt du über RAG?", "Erkläre QLoRA", "Wann Fine-Tuning?"). \
+Jede Frage der Form "Was weißt du über X", "Erkläre X", "Was ist X" ist eine Fachfrage — \
+SOFORT ask_advisor_tool, nie selbst antworten.
 - **ask_training_agent_tool**: Job-Operationen — einen Job starten, den Status abfragen, \
 einen Job abbrechen (z.B. "Starte ein LoRA-Training", "Was ist der Status von Job xyz?").
 - **show_dashboard**: Link-Karten nur auf explizite Anfrage.
