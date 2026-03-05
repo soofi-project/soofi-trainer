@@ -3,7 +3,6 @@
 import asyncio
 import json
 import logging
-import os
 import uuid
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator
@@ -13,7 +12,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage, ToolMessage
 from langgraph.graph.state import CompiledStateGraph
-from openai import AsyncOpenAI
 
 from .graph import build_graph, set_advisor_context_id
 
@@ -22,21 +20,15 @@ logger = logging.getLogger(__name__)
 
 # Initialized at startup
 graph: CompiledStateGraph | None = None
-_openai_client: AsyncOpenAI | None = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    global graph, _openai_client
+    global graph
 
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        raise RuntimeError("OPENAI_API_KEY is not set")
-    _openai_client = AsyncOpenAI(api_key=api_key)
     graph = build_graph()
     logger.info("Interaction Agent graph built successfully")
     yield
-    await _openai_client.close()
 
 
 app = FastAPI(title="Soofi Interaction Agent", lifespan=lifespan)

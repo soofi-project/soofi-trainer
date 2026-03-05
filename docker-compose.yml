@@ -258,7 +258,6 @@ services:
       - ${ENV_SECRETS_FILE}
     environment:
       - ADVISOR_A2A_URL=http://advisor:8000
-      - INTERACTION_MODEL=${INTERACTION_MODEL}
     networks:
       - soofi-network
     depends_on:
