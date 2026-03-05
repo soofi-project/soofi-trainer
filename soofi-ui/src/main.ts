@@ -431,6 +431,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
   @state() private dashboardEmbed: DashboardEmbedInfo | null = null;
   @state() private isRecording = false;
   @state() private searching = false;
+  @state() private searchStatusLabel = "";
 
   // Stable session ID for advisor conversation memory (persists across messages)
   private sessionId = crypto.randomUUID();
@@ -447,13 +448,8 @@ class SoofiChat extends SignalWatcher(LitElement) {
   private ttsGeneration = 0;
   private currentAudio: HTMLAudioElement | null = null;
 
-  // Sentence buffer for streaming TTS — accumulates deltas until a sentence boundary
-  private sentenceBuffer = '';
-  private ttsSentenceCount = 0;
-  private static readonly TTS_MAX_SENTENCES = 2;
-
-  // Set to true when the last message was sent via voice recording
-  private lastMessageWasVoice = false;
+  // True while streaming a response that was triggered by voice input (no input focus after)
+  private _voiceSession = false;
 
   // -----------------------------------------------------------------------
   // Lifecycle
@@ -539,7 +535,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
               </svg>
-              Suche in der Wissensdatenbank
+              ${this.searchStatusLabel || "Überlege"}
               <span class="searching-bar__dots">
                 <span>.</span><span>.</span><span>.</span>
               </span>
@@ -610,11 +606,14 @@ class SoofiChat extends SignalWatcher(LitElement) {
     if (messagesDiv) {
       messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
-    // Restore focus to input only when streaming just finished —
-    // not on every update, so Space-key PTT can work when input is blurred
+    // Restore focus to input only when streaming just finished AND the session was text-based.
+    // For voice sessions, we leave focus off the input so Space-key PTT keeps working.
     if (changedProperties.has("streaming") && !this.streaming) {
-      const input = this.shadowRoot?.querySelector<HTMLInputElement>(".input-bar input");
-      input?.focus();
+      if (!this._voiceSession) {
+        const input = this.shadowRoot?.querySelector<HTMLInputElement>(".input-bar input");
+        input?.focus();
+      }
+      this._voiceSession = false;
     }
   }
 
@@ -758,7 +757,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
       const text = data.text?.trim();
       if (text) {
         this.inputValue = text;
-        this.lastMessageWasVoice = true;
+        this._voiceSession = true;
         this.sendMessage();
       }
     } catch {
@@ -805,16 +804,12 @@ class SoofiChat extends SignalWatcher(LitElement) {
         .filter((m) => m.text) // skip empty placeholder
         .map((m) => ({ role: m.role, content: m.text }));
 
-      const isVoice = this.lastMessageWasVoice;
-      this.lastMessageWasVoice = false;
-
       const response = await fetch("/api/agent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: history,
           session_id: this.sessionId,
-          voice_input: isVoice,
         }),
       });
 
@@ -843,7 +838,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
 
           try {
             const event: AgUiEvent = JSON.parse(jsonStr);
-            this.handleAgUiEvent(event, isVoice);
+            this.handleAgUiEvent(event);
           } catch {
             // Skip malformed events
           }
@@ -862,12 +857,10 @@ class SoofiChat extends SignalWatcher(LitElement) {
     }
   }
 
-  private handleAgUiEvent(event: AgUiEvent, isVoice = false): void {
+  private handleAgUiEvent(event: AgUiEvent): void {
     switch (event.type) {
       case "TEXT_MESSAGE_START":
         this.currentMsgId = event.messageId as string;
-        this.sentenceBuffer = '';
-        this.ttsSentenceCount = 0;
         break;
 
       case "TEXT_MESSAGE_CONTENT":
@@ -879,46 +872,29 @@ class SoofiChat extends SignalWatcher(LitElement) {
             lastAssistant.text += delta;
           }
           this.messages = msgs;
-
-          // TTS: buffer deltas and enqueue each complete sentence immediately
-          // Stop after TTS_MAX_SENTENCES to avoid reading the full response aloud
-          if (isVoice && this.ttsSentenceCount < SoofiChat.TTS_MAX_SENTENCES) {
-            this.sentenceBuffer += delta;
-            let pos: number;
-            while ((pos = this.sentenceBuffer.search(/[.!?]+\s/)) !== -1) {
-              const match = this.sentenceBuffer.slice(pos).match(/[.!?]+\s/)!;
-              const endPos = pos + match[0].length;
-              const sentence = this.sentenceBuffer.slice(0, endPos).trim();
-              this.sentenceBuffer = this.sentenceBuffer.slice(endPos);
-              const clean = this.cleanForTTS(sentence);
-              if (clean) {
-                this.enqueueTTS(clean);
-                this.ttsSentenceCount++;
-                if (this.ttsSentenceCount >= SoofiChat.TTS_MAX_SENTENCES) {
-                  this.sentenceBuffer = '';
-                  break;
-                }
-              }
-            }
-          }
         }
         break;
 
       case "TOOL_CALL_START":
         this.searching = true;
+        this.searchStatusLabel = "";
         break;
 
       case "TOOL_CALL_END":
         this.searching = false;
+        this.searchStatusLabel = "";
+        break;
+
+      case "SEARCH_STATUS":
+        this.searchStatusLabel = (event.label as string) || "";
+        break;
+
+      case "SPEECH_TEXT":
+        // TTS plays for all responses (text and voice) — intentional: the system always speaks.
+        if (event.text) this.enqueueTTS(event.text as string);
         break;
 
       case "TEXT_MESSAGE_END":
-        // Flush remainder only if we haven't hit the sentence limit yet
-        if (isVoice && this.sentenceBuffer.trim() && this.ttsSentenceCount < SoofiChat.TTS_MAX_SENTENCES) {
-          const clean = this.cleanForTTS(this.sentenceBuffer);
-          if (clean) this.enqueueTTS(clean);
-          this.sentenceBuffer = '';
-        }
         this.currentMsgId = null;
         this.searching = false;
         break;
@@ -956,20 +932,6 @@ class SoofiChat extends SignalWatcher(LitElement) {
   // -----------------------------------------------------------------------
   // TTS audio queue
   // -----------------------------------------------------------------------
-
-  private cleanForTTS(text: string): string {
-    return text
-      .replace(/\n?(?:Quellen?|Sources?|Referenzen?)[\s:：][\s\S]*/i, '') // stop at sources
-      .replace(/```[\s\S]*?```/g, '')      // code blocks
-      .replace(/^#{1,6}\s+/gm, '')         // headings
-      .replace(/\*{1,3}(.+?)\*{1,3}/gs, '$1') // bold / italic
-      .replace(/_{1,2}(.+?)_{1,2}/gs, '$1')   // underscore emphasis
-      .replace(/`[^`]+`/g, '')             // inline code
-      .replace(/^\d+\.\s+/gm, '')          // numbered list markers (avoid "eins punkt")
-      .replace(/^[-*•]\s+/gm, '')          // bullet points
-      .replace(/https?:\/\/\S+/g, '')      // URLs
-      .trim();
-  }
 
   private enqueueTTS(text: string): void {
     if (!text.trim()) return;
