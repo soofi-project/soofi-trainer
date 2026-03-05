@@ -14,8 +14,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage, ToolMessage
 from langgraph.graph.state import CompiledStateGraph
-from .constants import ADVISOR_KEY_CHUNK, ADVISOR_KEY_SEARCH_STATUS
-from .graph import build_graph, set_advisor_context_id
+from .constants import (
+    ADVISOR_KEY_CHUNK,
+    ADVISOR_KEY_SEARCH_STATUS,
+    TRAINING_AGENT_KEY_CHUNK,
+    TRAINING_AGENT_KEY_JOB_STARTED,
+    TRAINING_AGENT_KEY_STATUS,
+)
+from .graph import build_graph, set_advisor_context_id, set_training_context_id
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -164,6 +170,7 @@ async def _stream_ag_ui_events(
     msg_id = str(uuid.uuid4())
 
     set_advisor_context_id(session_id)
+    set_training_context_id(session_id)
     lc_messages = _build_lc_messages(messages)
 
     yield _sse({"type": "RUN_STARTED", "threadId": thread_id, "runId": run_id})
@@ -172,6 +179,9 @@ async def _stream_ag_ui_events(
     result_messages: list[Any] = []
     advisor_searching = False
     advisor_streamed = False  # True once advisor chunks have been forwarded to browser
+    training_agent_searching = False
+    training_agent_streamed = False  # True once training agent chunks have been forwarded
+    job_started_id: str | None = None  # Job ID from a started training job
     response_text = ""  # Accumulated full response text for SPEECH_TEXT generation
     speech_emitted = False  # True once SPEECH_TEXT has been emitted for this response
 
@@ -181,8 +191,9 @@ async def _stream_ag_ui_events(
         ):
             kind = event["event"]
 
-            if kind == "on_tool_start" and not advisor_searching:
-                if event.get("name") == "ask_advisor_tool":
+            if kind == "on_tool_start":
+                tool_name = event.get("name")
+                if tool_name == "ask_advisor_tool" and not advisor_searching:
                     advisor_searching = True
                     advisor_streamed = False
                     yield _sse({"type": "TOOL_CALL_START", "tool": "ask_advisor_tool"})
@@ -191,14 +202,27 @@ async def _stream_ag_ui_events(
                     # Brief pause so the A2A edge animation is visible before transitioning.
                     await asyncio.sleep(0.6)
                     yield _sse({"type": "SEARCH_STATUS", "label": "Suche in der Wissensdatenbank"})
+                elif tool_name == "ask_training_agent_tool" and not training_agent_searching:
+                    training_agent_searching = True
+                    training_agent_streamed = False
+                    yield _sse({"type": "TOOL_CALL_START", "tool": "ask_training_agent_tool"})
+                    yield _sse({"type": "SEARCH_STATUS", "label": "Verarbeite Trainingsauftrag\u2026"})
 
             elif kind == "on_custom_event":
-                # Stream-Delegation: advisor chunks and status events arrive here
+                # Stream-Delegation: advisor and training agent chunks arrive here
                 data = event.get("data", {})
 
                 search_status = data.get(ADVISOR_KEY_SEARCH_STATUS)
                 if search_status:
                     yield _sse({"type": "SEARCH_STATUS", "label": search_status})
+
+                training_status = data.get(TRAINING_AGENT_KEY_STATUS)
+                if training_status:
+                    yield _sse({"type": "SEARCH_STATUS", "label": training_status})
+
+                job_id = data.get(TRAINING_AGENT_KEY_JOB_STARTED)
+                if job_id:
+                    job_started_id = job_id
 
                 chunk = data.get(ADVISOR_KEY_CHUNK)
                 if chunk:
@@ -222,11 +246,35 @@ async def _stream_ag_ui_events(
                             speech_emitted = True
                             yield _sse({"type": "SPEECH_TEXT", "text": speech})
 
+                training_chunk = data.get(TRAINING_AGENT_KEY_CHUNK)
+                if training_chunk:
+                    response_text += training_chunk
+                    if not training_agent_streamed:
+                        training_agent_streamed = True
+                        training_agent_searching = False
+                        yield _sse({"type": "TOOL_CALL_END", "tool": "ask_training_agent_tool"})
+                    yield _sse(
+                        {
+                            "type": "TEXT_MESSAGE_CONTENT",
+                            "messageId": msg_id,
+                            "delta": training_chunk,
+                        }
+                    )
+                    if not speech_emitted and _RE_SENTENCE_END.search(response_text):
+                        speech = _generate_speech_text(response_text)
+                        if speech:
+                            speech_emitted = True
+                            yield _sse({"type": "SPEECH_TEXT", "text": speech})
+
             elif kind == "on_tool_end":
+                tool_name = event.get("name")
                 # Fallback: if streaming yielded nothing, emit TOOL_CALL_END here
-                if event.get("name") == "ask_advisor_tool" and advisor_searching:
+                if tool_name == "ask_advisor_tool" and advisor_searching:
                     advisor_searching = False
                     yield _sse({"type": "TOOL_CALL_END", "tool": "ask_advisor_tool"})
+                elif tool_name == "ask_training_agent_tool" and training_agent_searching:
+                    training_agent_searching = False
+                    yield _sse({"type": "TOOL_CALL_END", "tool": "ask_training_agent_tool"})
 
             elif kind == "on_chat_model_stream":
                 chunk = event["data"]["chunk"]
@@ -235,7 +283,8 @@ async def _stream_ag_ui_events(
                     and chunk.content
                     and not chunk.tool_calls
                     and not chunk.tool_call_chunks
-                    and not advisor_streamed  # suppress if advisor already streamed
+                    and not advisor_streamed  # suppress if advisor or training agent already streamed
+                    and not training_agent_streamed
                 ):
                     response_text += chunk.content
                     yield _sse(
@@ -279,6 +328,18 @@ async def _stream_ag_ui_events(
     surface = _extract_a2ui_from_tool_results(result_messages)
     if surface is not None:
         yield _sse({"type": "STATE_SNAPSHOT", "snapshot": {"a2ui": surface}})
+
+    # Push component trigger when a training job was started (T-08-5 renders the component)
+    if job_started_id is not None:
+        yield _sse(
+            {
+                "type": "STATE_SNAPSHOT",
+                "snapshot": {
+                    "custom_component": "soofi-training-progress",
+                    "job_id": job_started_id,
+                },
+            }
+        )
 
     yield _sse({"type": "RUN_FINISHED", "threadId": thread_id, "runId": run_id})
 
