@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import uuid
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator
@@ -13,8 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage, ToolMessage
 from langgraph.graph.state import CompiledStateGraph
-from openai import AsyncOpenAI
-
+from .constants import ADVISOR_KEY_CHUNK, ADVISOR_KEY_SEARCH_STATUS
 from .graph import build_graph, set_advisor_context_id
 
 logging.basicConfig(level=logging.INFO)
@@ -22,21 +22,19 @@ logger = logging.getLogger(__name__)
 
 # Initialized at startup
 graph: CompiledStateGraph | None = None
-_openai_client: AsyncOpenAI | None = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    global graph, _openai_client
+    global graph
 
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         raise RuntimeError("OPENAI_API_KEY is not set")
-    _openai_client = AsyncOpenAI(api_key=api_key)
+
     graph = build_graph()
     logger.info("Interaction Agent graph built successfully")
     yield
-    await _openai_client.close()
 
 
 app = FastAPI(title="Soofi Interaction Agent", lifespan=lifespan)
@@ -48,6 +46,71 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+# ---------------------------------------------------------------------------
+# Speech text extraction — generates speakable prose for TTS from responses
+# ---------------------------------------------------------------------------
+
+
+_RE_MD_LINK = re.compile(r"\[([^\]]+)\]\([^)]+\)")
+_RE_MD_FORMAT = re.compile(r"[*_`]+")
+_RE_WHITESPACE = re.compile(r"\s+")
+_SPEECH_MIN_CHARS = 15  # don't speak trivially short responses
+_RE_SENTENCE_END = re.compile(r"(?<![A-Z0-9])[.!?]\s")  # sentence boundary for early TTS trigger
+# Lines that start a structured markdown block — stop collecting intro before these
+_RE_STRUCTURE_LINE = re.compile(r"^\s*(?:#{1,6}\s|[-*]\s|\d+\.\s)")
+# Spoken when the response starts directly with structure (no intro prose)
+_SPEECH_FALLBACK = "Ich habe folgendes gefunden."
+_SPEECH_MAX_CHARS = 200  # upper limit to avoid reading very long intros
+
+
+def _generate_speech_text(text: str) -> str:
+    """Extract speakable intro prose from a Markdown response for TTS.
+
+    - Collects lines up to the first structural element (header, bullet, list)
+    - If the whole response is structural, returns a static fallback phrase
+    - Reads all intro sentences; stops and converts a colon-ending sentence
+      (which would introduce a list) to a period so it sounds natural
+    """
+    # Collect only the intro lines before any structural markdown
+    intro_lines: list[str] = []
+    for line in text.splitlines():
+        if _RE_STRUCTURE_LINE.match(line):
+            break
+        intro_lines.append(line)
+
+    intro = "\n".join(intro_lines).strip()
+
+    # Whole response starts with structure — give a short spoken acknowledgement
+    if not intro or len(intro) < _SPEECH_MIN_CHARS:
+        return _SPEECH_FALLBACK
+
+    # Strip inline markdown
+    intro = _RE_MD_LINK.sub(r"\1", intro)
+    intro = _RE_MD_FORMAT.sub("", intro)
+    intro = _RE_WHITESPACE.sub(" ", intro).strip()
+
+    # Collect sentences; rules:
+    # - Only include sentences that end with proper punctuation (.!?) — trailing
+    #   fragments without punctuation are incomplete (early-emission artifact)
+    # - When a sentence ends with ":" it introduces a list: replace colon with
+    #   "." and stop so list items are not read out
+    sentences = re.split(r"(?<=[.!?])\s+", intro)
+    result: list[str] = []
+    for sentence in sentences:
+        s = sentence.strip()
+        if not s:
+            continue
+        if s.endswith(":"):
+            result.append(s[:-1] + ".")
+            break
+        if not re.search(r"[.!?]$", s):
+            break  # incomplete fragment — stop here
+        result.append(s)
+        if sum(len(x) for x in result) >= _SPEECH_MAX_CHARS:
+            break
+
+    return " ".join(result).strip()
 
 
 
@@ -109,6 +172,8 @@ async def _stream_ag_ui_events(
     result_messages: list[Any] = []
     advisor_searching = False
     advisor_streamed = False  # True once advisor chunks have been forwarded to browser
+    response_text = ""  # Accumulated full response text for SPEECH_TEXT generation
+    speech_emitted = False  # True once SPEECH_TEXT has been emitted for this response
 
     try:
         async for event in graph.astream_events(
@@ -123,9 +188,16 @@ async def _stream_ag_ui_events(
                     yield _sse({"type": "TOOL_CALL_START", "tool": "ask_advisor_tool"})
 
             elif kind == "on_custom_event":
-                # Stream-Delegation: advisor chunks arrive here via get_stream_writer()
-                chunk = event.get("data", {}).get("advisor_chunk")
+                # Stream-Delegation: advisor chunks and status events arrive here
+                data = event.get("data", {})
+
+                search_status = data.get(ADVISOR_KEY_SEARCH_STATUS)
+                if search_status:
+                    yield _sse({"type": "SEARCH_STATUS", "label": search_status})
+
+                chunk = data.get(ADVISOR_KEY_CHUNK)
                 if chunk:
+                    response_text += chunk
                     if not advisor_streamed:
                         # First chunk — hide the searching indicator
                         advisor_streamed = True
@@ -138,6 +210,12 @@ async def _stream_ag_ui_events(
                             "delta": chunk,
                         }
                     )
+                    # Emit SPEECH_TEXT as soon as the first sentence is complete
+                    if not speech_emitted and _RE_SENTENCE_END.search(response_text):
+                        speech = _generate_speech_text(response_text)
+                        if speech:
+                            speech_emitted = True
+                            yield _sse({"type": "SPEECH_TEXT", "text": speech})
 
             elif kind == "on_tool_end":
                 # Fallback: if streaming yielded nothing, emit TOOL_CALL_END here
@@ -154,6 +232,7 @@ async def _stream_ag_ui_events(
                     and not chunk.tool_call_chunks
                     and not advisor_streamed  # suppress if advisor already streamed
                 ):
+                    response_text += chunk.content
                     yield _sse(
                         {
                             "type": "TEXT_MESSAGE_CONTENT",
@@ -162,6 +241,12 @@ async def _stream_ag_ui_events(
                         }
                     )
                     await asyncio.sleep(STREAM_DELAY)
+                    # Emit SPEECH_TEXT as soon as the first sentence is complete
+                    if not speech_emitted and _RE_SENTENCE_END.search(response_text):
+                        speech = _generate_speech_text(response_text)
+                        if speech:
+                            speech_emitted = True
+                            yield _sse({"type": "SPEECH_TEXT", "text": speech})
 
             elif kind == "on_chain_end":
                 output = event.get("data", {}).get("output", {})
@@ -179,6 +264,12 @@ async def _stream_ag_ui_events(
         )
 
     yield _sse({"type": "TEXT_MESSAGE_END", "messageId": msg_id})
+
+    # Fallback: emit SPEECH_TEXT after stream if no sentence boundary was hit during streaming
+    if response_text and not speech_emitted:
+        speech_text = _generate_speech_text(response_text)
+        if speech_text:
+            yield _sse({"type": "SPEECH_TEXT", "text": speech_text})
 
     surface = _extract_a2ui_from_tool_results(result_messages)
     if surface is not None:
