@@ -5,6 +5,7 @@
   - [T-09-2](T-09-2-agent-flow-ui.md)
   - [T-09-3](T-09-3-rag-transparency.md)
   - [T-09-4](T-09-4-agent-card-viewer.md)
+  - [T-09-5](T-09-5-gpu-monitoring.md)
 
 /label ~UserStory_US-09
 /label ~UserStory
