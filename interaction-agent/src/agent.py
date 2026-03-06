@@ -182,6 +182,11 @@ async def _stream_ag_ui_events(
                     advisor_searching = True
                     advisor_streamed = False
                     yield _sse({"type": "TOOL_CALL_START", "tool": "ask_advisor_tool"})
+                    # Advisor always calls search_documents — on_custom_event does not
+                    # propagate write() calls from ToolNode, so emit SEARCH_STATUS directly.
+                    # Brief pause so the A2A edge animation is visible before transitioning.
+                    await asyncio.sleep(0.6)
+                    yield _sse({"type": "SEARCH_STATUS", "label": "Suche in der Wissensdatenbank"})
 
             elif kind == "on_custom_event":
                 # Stream-Delegation: advisor chunks and status events arrive here

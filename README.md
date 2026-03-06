@@ -88,7 +88,8 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 | `WEAVIATE_VERSION` | `1.35.7` | Weaviate Image version |
 | `WEAVIATE_PORT` | `8070` | Weaviate HTTP port |
 | `WEAVIATE_COLLECTION` | `SoofiKnowledge` | Weaviate collection name |
-| `EMBEDDING_MODEL` | `openai:text-embedding-3-large` | Embedding model (provider:model) |
+| `EMBEDDING_MODEL` | `openai:text-embedding-3-large` | Embedding model (`provider:model`, e.g. `ollama:bge-m3`) |
+| `OLLAMA_HOST` | _(unset)_ | Ollama base URL — only needed when using an Ollama embedding model (e.g. `http://host.docker.internal:11434`) |
 | `ADVISOR_NAME` | `soofi-advisor` | Model name shown in Open WebUI |
 | `ADVISOR_MODEL` | `gpt-4o-mini` | LLM model for the advisor agent |
 | `MCPINSPECTOR_VERSION` | `0.18.0` | MCP Inspector Image version |
