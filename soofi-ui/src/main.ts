@@ -919,6 +919,9 @@ class SoofiChat extends SignalWatcher(LitElement) {
 
 
       case "RUN_FINISHED":
+        if (this._flowTimer) clearTimeout(this._flowTimer);
+        this._flowTimer = null;
+        this.flowState = "idle";
         this.searching = false;
         break;
 
