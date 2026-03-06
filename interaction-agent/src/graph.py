@@ -114,6 +114,8 @@ async def ask_training_agent_tool(question: str) -> str:
 
             if event_type == SOOFI_EVENT_JOB_STARTED:
                 write({TRAINING_AGENT_KEY_JOB_STARTED: parsed.get("job_id", "")})
+            elif event_type == SOOFI_EVENT_SEARCH_STATUS:
+                write({TRAINING_AGENT_KEY_STATUS: parsed.get("text", "")})
             else:
                 full_text += chunk
                 write({TRAINING_AGENT_KEY_CHUNK: chunk})
