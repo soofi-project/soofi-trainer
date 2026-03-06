@@ -16,9 +16,13 @@ logger = logging.getLogger(__name__)
 # Protocol constants for the soofi event envelope shared with interaction-agent
 _SOOFI_EVENT_KEY = "__soofi_event"
 _EVENT_JOB_STARTED = "job_started"
+_EVENT_SEARCH_STATUS = "search_status"
 
 # Tool name that signals a training job was started
 _START_TRAINING_TOOL = "start_training_job"
+
+# MCP tool names — emit status event when these start
+_MCP_TOOLS = {"start_training_job", "get_job_status", "list_training_jobs", "cancel_training_job"}
 
 
 class TrainingAgentExecutor(AgentExecutor):
@@ -90,7 +94,26 @@ class TrainingAgentExecutor(AgentExecutor):
                 version="v2",
                 config=config,
             ):
-                if event["event"] == "on_tool_end":
+                if event["event"] == "on_tool_start" and event.get("name") in _MCP_TOOLS:
+                    status_json = json.dumps(
+                        {_SOOFI_EVENT_KEY: _EVENT_SEARCH_STATUS, "text": "Rufe Training Gateway auf"},
+                        ensure_ascii=False,
+                    )
+                    await event_queue.enqueue_event(
+                        TaskStatusUpdateEvent(
+                            task_id=context.task_id,
+                            context_id=context.context_id,
+                            status=TaskStatus(
+                                state=TaskState.working,
+                                message=new_agent_text_message(
+                                    status_json, context.context_id, context.task_id
+                                ),
+                            ),
+                            final=False,
+                        )
+                    )
+
+                elif event["event"] == "on_tool_end":
                     # Emit job_started envelope when start_training_job completes successfully
                     if event.get("name") == _START_TRAINING_TOOL:
                         output = event.get("data", {}).get("output")

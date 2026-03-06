@@ -28,7 +28,7 @@ async def start_training_job(
     Args:
         method: Training method (lora, sft, qlora, rag, distillation, cpt, instruction, dpo, rlhf)
         dataset_ref: Reference to the training dataset
-        base_model: Base model name (e.g. meta-llama/Llama-3.1-8B)
+        base_model: Base model name (e.g. soofi)
         config: Optional configuration overrides for the training job
 
     Returns:

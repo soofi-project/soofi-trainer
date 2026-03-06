@@ -146,7 +146,7 @@ class AdvisorAgentExecutor(AgentExecutor):
             return
 
         response_text = "".join(collected) or "No response generated."
-        logger.info("A2A response: %s", response_text[:200])
+        logger.info("A2A response: %s", response_text[:1000])
 
         await event_queue.enqueue_event(
             Task(
