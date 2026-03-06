@@ -164,7 +164,9 @@ class SSEStream:
 
         # Fallback speech if no sentence boundary was hit during streaming
         if self._response_text and not self._speech_emitted:
-            speech = generate_speech_text(self._response_text)
+            speech = generate_speech_text(
+                self._response_text, has_search_results=self._has_search_results()
+            )
             if speech:
                 yield _sse({"type": "SPEECH_TEXT", "text": speech})
 
@@ -285,12 +287,17 @@ class SSEStream:
 
     # -- helpers -------------------------------------------------------------
 
+    def _has_search_results(self) -> bool:
+        return any(t.streamed for t in self._trackers.values())
+
     def _maybe_emit_speech(self) -> list[str]:
         if self._speech_emitted:
             return []
         if not RE_SENTENCE_END.search(self._response_text):
             return []
-        speech = generate_speech_text(self._response_text)
+        speech = generate_speech_text(
+            self._response_text, has_search_results=self._has_search_results()
+        )
         if not speech:
             return []
         self._speech_emitted = True

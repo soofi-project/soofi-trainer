@@ -147,7 +147,7 @@ def show_dashboard(name: str) -> str:
 def build_graph() -> CompiledStateGraph:
     """Build the LangGraph ReAct agent for the Interaction Agent."""
     tools = [ask_advisor_tool, ask_training_agent_tool, show_dashboard]
-    llm = ChatOpenAI(model=model_name).bind_tools(tools)
+    llm = ChatOpenAI(model=model_name).bind_tools(tools, parallel_tool_calls=False)
     tool_node = ToolNode(tools)
 
     async def agent(state: MessagesState) -> MessagesState:

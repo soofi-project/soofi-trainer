@@ -19,6 +19,6 @@ Rufe `get_job_status` auf und gib Status, Phase, Fortschritt und ggf. Fehler aus
 Bestätigung einholen, dann `cancel_training_job` aufrufen.
 
 ## Regeln
-- Antworte auf Deutsch, prägnant.
+- Antworte IMMER auf Deutsch, auch wenn Tool-Ergebnisse auf Englisch sind. Keine andere Sprache.
 - Keine erfundenen Job-IDs — nur echte IDs aus Tool-Antworten verwenden.
 """

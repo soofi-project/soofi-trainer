@@ -15,7 +15,7 @@ _SPEECH_FALLBACK = "Ich habe folgendes gefunden."
 _SPEECH_MAX_CHARS = 200  # upper limit to avoid reading very long intros
 
 
-def generate_speech_text(text: str) -> str:
+def generate_speech_text(text: str, *, has_search_results: bool = False) -> str:
     """Extract speakable intro prose from a Markdown response for TTS.
 
     - Collects lines up to the first structural element (header, bullet, list)
@@ -33,8 +33,13 @@ def generate_speech_text(text: str) -> str:
     intro = "\n".join(intro_lines).strip()
 
     # Whole response starts with structure — give a short spoken acknowledgement
-    if not intro or len(intro) < _SPEECH_MIN_CHARS:
-        return _SPEECH_FALLBACK
+    # Only use the search fallback when there were actual search results
+    if not intro:
+        return _SPEECH_FALLBACK if has_search_results else ""
+
+    # Too short to speak — return empty so caller can retry after more text arrives
+    if len(intro) < _SPEECH_MIN_CHARS:
+        return ""
 
     # Strip inline markdown
     intro = _RE_MD_LINK.sub(r"\1", intro)
