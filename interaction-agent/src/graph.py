@@ -58,6 +58,8 @@ model_name = os.getenv("INTERACTION_MODEL")
 if not model_name:
     raise RuntimeError("INTERACTION_MODEL env var required.")
 
+base_url = os.getenv("OPENAI_BASE_URL") or None
+
 
 @tool
 async def ask_advisor_tool(question: str) -> str:
@@ -121,7 +123,10 @@ def show_dashboard(name: str) -> str:
 def build_graph() -> CompiledStateGraph:
     """Build the LangGraph ReAct agent for the Interaction Agent."""
     tools = [ask_advisor_tool, show_dashboard]
-    llm = ChatOpenAI(model=model_name).bind_tools(tools)
+    llm = ChatOpenAI(
+        model=model_name,
+        **({"openai_api_base": base_url} if base_url else {}),
+    ).bind_tools(tools)
     tool_node = ToolNode(tools)
 
     async def agent(state: MessagesState) -> MessagesState:

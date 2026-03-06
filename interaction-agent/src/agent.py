@@ -3,7 +3,6 @@
 import asyncio
 import json
 import logging
-import os
 import re
 import uuid
 from contextlib import asynccontextmanager
@@ -14,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage, ToolMessage
 from langgraph.graph.state import CompiledStateGraph
+
 from .constants import ADVISOR_KEY_CHUNK, ADVISOR_KEY_SEARCH_STATUS
 from .graph import build_graph, set_advisor_context_id
 
@@ -27,10 +27,6 @@ graph: CompiledStateGraph | None = None
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     global graph
-
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        raise RuntimeError("OPENAI_API_KEY is not set")
 
     graph = build_graph()
     logger.info("Interaction Agent graph built successfully")
