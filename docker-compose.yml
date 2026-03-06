@@ -284,6 +284,7 @@ services:
       - ADVISOR_A2A_URL=http://advisor:8000
       - TRAINING_AGENT_A2A_URL=http://training-agent:8000
       - INTERACTION_MODEL=${INTERACTION_MODEL}
+
     networks:
       - soofi-network
     depends_on:
