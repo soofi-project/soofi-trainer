@@ -2,9 +2,9 @@
 
 ## Überblick
 
-Instruction Tuning ist ein überwachtetes Fine-Tuning-Verfahren, bei dem ein vortrainiertes Sprachmodell auf Datensätzen trainiert wird, die aus natürlichsprachlichen Instruktionen und den dazugehörigen gewünschten Antworten bestehen (z. B. „Erkläre X“ → Erklärung, „Fasse Y zusammen“ → Zusammenfassung). Ziel ist es, die Fähigkeit des Modells zu verbessern, natürlichsprachliche Anweisungen zuverlässig zu befolgen und sich wie ein konversationeller Assistent zu verhalten.
+Instruction Tuning ist ein überwachtetes Fine-Tuning-Verfahren, bei dem ein vortrainiertes Sprachmodell auf Datensätzen trainiert wird, die aus natürlichsprachlichen Instruktionen und den dazugehörigen gewünschten Antworten bestehen (z. B. „Erkläre X“ → Erklärung, „Fasse Y zusammen“ → Zusammenfassung). Ziel ist es, die Fähigkeit des Modells zu verbessern, natürlichsprachliche Anweisungen zuverlässig zu befolgen und sich wie ein konversationeller Assistent zu verhalten. Diese Methode wird häufig eingesetzt, um Basismodelle in assistentenähnliche Systeme zu transformieren. 
 
-Diese Methode wird häufig eingesetzt, um Basismodelle in assistentenähnliche Systeme zu transformieren. Im SOOFI-Kontext ermöglicht Instruction Tuning souveränen Foundation-Modellen, zuverlässig als domänenspezifische Assistenten für industrielle und öffentliche Anwendungen zu agieren.
+Im SOOFI-Kontext trägt Instruction Tuning zur Entwicklung strukturierter und zuverlässiger Assistenzfunktionen in souveränen Foundation-Modellen bei.
 
 ## Funktionsweise
 
@@ -42,6 +42,6 @@ Typische Anwendungsfälle umfassen konversationelle Assistenten, Systeme zur str
 
 Effektives Instruction Tuning basiert auf vielfältigen und sorgfältig gestalteten Instruktionsbeispielen, die unterschiedliche Formulierungen und Aufgabenkomplexitäten abdecken. Klare Formatierungsregeln im Datensatz verbessern die Generalisierungsfähigkeit. Regelmäßige Evaluation mit bisher ungesehenen Prompts hilft, Overfitting auf bestimmte Instruktionsmuster zu erkennen. Die Kombination von Instruction Tuning mit aufgabenspezifischen Evaluationsmetriken stellt messbare Leistungsverbesserungen sicher.
 
-## SOOFI Integration Perspective
+## SOOFI Integrationsperspektive
 
-Im Rahmen von SOOFI unterstützt Instruction Tuning die Entwicklung strukturierter und verlässlicher Assistenzfunktionen in souveränen Sprachmodellen. Es ermöglicht eine kontrollierte Anpassung an aufgabenspezifische Interaktionsmuster bei gleichzeitiger Flexibilität über verschiedene Anwendungsszenarien hinweg. Der Ansatz ergänzt retrieval-basierte und parameter-effiziente Methoden innerhalb modularer Spezialisierungsworkflows.
+Im SOOFI-Kontext unterstützt Instruction Tuning die Entwicklung strukturierter und zuverlässiger Assistenzfunktionen in souveränen Foundation-Modellen. Durch das Training auf kuratierten Instruction-Response-Datensätzen können SOOFI-Systeme ihre Fähigkeit verbessern, Benutzeranweisungen zu befolgen, konsistente Antworten zu generieren und aufgabenorientierte Interaktionen zu unterstützen. Dadurch wird eine kontrollierte Anpassung an domänen- und aufgabenspezifische Interaktionsmuster ermöglicht, während gleichzeitig Flexibilität über verschiedene Anwendungsszenarien hinweg erhalten bleibt.

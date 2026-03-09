@@ -42,6 +42,6 @@ Typische Anwendungsfälle umfassen die Verfeinerung von Konversationsassistenten
 
 Eine effektive DPO-Implementierung erfordert klare Annotationsrichtlinien und vielfältige Präferenzdatensätze. Der Vergleich der Modellleistung vor und nach der Präferenzoptimierung hilft, Alignment-Verbesserungen messbar zu machen. Regelmäßige Überprüfungen der Annotationskonsistenz reduzieren das Risiko unbeabsichtigter Verzerrungen.
 
-## SOOFI-Integrationsperspektive
+## SOOFI Integrationsperspektive
 
-Im Rahmen strukturierter Spezialisierungsworkflows bietet DPO einen pragmatischen Mechanismus zur Integration menschlicher Präferenzen in die Modellausrichtung bei gleichzeitig beherrschbarer Implementierungskomplexität. Die Methode ergänzt überwachte und instruktionale Trainingsansätze, wenn eine gezielte Verhaltensverfeinerung erforderlich ist.
+Im SOOFI-Kontext bietet Direct Preference Optimization (DPO) einen pragmatischen Mechanismus zur Ausrichtung souveräner Foundation-Modelle an menschliche Präferenzen, während die Implementierungskomplexität überschaubar bleibt. Die Methode ergänzt überwachte und instruktionbasierte Trainingsverfahren, wenn eine feinere Verhaltensausrichtung erforderlich ist. Sie ermöglicht es, Antwortqualität, Hilfsbereitschaft und Konsistenz des Modellverhaltens zu verbessern, ohne die vollständige architektonische und operative Komplexität klassischer RLHF-Pipelines zu erfordern.

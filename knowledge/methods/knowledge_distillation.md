@@ -44,4 +44,4 @@ Eine effektive Distillation setzt ein qualitativ hochwertiges Teacher-Modell sow
 
 ## SOOFI Integrationsperspektive
 
-Im Rahmen modularer Spezialisierungsworkflows ermöglicht Knowledge Distillation den Übergang von leistungsstarken Trainingsumgebungen hin zu effizienter produktiver Bereitstellung. Die Methode unterstützt eine skalierbare Modellverteilung und Kostenkontrolle im Betrieb, während zentrale Leistungsmerkmale erhalten bleiben.
+Innerhalb der SOOFI-Spezialisierungsworkflows kann Knowledge Distillation nach Trainings- oder Alignment-Schritten eingesetzt werden, um leichtgewichtige Deployment-Varianten zu erzeugen. Dadurch können SOOFI-Modelle auf unterschiedlichen Infrastrukturumgebungen betrieben werden, einschließlich ressourcenbeschränkter Systeme, während gleichzeitig konsistente Aufgabenleistung und reduzierte Betriebskosten erreicht werden.

@@ -44,4 +44,4 @@ Eine effektive Umsetzung von Prefix Tuning erfordert eine sorgfältige Auswahl d
 
 ## SOOFI Integrationsperspektive
 
-Im Rahmen modularer Anpassungsworkflows bietet Prefix Tuning einen leichtgewichtigen Mechanismus zur Aufgaben-Konditionierung, ohne die Gewichte von Foundation-Modellen zu verändern. Die Methode unterstützt flexible Experimente und kontrollierte Spezialisierungsstrategien bei gleichzeitiger Wahrung der Integrität der zugrunde liegenden Modellarchitektur.
+Im SOOFI-Kontext stellt Prefix Tuning einen leichtgewichtigen Ansatz dar, um souveräne Foundation-Modelle an spezifische Aufgaben anzupassen, ohne die zugrunde liegenden Modellgewichte zu verändern. Durch die Optimierung einer kleinen Menge von Prefix-Parametern ermöglicht die Methode eine effiziente Verhaltensanpassung bei minimalem Rechenaufwand.

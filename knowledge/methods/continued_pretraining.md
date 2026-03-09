@@ -38,6 +38,6 @@ Typische Anwendungsfälle umfassen die Anpassung eines Foundation-Modells an ind
 
 Eine effektive Umsetzung von Continued Pretraining erfordert eine sorgfältige Kuratierung des Domänenkorpus, um Vielfalt und Repräsentativität sicherzustellen. Das Monitoring auf sogenanntes „Catastrophic Forgetting“ ist wichtig, um allgemeine Sprachfähigkeiten zu erhalten. Eine schrittweise Evaluation anhand sowohl domänenspezifischer als auch allgemeiner Benchmarks hilft, ein ausgewogenes Verhältnis zwischen Spezialisierung und Robustheit sicherzustellen.
 
-## SOOFI-Integrationsperspektive
+## SOOFI Integrationsperspektive
 
-Im Rahmen von SOOFI bietet Continued Pretraining einen Ansatz zur Entwicklung tief domänenintegrierter souveräner Foundation-Modelle. Durch die Nutzung großskaliger europäischer Industrie- und Public-Sector-Korpora kann SOOFI das interne Domänenverständnis stärken und gleichzeitig Kontrolle über Datenherkunft und Compliance-Anforderungen wahren. Dieser Ansatz unterstützt den langfristigen Kompetenzaufbau in strategisch relevanten Anwendungsfeldern.
+Im Rahmen von SOOFI bietet Continued Pretraining einen Ansatz zur Entwicklung tief domänenintegrierter souveräner Foundation-Modelle. Durch die Nutzung großskaliger kuratierter Korpora, einschließlich europäischer Industrie-, Public-Sector- und weiterer domänenspezifischer Datensätze, kann SOOFI das interne Domänenverständnis stärken und gleichzeitig Kontrolle über Datenherkunft und Compliance-Anforderungen wahren. Dieser Ansatz unterstützt den langfristigen Kompetenzaufbau in strategisch relevanten Anwendungsfeldern.
