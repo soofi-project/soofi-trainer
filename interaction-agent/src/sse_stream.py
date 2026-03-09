@@ -4,6 +4,7 @@ import asyncio
 import copy
 import json
 import logging
+import re
 import uuid
 from dataclasses import dataclass, field
 from typing import Any, AsyncGenerator
@@ -11,11 +12,20 @@ from typing import Any, AsyncGenerator
 from langchain_core.messages import AIMessageChunk, ToolMessage
 from langgraph.graph.state import CompiledStateGraph
 
+from .constants import CONTROL_DOC_VIEWER_TOOL, DOC_VIEWER_KEY
 from .speech import RE_SENTENCE_END, generate_speech_text
 
 logger = logging.getLogger(__name__)
 
 STREAM_DELAY = 0.02  # seconds between direct-LLM text chunks
+
+# Strip domains the LLM may prepend to /docs/ URLs (e.g. https://www.dfki.de/docs/...)
+_RE_DOCS_URL = re.compile(r"https?://[^/\s)]+(/docs/)")
+# Hold back partial markdown links at end of buffer so the UI never shows
+# broken fragments like "[lor", "[lora](https://www.dfki" while streaming.
+# Buffers from "[" until the closing ")" of the link URL.
+# Matches: [text  |  [text]  |  [text](  |  [text](url  |  https://partial
+_RE_PARTIAL = re.compile(r"\[[^\]]*(?:\](?:\([^)]*)?)?$|https?://[^\s)]*$")
 
 
 def _sse(event: dict[str, Any]) -> str:
@@ -28,15 +38,17 @@ def _compute_tail(full_output: str, streamed: str) -> str:
         return ""
     if full_output.startswith(streamed):
         return full_output[len(streamed) :]
+    # The streamed text has URL-cleaned /docs/ links (domains stripped), so the raw
+    # full_output won't match as a prefix.  Apply the same cleaning before comparing.
+    cleaned_output = _RE_DOCS_URL.sub(r"\1", full_output)
+    if cleaned_output.startswith(streamed):
+        return cleaned_output[len(streamed) :]
     logger.warning(
-        "Tail compensation prefix mismatch: streamed %d chars, full output %d chars, "
-        "first divergence around char %d",
+        "Tail compensation prefix mismatch: streamed %d chars, full output %d chars "
+        "(cleaned %d chars)",
         len(streamed),
         len(full_output),
-        next(
-            (i for i, (a, b) in enumerate(zip(streamed, full_output)) if a != b),
-            min(len(streamed), len(full_output)),
-        ),
+        len(cleaned_output),
     )
     return ""
 
@@ -103,6 +115,7 @@ class SSEStream:
         self._trackers = {t.tool_name: copy.deepcopy(t) for t in trackers}
         self._msg_id = ""
         self._response_text = ""
+        self._chunk_buffer = ""
         self._speech_emitted = False
         self._result_messages: list[Any] = []
 
@@ -116,6 +129,7 @@ class SSEStream:
         run_id = str(uuid.uuid4())
         self._msg_id = str(uuid.uuid4())
         self._response_text = ""
+        self._chunk_buffer = ""
         self._speech_emitted = False
         self._result_messages = []
 
@@ -155,6 +169,10 @@ class SSEStream:
                     "delta": "\n\n[Fehler bei der Verarbeitung]",
                 }
             )
+
+        # Flush any buffered partial URL
+        for sse in self._flush_buffer():
+            yield sse
 
         # Tail compensation for all trackers
         for sse in self._emit_tails():
@@ -206,6 +224,7 @@ class SSEStream:
 
     async def _handle_custom_event(self, event: dict[str, Any]) -> AsyncGenerator[str, None]:
         data = event.get("data", {})
+
         for tracker in self._trackers.values():
             # Status keys
             for status_key in tracker.status_keys:
@@ -229,23 +248,30 @@ class SSEStream:
         self, tracker: ToolStreamTracker, chunk: str
     ) -> AsyncGenerator[str, None]:
         """Handle an incoming text chunk from a tool stream."""
-        self._response_text += chunk
         if not tracker.streamed:
             tracker.streamed = True
             tracker.searching = False
             yield _sse({"type": "TOOL_CALL_END", "tool": tracker.tool_name})
-        yield _sse(
-            {
-                "type": "TEXT_MESSAGE_CONTENT",
-                "messageId": self._msg_id,
-                "delta": chunk,
-            }
-        )
-        for sse in self._maybe_emit_speech():
+        async for sse in self._emit_text(chunk):
             yield sse
 
     async def _handle_tool_end(self, event: dict[str, Any]) -> AsyncGenerator[str, None]:
         tool_name = event.get("name")
+
+        # Doc viewer commands are returned as JSON from the tool
+        if tool_name == CONTROL_DOC_VIEWER_TOOL:
+            raw = event.get("data", {}).get("output", "")
+            content = raw.content if hasattr(raw, "content") else raw
+            try:
+                data = json.loads(content) if isinstance(content, str) else {}
+                doc_cmd = data.get(DOC_VIEWER_KEY)
+                if doc_cmd:
+                    logger.info("Emitting DOC_VIEWER event: %s", doc_cmd)
+                    yield _sse({"type": "DOC_VIEWER", **doc_cmd})
+            except (json.JSONDecodeError, TypeError):
+                pass
+            return
+
         tracker = self._trackers.get(tool_name) if tool_name else None
         if not tracker:
             return
@@ -273,17 +299,55 @@ class SSEStream:
         # Suppress direct-LLM output if any tracker already streamed
         if any(t.streamed for t in self._trackers.values()):
             return
-        self._response_text += chunk.content
-        yield _sse(
-            {
-                "type": "TEXT_MESSAGE_CONTENT",
-                "messageId": self._msg_id,
-                "delta": chunk.content,
-            }
-        )
-        await asyncio.sleep(STREAM_DELAY)
-        for sse in self._maybe_emit_speech():
+        async for sse in self._emit_text(chunk.content):
             yield sse
+        await asyncio.sleep(STREAM_DELAY)
+
+    # -- URL-safe text emission -----------------------------------------------
+
+    async def _emit_text(self, chunk: str) -> AsyncGenerator[str, None]:
+        """Buffer-aware text emission that fixes /docs/ URLs across chunk boundaries."""
+        self._chunk_buffer += chunk
+        # Apply the URL fix on the combined buffer
+        cleaned = _RE_DOCS_URL.sub(r"\1", self._chunk_buffer)
+        # Check if the buffer ends with a partial link/URL that might continue
+        m = _RE_PARTIAL.search(cleaned)
+        if m:
+            # Hold back the partial URL, emit everything before it
+            emit = cleaned[: m.start()]
+            self._chunk_buffer = cleaned[m.start() :]
+        else:
+            emit = cleaned
+            self._chunk_buffer = ""
+        if emit:
+            self._response_text += emit
+            yield _sse(
+                {
+                    "type": "TEXT_MESSAGE_CONTENT",
+                    "messageId": self._msg_id,
+                    "delta": emit,
+                }
+            )
+            for sse in self._maybe_emit_speech():
+                yield sse
+
+    def _flush_buffer(self) -> list[str]:
+        """Flush any remaining buffered text (e.g. at end of stream)."""
+        if not self._chunk_buffer:
+            return []
+        # Buffer already contains URL-cleaned text from _emit_text
+        remaining = self._chunk_buffer
+        self._chunk_buffer = ""
+        self._response_text += remaining
+        return [
+            _sse(
+                {
+                    "type": "TEXT_MESSAGE_CONTENT",
+                    "messageId": self._msg_id,
+                    "delta": remaining,
+                }
+            )
+        ]
 
     # -- helpers -------------------------------------------------------------
 

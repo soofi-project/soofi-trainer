@@ -19,8 +19,6 @@ ist — also BEVOR du suchst, nicht danach.
 - [Dateiname](url)
 
 Die URL steht im Feld `metadata.source` jedes Suchergebnisses. \
-Als Linktext den Dateinamen ohne Pfad und Erweiterung verwenden \
-(z.B. `rag-best-practices` aus `.../rag-best-practices.md`). \
 Keine URLs erfinden — nur URLs aus `metadata.source` verwenden.
 
 ## Regeln

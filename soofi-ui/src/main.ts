@@ -14,13 +14,32 @@ import "@a2ui/lit/ui";
 import "./components/agent-flow.js";
 import type { FlowState } from "./components/agent-flow.js";
 
-// Configure marked: synchronous, open links in new tab
+// Slugify helper — must match _slugify() in knowledge ingestion
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/\s+/g, "-");
+}
+
+// Configure marked: synchronous, open links in new tab, heading IDs
 marked.use({
   async: false,
   renderer: {
     link({ href, title, text }) {
       const titleAttr = title ? ` title="${title}"` : "";
+      // Normalize /docs/ URLs: strip any domain the LLM may have prepended
+      const docsIdx = href?.indexOf("/docs/") ?? -1;
+      if (docsIdx >= 0) {
+        const cleanHref = href!.slice(docsIdx);
+        return `<a href="${cleanHref}"${titleAttr}>${text}</a>`;
+      }
       return `<a href="${href}"${titleAttr} target="_blank" rel="noopener">${text}</a>`;
+    },
+    heading({ text, depth }) {
+      const id = slugify(text);
+      return `<h${depth} id="${id}">${text}</h${depth}>`;
     },
   },
 });
@@ -152,11 +171,20 @@ class SoofiChat extends SignalWatcher(LitElement) {
   static styles = css`
     :host {
       display: flex;
-      flex-direction: column;
+      flex-direction: row;
+      justify-content: center;
       height: 100vh;
       width: 100%;
-      max-width: 800px;
       background: var(--color-bg, #f5f5f5);
+    }
+
+    .chat-column {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-width: 0;
+      max-width: 800px;
+      height: 100%;
     }
 
     /* Header */
@@ -406,6 +434,126 @@ class SoofiChat extends SignalWatcher(LitElement) {
       fill: #fff;
     }
 
+    /* Doc viewer panel */
+    .doc-viewer {
+      flex: 0 0 500px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      border-left: 1px solid var(--color-border, #dadce0);
+      background: var(--color-surface, #fff);
+    }
+    .doc-viewer__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--color-border, #dadce0);
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--color-text, #202124);
+    }
+    .doc-viewer__close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 20px;
+      color: var(--color-text-secondary, #5f6368);
+      padding: 0 4px;
+      line-height: 1;
+    }
+    .doc-viewer__close:hover {
+      color: var(--color-text, #202124);
+    }
+    .doc-viewer__jump-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--color-border, #dadce0);
+      background: #fafafa;
+    }
+    .doc-viewer__jump-link {
+      font-size: 12px;
+      color: var(--color-primary, #1a73e8);
+      cursor: pointer;
+      text-decoration: none;
+      padding: 2px 8px;
+      border-radius: 12px;
+      background: #e8f0fe;
+    }
+    .doc-viewer__jump-link:hover {
+      text-decoration: underline;
+    }
+    .doc-viewer__body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      line-height: 1.6;
+    }
+    .doc-viewer__body h1,
+    .doc-viewer__body h2,
+    .doc-viewer__body h3,
+    .doc-viewer__body h4 {
+      margin: 20px 0 8px 0;
+      line-height: 1.3;
+    }
+    .doc-viewer__body h1:first-child,
+    .doc-viewer__body h2:first-child,
+    .doc-viewer__body h3:first-child {
+      margin-top: 0;
+    }
+    .doc-viewer__body p { margin: 0 0 12px 0; }
+    .doc-viewer__body ul,
+    .doc-viewer__body ol {
+      margin: 4px 0 12px 0;
+      padding-left: 24px;
+    }
+    .doc-viewer__body a {
+      color: var(--color-primary, #1a73e8);
+      text-decoration: none;
+    }
+    .doc-viewer__body a:hover { text-decoration: underline; }
+    .doc-viewer__body code {
+      background: #f1f3f4;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.9em;
+    }
+    .doc-viewer__body pre {
+      background: #f1f3f4;
+      padding: 12px;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 8px 0;
+    }
+    .doc-viewer__body pre code { background: none; padding: 0; }
+    .doc-viewer__body .highlighted-section {
+      border-left: 3px solid #f9a825;
+      padding-left: 8px;
+      margin-left: -11px;
+    }
+
+    /* Responsive: narrower doc viewer on tablets */
+    @media (min-width: 1024px) and (max-width: 1279px) {
+      .doc-viewer {
+        flex: 0 0 360px;
+      }
+    }
+
+    /* Responsive: overlay on narrow viewports */
+    @media (max-width: 1023px) {
+      .doc-viewer {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        z-index: 100;
+      }
+      .doc-viewer__header {
+        padding: 12px 16px;
+      }
+    }
+
     /* Streaming indicator */
     .streaming-dot::after {
       content: "\u25CF";
@@ -437,6 +585,13 @@ class SoofiChat extends SignalWatcher(LitElement) {
   @state() private searchStatusLabel = "";
   @state() private flowState: FlowState = "idle";
   private _flowTimer: ReturnType<typeof setTimeout> | null = null;
+  @state() private docViewerUrl: string | null = null;
+  @state() private docContent = "";
+  @state() private docViewerAnchors: string[] = [];
+
+  // All /docs/ links seen in the conversation, in order of appearance
+  private docLinks: string[] = [];
+  private docLinksCurrentIdx = -1;
 
   // Stable session ID for advisor conversation memory (persists across messages)
   private sessionId = crypto.randomUUID();
@@ -477,12 +632,17 @@ class SoofiChat extends SignalWatcher(LitElement) {
   // -----------------------------------------------------------------------
 
   render() {
+    const docFileName = this.docViewerUrl
+      ? decodeURIComponent(this.docViewerUrl.split("/").pop()?.split("#")[0] ?? "")
+      : "";
+
     return html`
+      <div class="chat-column">
       <header>
         <h1>Soofi Trainer</h1>
       </header>
 
-      <div class="messages" id="messages">
+      <div class="messages" id="messages" @click=${this.onMessagesClick}>
         ${this.messages.map(
           (m, i) =>
             m.role === "user"
@@ -604,6 +764,36 @@ class SoofiChat extends SignalWatcher(LitElement) {
           Senden
         </button>
       </div>
+      </div>
+
+      ${this.docViewerUrl
+        ? html`
+            <div class="doc-viewer">
+              <div class="doc-viewer__header">
+                <span>${docFileName}</span>
+                <button class="doc-viewer__close" @click=${this.closeDocViewer}>&times;</button>
+              </div>
+              ${this.docViewerAnchors.length > 1
+                ? html`
+                    <div class="doc-viewer__jump-list">
+                      ${this.docViewerAnchors.map(
+                        (anchor) => html`
+                          <a class="doc-viewer__jump-link" @click=${() => this.scrollToAnchor(anchor)}>
+                            ${anchor.replace(/-/g, " ")}
+                          </a>
+                        `
+                      )}
+                    </div>
+                  `
+                : nothing}
+              <div class="doc-viewer__body" id="doc-viewer-body">
+                ${this.docViewerUrl.endsWith(".pdf")
+                  ? html`<iframe src=${this.docViewerUrl} style="width:100%;height:100%;border:none;"></iframe>`
+                  : unsafeHTML(this.docContent)}
+              </div>
+            </div>
+          `
+        : nothing}
     `;
   }
 
@@ -877,6 +1067,8 @@ class SoofiChat extends SignalWatcher(LitElement) {
           const lastAssistant = msgs[msgs.length - 1];
           if (lastAssistant?.role === "assistant") {
             lastAssistant.text += delta;
+            // Track /docs/ links as they appear
+            this.extractDocLinks(lastAssistant.text);
           }
           this.messages = msgs;
         }
@@ -925,6 +1117,10 @@ class SoofiChat extends SignalWatcher(LitElement) {
       case "SPEECH_TEXT":
         // TTS plays for all responses (text and voice) — intentional: the system always speaks.
         if (event.text) this.enqueueTTS(event.text as string);
+        break;
+
+      case "DOC_VIEWER":
+        this.handleDocViewerEvent(event);
         break;
 
       case "TEXT_MESSAGE_END":
@@ -999,6 +1195,129 @@ class SoofiChat extends SignalWatcher(LitElement) {
       audio.play().catch(() => resolve());
     });
     if (this.currentAudio === audio) this.currentAudio = null;
+  }
+
+  // -----------------------------------------------------------------------
+  // Doc viewer
+  // -----------------------------------------------------------------------
+
+  private onMessagesClick(e: MouseEvent): void {
+    const target = e.target as HTMLElement;
+    const anchor = target.closest("a");
+    if (!anchor) return;
+    const href = anchor.getAttribute("href");
+    if (!href || !href.startsWith("/docs/")) return;
+    e.preventDefault();
+    this.openDocViewer(href);
+  }
+
+  private async openDocViewer(url: string): Promise<void> {
+    this.docViewerUrl = url;
+    // Sync index for next/previous navigation
+    const idx = this.docLinks.indexOf(url);
+    if (idx >= 0) this.docLinksCurrentIdx = idx;
+    const [basePath, fragment] = url.split("#", 2);
+    this.docViewerAnchors = this.collectDocAnchors(basePath);
+
+    if (basePath.endsWith(".pdf")) return;
+
+    try {
+      const resp = await fetch(basePath);
+      if (!resp.ok) {
+        this.docContent = `<p>Fehler beim Laden: HTTP ${resp.status}</p>`;
+        return;
+      }
+      const mdText = await resp.text();
+      this.docContent = marked.parse(mdText) as string;
+
+      // Highlight referenced sections
+      if (this.docViewerAnchors.length > 0) {
+        await this.updateComplete;
+        for (const anchor of this.docViewerAnchors) {
+          const el = this.shadowRoot?.getElementById(anchor);
+          if (el) el.classList.add("highlighted-section");
+        }
+      }
+
+      // Scroll to fragment
+      if (fragment) {
+        await this.updateComplete;
+        this.scrollToAnchor(fragment);
+      }
+    } catch {
+      this.docContent = "<p>Fehler beim Laden des Dokuments.</p>";
+    }
+  }
+
+  private closeDocViewer(): void {
+    this.docViewerUrl = null;
+    this.docContent = "";
+    this.docViewerAnchors = [];
+  }
+
+  private scrollToAnchor(anchor: string): void {
+    const el = this.shadowRoot?.getElementById(anchor);
+    el?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  private extractDocLinks(text: string): void {
+    const re = /\]\(\/docs\/[^)]+\)/g;
+    let match: RegExpExecArray | null;
+    while ((match = re.exec(text)) !== null) {
+      const url = match[0].slice(2, -1); // strip ]( and )
+      if (!this.docLinks.includes(url)) {
+        this.docLinks.push(url);
+      }
+    }
+  }
+
+  private handleDocViewerEvent(event: AgUiEvent): void {
+    const action = event.action as string;
+    if (action === "close") {
+      this.closeDocViewer();
+      return;
+    }
+    if (action === "next") {
+      const nextIdx = this.docLinksCurrentIdx + 1;
+      if (nextIdx < this.docLinks.length) {
+        this.docLinksCurrentIdx = nextIdx;
+        this.openDocViewer(this.docLinks[nextIdx]);
+      }
+      return;
+    }
+    if (action === "previous") {
+      const prevIdx = this.docLinksCurrentIdx - 1;
+      if (prevIdx >= 0) {
+        this.docLinksCurrentIdx = prevIdx;
+        this.openDocViewer(this.docLinks[prevIdx]);
+      }
+      return;
+    }
+    if (action === "open") {
+      const idx = (event.index as number) - 1; // 1-based → 0-based
+      if (idx >= 0 && idx < this.docLinks.length) {
+        this.docLinksCurrentIdx = idx;
+        this.openDocViewer(this.docLinks[idx]);
+      }
+    }
+  }
+
+  private collectDocAnchors(basePath: string): string[] {
+    const anchors: string[] = [];
+    const seen = new Set<string>();
+    const escapedPath = basePath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const pattern = new RegExp(escapedPath + "#([\\w-]+)", "g");
+    for (const msg of this.messages) {
+      if (msg.role !== "assistant") continue;
+      let match: RegExpExecArray | null;
+      while ((match = pattern.exec(msg.text)) !== null) {
+        if (!seen.has(match[1])) {
+          seen.add(match[1]);
+          anchors.push(match[1]);
+        }
+      }
+    }
+    return anchors;
   }
 
   // -----------------------------------------------------------------------
