@@ -34,6 +34,7 @@ from .constants import (
     SOOFI_EVENT_SEARCH_STATUS,
     TRAINING_AGENT_KEY_CHUNK,
     TRAINING_AGENT_KEY_JOB_STARTED,
+    TRAINING_AGENT_KEY_STATUS,
     TRAINING_EVENT,
 )
 from .i18n import Language, tr
@@ -210,6 +211,10 @@ async def ask_training_agent_tool(question: str) -> str:
             if event_type == SOOFI_EVENT_JOB_STARTED:
                 await adispatch_custom_event(
                     TRAINING_EVENT, {TRAINING_AGENT_KEY_JOB_STARTED: parsed.get("job_id", "")}
+                )
+            elif event_type == SOOFI_EVENT_SEARCH_STATUS:
+                await adispatch_custom_event(
+                    TRAINING_EVENT, {TRAINING_AGENT_KEY_STATUS: parsed.get("text", "")}
                 )
             else:
                 full_text += chunk

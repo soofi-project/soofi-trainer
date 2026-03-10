@@ -247,6 +247,92 @@ class SoofiChat extends SignalWatcher(LitElement) {
     .lang-toggle span:not(.active):hover {
       color: var(--color-text, #202124);
     }
+    .reset-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border: none;
+      border-radius: 50%;
+      background: transparent;
+      color: var(--color-text-secondary, #5f6368);
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .reset-btn:hover {
+      background: var(--color-hover, #f1f3f4);
+      color: var(--color-text, #202124);
+    }
+    .reset-btn svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    /* Reset confirmation dialog */
+    .dialog-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      animation: fadeIn 0.15s ease-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .dialog {
+      background: var(--color-surface, #fff);
+      border-radius: 16px;
+      padding: 24px;
+      min-width: 320px;
+      max-width: 400px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    }
+    .dialog h2 {
+      margin: 0 0 8px;
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--color-text, #202124);
+    }
+    .dialog p {
+      margin: 0 0 20px;
+      font-size: 14px;
+      color: var(--color-text-secondary, #5f6368);
+      line-height: 1.5;
+    }
+    .dialog-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    .dialog-actions button {
+      padding: 8px 20px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .dialog-actions .cancel {
+      background: transparent;
+      border: 1px solid var(--color-border, #dadce0);
+      color: var(--color-text, #202124);
+    }
+    .dialog-actions .cancel:hover {
+      background: var(--color-hover, #f1f3f4);
+    }
+    .dialog-actions .confirm {
+      background: #d93025;
+      border: none;
+      color: #fff;
+    }
+    .dialog-actions .confirm:hover {
+      background: #c5221f;
+    }
 
     /* Messages area */
     .messages {
@@ -741,6 +827,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
   @state() private docContent = "";
   @state() private docViewerAnchors: string[] = [];
   @state() private agentCards: Array<[string, AgentCardData]> | null = null;
+  @state() private showResetDialog = false;
 
   // All /docs/ links seen in the conversation, in order of appearance
   private docLinks: string[] = [];
@@ -797,6 +884,12 @@ class SoofiChat extends SignalWatcher(LitElement) {
           <span class=${this.language === "de" ? "active" : ""}>DE</span>
           <span class=${this.language === "en" ? "active" : ""}>EN</span>
         </div>
+        <button class="reset-btn" title=${tr("reset_confirm", this.language)} @click=${() => { this.showResetDialog = true; }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 12a9 9 0 1 1 3 6.36"/>
+            <polyline points="3 16 3 12 7 12"/>
+          </svg>
+        </button>
       </header>
 
       <div class="messages" id="messages" @click=${this.onMessagesClick}>
@@ -979,6 +1072,20 @@ class SoofiChat extends SignalWatcher(LitElement) {
               </div>
             `
           : nothing}
+
+      ${this.showResetDialog
+        ? html`
+          <div class="dialog-overlay" @click=${this.cancelReset}>
+            <div class="dialog" @click=${(e: Event) => e.stopPropagation()}>
+              <h2>${tr("reset_title", this.language)}</h2>
+              <p>${tr("reset_body", this.language)}</p>
+              <div class="dialog-actions">
+                <button class="cancel" @click=${this.cancelReset}>${tr("reset_cancel", this.language)}</button>
+                <button class="confirm" @click=${this.confirmReset}>${tr("reset_confirm", this.language)}</button>
+              </div>
+            </div>
+          </div>`
+        : nothing}
     `;
   }
 
@@ -1619,6 +1726,48 @@ class SoofiChat extends SignalWatcher(LitElement) {
 
   private toggleLanguage(): void {
     this.language = this.language === "de" ? "en" : "de";
+  }
+
+  private cancelReset(): void {
+    this.showResetDialog = false;
+  }
+
+  private confirmReset(): void {
+    this.showResetDialog = false;
+    this.messages = [];
+    this.inputValue = "";
+    this.streaming = false;
+    this.searching = false;
+    this.searchStatusLabel = "";
+    this.flowState = "idle";
+    this.docViewerUrl = null;
+    this.docContent = "";
+    this.docViewerAnchors = [];
+    this.agentCards = null;
+    this.surfaceEntries = [];
+    this.dashboardEmbed = null;
+    this.docLinks = [];
+    this.docLinksCurrentIdx = -1;
+    this.sessionId = crypto.randomUUID();
+    this.currentMsgId = null;
+    // Stop active recording
+    if (this.mediaRecorder && this.mediaRecorder.state !== "inactive") {
+      this.mediaRecorder.stop();
+    }
+    this.mediaRecorder = null;
+    this.audioChunks = [];
+    this.isRecording = false;
+    this._voiceSession = false;
+    // Cancel flow animation timer
+    if (this._flowTimer) clearTimeout(this._flowTimer);
+    this._flowTimer = null;
+    // Cancel any pending TTS
+    this.ttsGeneration++;
+    this.audioQueue = Promise.resolve();
+    if (this.currentAudio) {
+      this.currentAudio.pause();
+      this.currentAudio = null;
+    }
   }
 
   private collectDocAnchors(basePath: string): string[] {
