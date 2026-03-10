@@ -12,7 +12,7 @@ from typing import Any, AsyncGenerator
 from langchain_core.messages import AIMessageChunk, ToolMessage
 from langgraph.graph.state import CompiledStateGraph
 
-from .constants import CONTROL_DOC_VIEWER_TOOL, DOC_VIEWER_KEY
+from .constants import AGENT_CARD_EVENT, AGENT_CARD_KEY, CONTROL_DOC_VIEWER_TOOL, DOC_VIEWER_KEY
 from .speech import RE_SENTENCE_END, generate_speech_text
 
 logger = logging.getLogger(__name__)
@@ -77,7 +77,7 @@ class ToolStreamTracker:
     """Per-tool streaming state machine: IDLE -> SEARCHING -> STREAMING -> DONE."""
 
     tool_name: str  # e.g. "ask_advisor_tool"
-    chunk_key: str  # custom-event key for text chunks
+    chunk_key: str = ""  # custom-event key for text chunks ("" = no streaming)
     status_keys: list[str] = field(default_factory=list)  # custom-event keys for status labels
     capture_keys: dict[str, str] = field(default_factory=dict)  # event_key -> snapshot field name
     component_name: str = ""  # if set, emit STATE_SNAPSHOT with captured values post-stream
@@ -223,6 +223,20 @@ class SSEStream:
                 yield _sse({"type": "SEARCH_STATUS", "label": tracker.on_start_label})
 
     async def _handle_custom_event(self, event: dict[str, Any]) -> AsyncGenerator[str, None]:
+        # Agent card events — dispatched directly from show_agent_card tool
+        if event.get("name") == AGENT_CARD_EVENT:
+            card_data = event.get("data", {})
+            card_cmd = card_data.get(AGENT_CARD_KEY)
+            if card_cmd:
+                # End the tool call first so the frontend leaves the searching state
+                tracker = self._trackers.get("show_agent_card")
+                if tracker and tracker.searching:
+                    tracker.searching = False
+                    yield _sse({"type": "TOOL_CALL_END", "tool": "show_agent_card"})
+                logger.info("Emitting AGENT_CARD event: %s", card_cmd.get("action"))
+                yield _sse({"type": "AGENT_CARD", **card_cmd})
+            return
+
         data = event.get("data", {})
 
         for tracker in self._trackers.values():
@@ -238,8 +252,8 @@ class SSEStream:
                 if value:
                     tracker.captured[attr_name] = value
 
-            # Chunk key — the main text stream
-            chunk = data.get(tracker.chunk_key)
+            # Chunk key — the main text stream (empty key = no streaming)
+            chunk = data.get(tracker.chunk_key) if tracker.chunk_key else None
             if chunk:
                 async for sse in self._accept_chunk(tracker, chunk):
                     yield sse

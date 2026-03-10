@@ -62,8 +62,8 @@ app.add_middleware(
 agent_card = AgentCard(
     name="Soofi Advisor",
     description=(
-        "LLM specialization advisor — analyzes use cases and recommends "
-        "methods such as RAG, LoRA, or QLoRA (language: German)"
+        "Fachberater für LLM-Spezialisierung — analysiert Anwendungsfälle "
+        "und empfiehlt Methoden wie RAG, LoRA oder QLoRA"
     ),
     url="http://advisor:8000/a2a/",
     version="0.1.0",
@@ -71,11 +71,8 @@ agent_card = AgentCard(
     skills=[
         AgentSkill(
             id="llm_specialization",
-            name="LLM Specialization",
-            description=(
-                "Analyzes use cases and recommends "
-                "LLM specialization methods"
-            ),
+            name="LLM-Spezialisierung",
+            description="Analysiert Anwendungsfälle und empfiehlt Spezialisierungsmethoden",
             tags=["llm", "rag", "lora", "fine-tuning"],
         )
     ],

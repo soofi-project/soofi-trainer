@@ -18,6 +18,10 @@ CONTROL_DOC_VIEWER_TOOL = "control_doc_viewer"
 ADVISOR_EVENT = "advisor_event"
 TRAINING_EVENT = "training_event"
 
+# Keys for agent card viewer events
+AGENT_CARD_KEY = "agent_card"
+AGENT_CARD_EVENT = "agent_card_event"
+
 # Protocol keys for the soofi event envelope emitted by the advisor service.
 # Must match the constants defined in advisor/src/a2a_handler.py.
 SOOFI_EVENT_KEY = "__soofi_event"

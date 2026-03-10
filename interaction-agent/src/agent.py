@@ -7,7 +7,7 @@ from typing import AsyncGenerator
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.graph.state import CompiledStateGraph
 
@@ -44,6 +44,11 @@ TRACKERS = [
         capture_keys={TRAINING_AGENT_KEY_JOB_STARTED: "job_id"},
         component_name="soofi-training-progress",
         on_start_label="Verarbeite Trainingsauftrag\u2026",
+    ),
+    ToolStreamTracker(
+        tool_name="show_agent_card",
+        chunk_key="",
+        on_start_label="Lade Agentenkarte\u2026",
     ),
 ]
 
@@ -130,3 +135,41 @@ async def health() -> dict[str, str]:
     if graph is None:
         return {"status": "error", "detail": "Graph not initialized"}
     return {"status": "ok"}
+
+
+# ---------------------------------------------------------------------------
+# A2A Agent Card — compatible endpoint so the agent card viewer can discover
+# this agent like any other A2A agent in the system.
+# ---------------------------------------------------------------------------
+
+AGENT_CARD = {
+    "name": "Soofi Interaction Agent",
+    "description": (
+        "Zentraler Gesprächsagent — nimmt Nutzereingaben entgegen, "
+        "koordiniert Advisor und Training Agent, steuert die UI"
+    ),
+    "url": "http://interaction-agent:8000",
+    "version": os.getenv("SOOFI_UI_INTERACTIONAGENT_VERSION", "0.1.0"),
+    "capabilities": {"streaming": True},
+    "skills": [
+        {
+            "id": "conversation",
+            "name": "Gesprächsführung",
+            "description": "Führt den Nutzer durch den LLM-Spezialisierungsprozess",
+            "tags": ["dialog", "orchestration", "a2a"],
+        },
+        {
+            "id": "agent_discovery",
+            "name": "Agentenerkennung",
+            "description": "Zeigt registrierte Agenten und deren Fähigkeiten an",
+            "tags": ["a2a", "agent-card"],
+        },
+    ],
+    "defaultInputModes": ["text/plain"],
+    "defaultOutputModes": ["text/plain"],
+}
+
+
+@app.get("/a2a/.well-known/agent-card.json")
+async def agent_card() -> JSONResponse:
+    return JSONResponse(AGENT_CARD)

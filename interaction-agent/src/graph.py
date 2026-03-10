@@ -1,11 +1,14 @@
 """LangGraph ReAct agent for the Soofi Interaction Agent."""
 
+import asyncio
 import contextvars
 import json
 import logging
 import os
 import re
+from typing import Any, Literal
 
+import httpx
 from langchain_core.callbacks import adispatch_custom_event
 from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
@@ -23,6 +26,8 @@ from .constants import (
     ADVISOR_EVENT,
     ADVISOR_KEY_CHUNK,
     ADVISOR_KEY_SEARCH_STATUS,
+    AGENT_CARD_EVENT,
+    AGENT_CARD_KEY,
     DOC_VIEWER_KEY,
     SOOFI_EVENT_JOB_STARTED,
     SOOFI_EVENT_KEY,
@@ -46,6 +51,84 @@ _training_context_id: contextvars.ContextVar[str | None] = contextvars.ContextVa
 model_name = os.getenv("INTERACTION_MODEL")
 if not model_name:
     raise RuntimeError("INTERACTION_MODEL env var required.")
+
+# Agent registry: parsed from AGENT_REGISTRY env var (comma-separated name=url pairs)
+_raw_registry = os.getenv("AGENT_REGISTRY", "")
+AGENT_REGISTRY: dict[str, str] = {}
+for pair in _raw_registry.split(","):
+    pair = pair.strip()
+    if "=" in pair:
+        name, url = pair.split("=", 1)
+        AGENT_REGISTRY[name.strip()] = url.strip()
+
+logger.info("Agent registry: %s", list(AGENT_REGISTRY.keys()))
+
+
+async def _fetch_agent_card(
+    name: str, base_url: str, client: httpx.AsyncClient | None = None
+) -> dict[str, Any]:
+    """Fetch an A2A agent card from /.well-known/agent-card.json."""
+    card_url = f"{base_url.rstrip('/')}/a2a/.well-known/agent-card.json"
+    try:
+        if client is None:
+            async with httpx.AsyncClient(timeout=3.0) as client:
+                resp = await client.get(card_url)
+        else:
+            resp = await client.get(card_url)
+        resp.raise_for_status()
+        data = resp.json()
+        data["_status"] = "online"
+        return data
+    except Exception as exc:
+        logger.warning("Failed to fetch agent card for %s at %s: %s", name, card_url, exc)
+        return {"name": name, "url": base_url, "_status": "offline", "_error": str(exc)}
+
+
+@tool
+async def show_agent_card(
+    agent: Literal[
+        "all", "interaction-agent", "advisor", "training-agent", "dataset-agent", "close"
+    ],  # Keep enum values in sync with AGENT_REGISTRY in .env
+) -> str:
+    """Show or close the A2A agent card panel.
+
+    Use this tool when the user asks about available agents, their capabilities,
+    or agent cards, or when the user wants to close the agent card panel.
+
+    Args:
+        agent: Which agent card to show, "all" for all agents, or "close" to close.
+    """
+    if agent == "close":
+        await adispatch_custom_event(
+            AGENT_CARD_EVENT, {AGENT_CARD_KEY: {"action": "close"}}
+        )
+        return "Agentenkarten geschlossen."
+
+    if agent == "all":
+        # Keep in sync with Literal enum above and AGENT_REGISTRY in .env
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            tasks = {
+                name: _fetch_agent_card(name, url, client)
+                for name, url in AGENT_REGISTRY.items()
+            }
+            results = await asyncio.gather(*tasks.values())
+        cards = list(zip(tasks.keys(), results))
+    elif agent in AGENT_REGISTRY:
+        card = await _fetch_agent_card(agent, AGENT_REGISTRY[agent])
+        cards = [(agent, card)]
+    else:
+        available = ", ".join(AGENT_REGISTRY.keys())
+        return f'Agent "{agent}" nicht gefunden. Verfügbare Agenten: {available}'
+
+    # Send card data to the frontend panel via custom event (SSE).
+    # The LLM only sees the short confirmation below — not the full card data.
+    await adispatch_custom_event(
+        AGENT_CARD_EVENT, {AGENT_CARD_KEY: {"action": "open", "cards": cards}}
+    )
+    names = [name for name, _ in cards]
+    if len(names) == 1:
+        return f"Agentenkarte geöffnet: {names[0]}"
+    return f"{len(names)} Agentenkarten geöffnet."
 
 
 @tool
@@ -184,7 +267,8 @@ def control_doc_viewer(action: str, state: Annotated[dict, InjectedState], index
     )
 
 
-_RE_DOC_LINK = re.compile(r"\[([^\]]+)\]\(/docs/[^)]+\)")
+# Match both relative /docs/ links and full URLs with /docs/ path
+_RE_DOC_LINK = re.compile(r"\[([^\]]+)\]\((?:https?://[^/\s)]+)?/docs/[^)]+\)")
 
 
 def _count_doc_links(state: dict) -> int:
@@ -199,7 +283,13 @@ def _count_doc_links(state: dict) -> int:
 
 def build_graph() -> CompiledStateGraph:
     """Build the LangGraph ReAct agent for the Interaction Agent."""
-    tools = [ask_advisor_tool, ask_training_agent_tool, show_dashboard, control_doc_viewer]
+    tools = [
+        ask_advisor_tool,
+        ask_training_agent_tool,
+        show_dashboard,
+        show_agent_card,
+        control_doc_viewer,
+    ]
     llm = ChatOpenAI(model=model_name).bind_tools(tools, parallel_tool_calls=False)
     tool_node = ToolNode(tools)
 
