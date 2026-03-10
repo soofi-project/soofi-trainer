@@ -15,9 +15,9 @@ from .prompts import SYSTEM_PROMPT_DE
 
 logger = logging.getLogger(__name__)
 
-model = os.getenv("INTERACTION_MODEL")
+model = os.getenv("TRAINING_AGENT_MODEL")
 if not model:
-    raise RuntimeError("INTERACTION_MODEL env var required.")
+    raise RuntimeError("TRAINING_AGENT_MODEL env var required.")
 
 
 def build_graph(tools: list[BaseTool]) -> CompiledStateGraph:
