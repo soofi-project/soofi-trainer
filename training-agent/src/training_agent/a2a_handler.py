@@ -2,6 +2,7 @@
 
 import json
 import logging
+import re
 from typing import Callable
 
 from a2a.server.agent_execution import AgentExecutor, RequestContext
@@ -11,12 +12,16 @@ from a2a.utils.message import new_agent_text_message
 from langchain_core.messages import AIMessageChunk, HumanMessage
 from langgraph.graph.state import CompiledStateGraph
 
+from .i18n import Language, tr
+from .prompts import SYSTEM_PROMPT_DE, SYSTEM_PROMPT_EN
+
 logger = logging.getLogger(__name__)
 
 # Protocol constants for the soofi event envelope shared with interaction-agent
 _SOOFI_EVENT_KEY = "__soofi_event"
 _EVENT_JOB_STARTED = "job_started"
 _EVENT_SEARCH_STATUS = "search_status"
+_RE_LANG_TAG = re.compile(r"\[LANG:(de|en)\]\s*$")
 
 # Tool name that signals a training job was started
 _START_TRAINING_TOOL = "start_training_job"
@@ -71,9 +76,18 @@ class TrainingAgentExecutor(AgentExecutor):
             )
             return
 
-        user_text = context.message.parts[0].root.text
+        raw_text = context.message.parts[0].root.text
+
+        # Extract [LANG:xx] tag from the end of the message
+        lang: Language = "de"
+        lang_match = _RE_LANG_TAG.search(raw_text)
+        if lang_match:
+            lang = lang_match.group(1)  # type: ignore[assignment]
+            raw_text = raw_text[: lang_match.start()].rstrip()
+
+        user_text = raw_text
         thread_id = context.context_id or context.task_id
-        logger.info("A2A request (thread=%s): %s", thread_id, user_text[:200])
+        logger.info("A2A request (thread=%s, lang=%s): %s", thread_id, lang, user_text[:200])
 
         # Signal that we're working
         await event_queue.enqueue_event(
@@ -85,7 +99,8 @@ class TrainingAgentExecutor(AgentExecutor):
             )
         )
 
-        config = {"configurable": {"thread_id": thread_id}}
+        system_prompt = SYSTEM_PROMPT_EN if lang == "en" else SYSTEM_PROMPT_DE
+        config = {"configurable": {"thread_id": thread_id, "system_prompt": system_prompt}}
         collected: list[str] = []
 
         try:
@@ -96,7 +111,7 @@ class TrainingAgentExecutor(AgentExecutor):
             ):
                 if event["event"] == "on_tool_start" and event.get("name") in _MCP_TOOLS:
                     status_json = json.dumps(
-                        {_SOOFI_EVENT_KEY: _EVENT_SEARCH_STATUS, "text": "Rufe Training Gateway auf"},
+                        {_SOOFI_EVENT_KEY: _EVENT_SEARCH_STATUS, "text": tr("calling_gateway", lang)},
                         ensure_ascii=False,
                     )
                     await event_queue.enqueue_event(
@@ -173,7 +188,7 @@ class TrainingAgentExecutor(AgentExecutor):
                     status=TaskStatus(
                         state=TaskState.failed,
                         message=new_agent_text_message(
-                            "Internal error during processing.",
+                            tr("processing_error", lang),
                             context.context_id,
                             context.task_id,
                         ),
@@ -182,7 +197,7 @@ class TrainingAgentExecutor(AgentExecutor):
             )
             return
 
-        response_text = "".join(collected) or "No response generated."
+        response_text = "".join(collected) or tr("no_response", lang)
         logger.info("A2A response: %s", response_text[:200])
 
         await event_queue.enqueue_event(

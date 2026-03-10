@@ -36,7 +36,8 @@ from .constants import (
     TRAINING_AGENT_KEY_JOB_STARTED,
     TRAINING_EVENT,
 )
-from .prompts import SYSTEM_PROMPT
+from .i18n import Language, tr
+from .prompts import get_system_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,7 @@ _advisor_context_id: contextvars.ContextVar[str | None] = contextvars.ContextVar
 _training_context_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "_training_context_id", default=None
 )
+_language: contextvars.ContextVar[Language] = contextvars.ContextVar("_language", default="de")
 
 model_name = os.getenv("INTERACTION_MODEL")
 if not model_name:
@@ -65,10 +67,10 @@ logger.info("Agent registry: %s", list(AGENT_REGISTRY.keys()))
 
 
 async def _fetch_agent_card(
-    name: str, base_url: str, client: httpx.AsyncClient | None = None
+    name: str, base_url: str, client: httpx.AsyncClient | None = None, lang: str = "de"
 ) -> dict[str, Any]:
     """Fetch an A2A agent card from /.well-known/agent-card.json."""
-    card_url = f"{base_url.rstrip('/')}/a2a/.well-known/agent-card.json"
+    card_url = f"{base_url.rstrip('/')}/a2a/.well-known/agent-card.json?lang={lang}"
     try:
         if client is None:
             async with httpx.AsyncClient(timeout=3.0) as client:
@@ -98,27 +100,28 @@ async def show_agent_card(
     Args:
         agent: Which agent card to show, "all" for all agents, or "close" to close.
     """
+    lang = _language.get()
     if agent == "close":
         await adispatch_custom_event(
             AGENT_CARD_EVENT, {AGENT_CARD_KEY: {"action": "close"}}
         )
-        return "Agentenkarten geschlossen."
+        return tr("cards_closed", lang)
 
     if agent == "all":
         # Keep in sync with Literal enum above and AGENT_REGISTRY in .env
         async with httpx.AsyncClient(timeout=3.0) as client:
             tasks = {
-                name: _fetch_agent_card(name, url, client)
+                name: _fetch_agent_card(name, url, client, lang=lang)
                 for name, url in AGENT_REGISTRY.items()
             }
             results = await asyncio.gather(*tasks.values())
         cards = list(zip(tasks.keys(), results))
     elif agent in AGENT_REGISTRY:
-        card = await _fetch_agent_card(agent, AGENT_REGISTRY[agent])
+        card = await _fetch_agent_card(agent, AGENT_REGISTRY[agent], lang=lang)
         cards = [(agent, card)]
     else:
         available = ", ".join(AGENT_REGISTRY.keys())
-        return f'Agent "{agent}" nicht gefunden. Verfügbare Agenten: {available}'
+        return tr("agent_not_found", lang, agent=agent, available=available)
 
     # Send card data to the frontend panel via custom event (SSE).
     # The LLM only sees the short confirmation below — not the full card data.
@@ -127,8 +130,8 @@ async def show_agent_card(
     )
     names = [name for name, _ in cards]
     if len(names) == 1:
-        return f"Agentenkarte geöffnet: {names[0]}"
-    return f"{len(names)} Agentenkarten geöffnet."
+        return tr("card_opened", lang, name=names[0])
+    return tr("cards_opened", lang, count=len(names))
 
 
 @tool
@@ -139,13 +142,16 @@ async def ask_advisor_tool(question: str) -> str:
     RAG, LoRA, fine-tuning, use-case analysis, etc.
 
     Args:
-        question: The domain question to send to the Advisor (in German).
+        question: The domain question to send to the Advisor.
     """
     ctx_id = _advisor_context_id.get()
+    lang = _language.get()
     full_text = ""
+    cite_suffix = "\n\n" + tr("cite_sources", lang)
+    lang_tag = f" [LANG:{lang}]"
 
     try:
-        async for chunk in _stream_advisor(question + "\n\nBitte Quellen angeben.", context_id=ctx_id):
+        async for chunk in _stream_advisor(question + cite_suffix + lang_tag, context_id=ctx_id):
             # Detect special event envelopes from the advisor
             try:
                 parsed = json.loads(chunk)
@@ -185,13 +191,15 @@ async def ask_training_agent_tool(question: str) -> str:
     checking job status, listing jobs, or cancelling a job.
 
     Args:
-        question: The training request to send to the Training Agent (in German).
+        question: The training request to send to the Training Agent.
     """
     ctx_id = _training_context_id.get()
+    lang = _language.get()
     full_text = ""
+    lang_tag = f" [LANG:{lang}]"
 
     try:
-        async for chunk in _stream_training_agent(question, context_id=ctx_id):
+        async for chunk in _stream_training_agent(question + lang_tag, context_id=ctx_id):
             # Detect special event envelopes from the training agent
             try:
                 parsed = json.loads(chunk)
@@ -248,19 +256,20 @@ def control_doc_viewer(action: str, state: Annotated[dict, InjectedState], index
                The links are numbered in the order they appeared in the conversation.
         state: Injected conversation state (not visible to the LLM).
     """
+    lang = _language.get()
     if action == "close":
-        label = "Dokumentenansicht geschlossen."
+        label = tr("doc_closed", lang)
     elif action == "next":
-        label = "Nächstes Dokument geöffnet."
+        label = tr("doc_next", lang)
     elif action == "previous":
-        label = "Vorheriges Dokument geöffnet."
+        label = tr("doc_previous", lang)
     else:
         total = _count_doc_links(state)
         if total == 0:
-            return "Keine Quelldokumente im Gespräch vorhanden."
+            return tr("doc_none", lang)
         if index < 1 or index > total:
-            return f"Ungültiger Index {index}. Es gibt {total} Quelldokument(e) (1–{total})."
-        label = f"Dokument {index} geöffnet."
+            return tr("doc_invalid_index", lang, index=index, total=total)
+        label = tr("doc_opened", lang, index=index)
     return json.dumps(
         {DOC_VIEWER_KEY: {"action": action, "index": index}, "label": label},
         ensure_ascii=False,
@@ -294,7 +303,7 @@ def build_graph() -> CompiledStateGraph:
     tool_node = ToolNode(tools)
 
     async def agent(state: MessagesState) -> MessagesState:
-        system = {"role": "system", "content": SYSTEM_PROMPT}
+        system = {"role": "system", "content": get_system_prompt(_language.get())}
         response = await llm.ainvoke([system] + state["messages"])
         if hasattr(response, "tool_calls") and response.tool_calls:
             for tc in response.tool_calls:
@@ -335,3 +344,8 @@ def set_advisor_context_id(context_id: str | None) -> None:
 def set_training_context_id(context_id: str | None) -> None:
     """Set the A2A context_id for the current request (used by ask_training_agent_tool)."""
     _training_context_id.set(context_id)
+
+
+def set_language(lang: Language) -> None:
+    """Set the language for the current request."""
+    _language.set(lang)
