@@ -8,12 +8,14 @@ import hashlib
 import json
 import logging
 import os
+import re
 import time
 from pathlib import Path
 from typing import Any
 
 import weaviate
 import yaml
+from langchain_core.documents import Document
 from minio import Minio
 from langchain.embeddings.base import init_embeddings
 from langchain_openai import OpenAIEmbeddings
@@ -44,6 +46,7 @@ COLLECTION_PROPERTIES = [
     Property(name="category", data_type=DataType.TEXT),
     Property(name="source", data_type=DataType.TEXT),
     Property(name="source_hash", data_type=DataType.TEXT),
+    Property(name="section", data_type=DataType.TEXT),
 ]
 
 MD_HEADERS_TO_SPLIT = [
@@ -222,8 +225,19 @@ def load_meta(md_path: Path) -> dict[str, str]:
     }
 
 
-def chunk_markdown(text: str) -> list[str]:
-    """Split markdown text into chunks using header-aware + recursive splitting."""
+def _slugify(text: str) -> str:
+    """Convert a heading to a URL-safe anchor slug."""
+    slug = text.lower().strip()
+    slug = re.sub(r"[^\w\s-]", "", slug)
+    slug = re.sub(r"[\s]+", "-", slug)
+    return slug
+
+
+def chunk_markdown(text: str) -> list[Document]:
+    """Split markdown text into chunks using header-aware + recursive splitting.
+
+    Returns Documents with metadata containing heading keys (h1, h2, h3).
+    """
     md_splitter = MarkdownHeaderTextSplitter(
         headers_to_split_on=MD_HEADERS_TO_SPLIT,
         strip_headers=False,
@@ -234,21 +248,24 @@ def chunk_markdown(text: str) -> list[str]:
         chunk_size=CHUNK_SIZE,
         chunk_overlap=CHUNK_OVERLAP,
     )
-    final_docs = char_splitter.split_documents(md_docs)
-
-    return [doc.page_content for doc in final_docs]
+    return char_splitter.split_documents(md_docs)
 
 
 def get_existing_sources(collection: Any) -> dict[str, str]:
-    """Fetch all unique (source, source_hash) pairs from the collection."""
+    """Fetch unique (base_source, source_hash) pairs from the collection.
+
+    Source URLs may contain ``#anchor`` suffixes — strip them so we get
+    one entry per file for change detection.
+    """
     existing: dict[str, str] = {}
 
     try:
         for obj in collection.iterator(return_properties=["source", "source_hash"]):
             source = obj.properties.get("source", "")
             source_hash = obj.properties.get("source_hash", "")
-            if source and source not in existing:
-                existing[source] = source_hash
+            base = source.split("#", 1)[0]
+            if base and base not in existing:
+                existing[base] = source_hash
     except Exception as exc:
         logger.warning("Could not fetch existing sources: %s", exc)
 
@@ -256,8 +273,11 @@ def get_existing_sources(collection: Any) -> dict[str, str]:
 
 
 def delete_by_source(collection: Any, source: str) -> None:
-    """Delete all objects with a given source value."""
-    collection.data.delete_many(where=Filter.by_property("source").equal(source))
+    """Delete all objects whose source starts with the given base path.
+
+    Matches both exact sources and sources with ``#anchor`` suffixes.
+    """
+    collection.data.delete_many(where=Filter.by_property("source").like(f"{source}*"))
 
 
 # ---------------------------------------------------------------------------
@@ -336,9 +356,9 @@ def ingest() -> None:
 
             # Read and chunk
             text = md_path.read_text(encoding="utf-8")
-            chunks = chunk_markdown(text)
+            docs = chunk_markdown(text)
 
-            if not chunks:
+            if not docs:
                 logger.warning("No chunks produced for %s", source)
                 continue
 
@@ -351,18 +371,27 @@ def ingest() -> None:
                 logger.info("Adding: %s", source)
 
             # Embed
-            vectors = embeddings.embed_documents(chunks)
+            vectors = embeddings.embed_documents([doc.page_content for doc in docs])
 
             # Batch insert
             with collection.batch.dynamic() as batch:
-                for chunk_text, vector in zip(chunks, vectors):
+                for doc, vector in zip(docs, vectors):
+                    # Extract the most specific heading for the section anchor
+                    heading = (
+                        doc.metadata.get("h3")
+                        or doc.metadata.get("h2")
+                        or doc.metadata.get("h1")
+                        or ""
+                    )
+                    anchor = f"#{_slugify(heading)}" if heading else ""
                     batch.add_object(
                         properties={
-                            "text": chunk_text,
+                            "text": doc.page_content,
                             "topic": meta["topic"],
                             "category": meta["category"],
-                            "source": source,
+                            "source": f"{source}{anchor}",
                             "source_hash": current_hash,
+                            "section": heading,
                         },
                         vector=vector,
                     )
@@ -370,7 +399,7 @@ def ingest() -> None:
             if batch.number_errors > 0:
                 logger.error("Batch insert had %d errors for %s", batch.number_errors, source)
 
-            logger.info("Inserted %d chunks for %s", len(chunks), source)
+            logger.info("Inserted %d chunks for %s", len(docs), source)
 
             # Upload to MinIO (after successful embed+insert)
             upload_to_minio(minio_client, md_path, knowledge_dir, minio_bucket)

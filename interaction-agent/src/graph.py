@@ -4,13 +4,15 @@ import contextvars
 import json
 import logging
 import os
+import re
 
+from langchain_core.callbacks import adispatch_custom_event
 from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
-from langgraph.config import get_stream_writer
 from langgraph.graph import MessagesState, StateGraph
 from langgraph.graph.state import CompiledStateGraph
-from langgraph.prebuilt import ToolNode
+from langgraph.prebuilt import InjectedState, ToolNode
+from typing_extensions import Annotated
 
 from .a2a_client import ask_advisor as _ask_advisor
 from .a2a_client import ask_training_agent as _ask_training_agent
@@ -18,14 +20,17 @@ from .a2a_client import stream_advisor as _stream_advisor
 from .a2a_client import stream_training_agent as _stream_training_agent
 from .a2ui_surfaces import mcp_inspector_surface, n8n_surface
 from .constants import (
+    ADVISOR_EVENT,
     ADVISOR_KEY_CHUNK,
     ADVISOR_KEY_SEARCH_STATUS,
+    DOC_VIEWER_KEY,
     SOOFI_EVENT_JOB_STARTED,
     SOOFI_EVENT_KEY,
     SOOFI_EVENT_SEARCH_STATUS,
     TRAINING_AGENT_KEY_CHUNK,
     TRAINING_AGENT_KEY_JOB_STARTED,
     TRAINING_AGENT_KEY_STATUS,
+    TRAINING_EVENT,
 )
 from .prompts import SYSTEM_PROMPT
 
@@ -56,7 +61,6 @@ async def ask_advisor_tool(question: str) -> str:
     Args:
         question: The domain question to send to the Advisor (in German).
     """
-    write = get_stream_writer()
     ctx_id = _advisor_context_id.get()
     full_text = ""
 
@@ -70,10 +74,14 @@ async def ask_advisor_tool(question: str) -> str:
                 event_type = None
 
             if event_type == SOOFI_EVENT_SEARCH_STATUS:
-                write({ADVISOR_KEY_SEARCH_STATUS: parsed["text"]})
+                await adispatch_custom_event(
+                    ADVISOR_EVENT, {ADVISOR_KEY_SEARCH_STATUS: parsed["text"]}
+                )
             else:
                 full_text += chunk
-                write({ADVISOR_KEY_CHUNK: chunk})
+                await adispatch_custom_event(
+                    ADVISOR_EVENT, {ADVISOR_KEY_CHUNK: chunk}
+                )
     except Exception:
         logger.exception("Advisor streaming failed after %d chars", len(full_text))
         if not full_text:
@@ -99,7 +107,6 @@ async def ask_training_agent_tool(question: str) -> str:
     Args:
         question: The training request to send to the Training Agent (in German).
     """
-    write = get_stream_writer()
     ctx_id = _training_context_id.get()
     full_text = ""
 
@@ -113,12 +120,18 @@ async def ask_training_agent_tool(question: str) -> str:
                 event_type = None
 
             if event_type == SOOFI_EVENT_JOB_STARTED:
-                write({TRAINING_AGENT_KEY_JOB_STARTED: parsed.get("job_id", "")})
+                await adispatch_custom_event(
+                    TRAINING_EVENT, {TRAINING_AGENT_KEY_JOB_STARTED: parsed.get("job_id", "")}
+                )
             elif event_type == SOOFI_EVENT_SEARCH_STATUS:
-                write({TRAINING_AGENT_KEY_STATUS: parsed.get("text", "")})
+                await adispatch_custom_event(
+                    TRAINING_EVENT, {TRAINING_AGENT_KEY_STATUS: parsed.get("text", "")}
+                )
             else:
                 full_text += chunk
-                write({TRAINING_AGENT_KEY_CHUNK: chunk})
+                await adispatch_custom_event(
+                    TRAINING_EVENT, {TRAINING_AGENT_KEY_CHUNK: chunk}
+                )
     except Exception:
         logger.exception("Training agent streaming failed after %d chars", len(full_text))
         if not full_text:
@@ -148,9 +161,52 @@ def show_dashboard(name: str) -> str:
     return json.dumps({"error": f"Unknown dashboard: {name}"}, ensure_ascii=False)
 
 
+@tool
+def control_doc_viewer(action: str, state: Annotated[dict, InjectedState], index: int = 1) -> str:
+    """Control the document viewer panel in the UI.
+
+    Args:
+        action: One of "open", "close", "next", "previous".
+                "open" opens the document at the given index (1-based).
+        index: 1-based index of the document link to open (only for action "open").
+               The links are numbered in the order they appeared in the conversation.
+        state: Injected conversation state (not visible to the LLM).
+    """
+    if action == "close":
+        label = "Dokumentenansicht geschlossen."
+    elif action == "next":
+        label = "Nächstes Dokument geöffnet."
+    elif action == "previous":
+        label = "Vorheriges Dokument geöffnet."
+    else:
+        total = _count_doc_links(state)
+        if total == 0:
+            return "Keine Quelldokumente im Gespräch vorhanden."
+        if index < 1 or index > total:
+            return f"Ungültiger Index {index}. Es gibt {total} Quelldokument(e) (1–{total})."
+        label = f"Dokument {index} geöffnet."
+    return json.dumps(
+        {DOC_VIEWER_KEY: {"action": action, "index": index}, "label": label},
+        ensure_ascii=False,
+    )
+
+
+_RE_DOC_LINK = re.compile(r"\[([^\]]+)\]\(/docs/[^)]+\)")
+
+
+def _count_doc_links(state: dict) -> int:
+    """Count markdown links matching /docs/ across all conversation messages."""
+    count = 0
+    for msg in state.get("messages", []):
+        content = msg.content if hasattr(msg, "content") else ""
+        if isinstance(content, str):
+            count += len(_RE_DOC_LINK.findall(content))
+    return count
+
+
 def build_graph() -> CompiledStateGraph:
     """Build the LangGraph ReAct agent for the Interaction Agent."""
-    tools = [ask_advisor_tool, ask_training_agent_tool, show_dashboard]
+    tools = [ask_advisor_tool, ask_training_agent_tool, show_dashboard, control_doc_viewer]
     llm = ChatOpenAI(
         model=model_name,
         **({"openai_api_base": base_url} if base_url else {}),
