@@ -84,7 +84,7 @@ app.mount("/a2a", A2AFastAPIApplication(agent_card, _a2a_handler).build())
 
 
 @app.get("/health")
-async def health() -> dict:
+async def health() -> dict[str, str]:
     if graph is None:
         return {"status": "error", "detail": "Graph not initialized"}
     return {"status": "ok"}

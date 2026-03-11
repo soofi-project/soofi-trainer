@@ -11,6 +11,7 @@ import weaviate
 from weaviate.classes.query import Filter, MetadataQuery
 from fastmcp import FastMCP
 from langchain.embeddings.base import init_embeddings
+from langchain_openai import OpenAIEmbeddings
 
 # -------------------------------------------------
 # Logging
@@ -46,6 +47,8 @@ def get_embeddings():
             )
         logger.info(f"Initializing embedding model: {model}")
         _embeddings = init_embeddings(model)
+        if isinstance(_embeddings, OpenAIEmbeddings):
+            _embeddings.check_embedding_ctx_length = False
 
     return _embeddings
 
@@ -120,6 +123,11 @@ def search_documents(
         collection = client.collections.get(collection_name)
 
         filters_applied = filters or {}
+        # Coerce list values to string — some models pass ["rag"] instead of "rag"
+        filters_applied = {
+            k: v[0] if isinstance(v, list) and v else str(v) if not isinstance(v, str) else v
+            for k, v in filters_applied.items()
+        }
         where_filter = None
 
         for field, value in filters_applied.items():

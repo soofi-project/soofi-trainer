@@ -88,12 +88,14 @@ class ToolStreamTracker:
     searching: bool = field(default=False, init=False)
     streamed: bool = field(default=False, init=False)
     tool_output: str = field(default="", init=False)
+    streamed_text: str = field(default="", init=False)
     captured: dict[str, Any] = field(default_factory=dict, init=False)
 
     def reset(self) -> None:
         self.searching = False
         self.streamed = False
         self.tool_output = ""
+        self.streamed_text = ""
         self.captured = {}
 
 
@@ -248,6 +250,7 @@ class SSEStream:
         self, tracker: ToolStreamTracker, chunk: str
     ) -> AsyncGenerator[str, None]:
         """Handle an incoming text chunk from a tool stream."""
+        tracker.streamed_text += chunk
         if not tracker.streamed:
             tracker.streamed = True
             tracker.searching = False
@@ -370,7 +373,7 @@ class SSEStream:
     def _emit_tails(self) -> list[str]:
         result: list[str] = []
         for tracker in self._trackers.values():
-            tail = _compute_tail(tracker.tool_output, self._response_text)
+            tail = _compute_tail(tracker.tool_output, tracker.streamed_text)
             if tail:
                 logger.info(
                     "Emitting %d missed %s tail chars from on_tool_end",
