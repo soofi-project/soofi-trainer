@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from training_gateway import backends, db
 from training_gateway.mcp_tools import mcp
+from training_gateway.rest_api import router as rest_router
 from training_gateway.webhooks import router as webhooks_router
 
 logging.basicConfig(level=logging.INFO)
@@ -58,6 +59,9 @@ async def health() -> dict:
     """Health check endpoint."""
     return {"status": "ok", "service": "training-gateway"}
 
+
+# Job REST endpoints (must be before the catch-all MCP mount)
+app.include_router(rest_router)
 
 # Webhook REST endpoints
 app.include_router(webhooks_router)
