@@ -886,25 +886,40 @@ class SoofiChat extends SignalWatcher(LitElement) {
         if (this._flowTimer) clearTimeout(this._flowTimer);
         this.searching = true;
         this.searchStatusLabel = "";
-        this.flowState = "asking-advisor";
+        this.flowState = event.tool === "ask_training_agent_tool"
+          ? "asking-training-agent"
+          : "asking-advisor";
         break;
 
       case "TOOL_CALL_END":
         this.searching = false;
         this.searchStatusLabel = "";
         if (this._flowTimer) clearTimeout(this._flowTimer);
-        this.flowState = "mcp-returning";
-        this._flowTimer = setTimeout(() => {
-          this.flowState = "a2a-returning";
+        if (this.flowState === "asking-training-agent" || this.flowState === "training-searching"
+            || this.flowState === "training-mcp-returning" || this.flowState === "ta-returning") {
+          // Training Agent: MCP back → A2A back → idle
+          this.flowState = "training-mcp-returning";
           this._flowTimer = setTimeout(() => {
-            this.flowState = "idle";
+            this.flowState = "ta-returning";
+            this._flowTimer = setTimeout(() => { this.flowState = "idle"; }, 900);
           }, 900);
-        }, 900);
+        } else {
+          // Advisor: MCP back → A2A back → idle
+          this.flowState = "mcp-returning";
+          this._flowTimer = setTimeout(() => {
+            this.flowState = "a2a-returning";
+            this._flowTimer = setTimeout(() => { this.flowState = "idle"; }, 900);
+          }, 900);
+        }
         break;
 
       case "SEARCH_STATUS":
         this.searchStatusLabel = (event.label as string) || "";
-        this.flowState = "searching";
+        if (this.flowState === "asking-training-agent") {
+          this.flowState = "training-searching";
+        } else if (this.flowState !== "training-searching") {
+          this.flowState = "searching";
+        }
         break;
 
       case "SPEECH_TEXT":

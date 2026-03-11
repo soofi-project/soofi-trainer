@@ -1,4 +1,4 @@
-"""LangGraph ReAct agent for the Soofi Advisor."""
+"""LangGraph ReAct agent for the Soofi Training Agent."""
 
 import logging
 import os
@@ -14,19 +14,14 @@ from .prompts import SYSTEM_PROMPT
 
 logger = logging.getLogger(__name__)
 
-model = os.getenv("ADVISOR_MODEL")
+model = os.getenv("INTERACTION_MODEL")
 if not model:
-    raise RuntimeError("ADVISOR_MODEL env var required.")
-
-base_url = os.getenv("OPENAI_BASE_URL") or None
+    raise RuntimeError("INTERACTION_MODEL env var required.")
 
 
 def build_graph(tools: list[BaseTool]) -> CompiledStateGraph:
     """Build the LangGraph ReAct agent with the given tools."""
-    llm = ChatOpenAI(
-        model=model,
-        **({"openai_api_base": base_url} if base_url else {}),
-    ).bind_tools(tools, parallel_tool_calls=False)
+    llm = ChatOpenAI(model=model).bind_tools(tools, parallel_tool_calls=False)
     tool_node = ToolNode(tools)
 
     async def agent(state: MessagesState) -> MessagesState:

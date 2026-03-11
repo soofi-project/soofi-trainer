@@ -3,10 +3,14 @@ import { customElement, property } from "lit/decorators.js";
 
 export type FlowState =
   | "idle"
-  | "asking-advisor"  // A2A fwd dots loop
-  | "searching"       // A2A fwd runs out, MCP fwd loops
-  | "mcp-returning"   // MCP back runs out (Weaviate → Advisor)
-  | "a2a-returning";  // A2A back runs out (Advisor → IA)
+  | "asking-advisor"          // A2A fwd dots loop (IA → Advisor)
+  | "searching"               // A2A fwd runs out, MCP fwd loops (Advisor → Weaviate)
+  | "mcp-returning"           // MCP back runs out (Weaviate → Advisor)
+  | "a2a-returning"           // A2A back runs out (Advisor → IA)
+  | "asking-training-agent"   // A2A fwd dots loop (IA → Training Agent)
+  | "training-searching"      // A2A fwd runs out, MCP fwd loops (TA → Gateway)
+  | "training-mcp-returning"  // MCP back runs out (Gateway → TA)
+  | "ta-returning";           // A2A back runs out (Training Agent → IA)
 
 const NT = 10;           // node top y
 const NH = 44;           // node height
@@ -21,26 +25,63 @@ function parseSvg(source: string): SVGSVGElement {
 }
 
 function buildSvgSource(s: FlowState): string {
-  const aguiOn      = s !== "idle";
-  const a2aOn       = s === "asking-advisor" || s === "searching"
-                   || s === "mcp-returning"   || s === "a2a-returning";
-  const mcpOn       = s === "searching" || s === "mcp-returning";
+  const isAdvisor  = s === "asking-advisor" || s === "searching"
+                  || s === "mcp-returning"  || s === "a2a-returning";
+  const isTraining = s === "asking-training-agent" || s === "training-searching"
+                  || s === "training-mcp-returning" || s === "ta-returning";
 
-  // Which nodes glow
-  const iaCls       = s === "asking-advisor" || s === "a2a-returning"   ? " node-rect--active" : "";
-  const advisorCls  = s === "asking-advisor" || s === "searching"
-                   || s === "mcp-returning"   || s === "a2a-returning"   ? " node-rect--active" : "";
-  const weaviateCls = s === "searching" || s === "mcp-returning"         ? " node-rect--active" : "";
+  const aguiOn = s !== "idle";
+  const a2aOn  = isAdvisor || isTraining;
+  const mcpOn  = s === "searching" || s === "mcp-returning";
+  const ta2aOn = isTraining;
 
-  const eC = (on: boolean) => "edge-line" + (on ? " edge-line--active" : "");
+  // Node glow
+  const iaCls  = (s === "asking-advisor" || s === "a2a-returning"
+               || s === "asking-training-agent" || s === "ta-returning") ? " node-rect--active" : "";
+  const advCls = isAdvisor                                                ? " node-rect--active" : "";
+  const weavCls = (s === "searching" || s === "mcp-returning")           ? " node-rect--active" : "";
+  const taCls  = isTraining                                               ? " node-rect--active" : "";
+  const tgCls  = (s === "training-searching" || s === "training-mcp-returning") ? " node-rect--active" : "";
+
+  const eC = (on: boolean) => "edge-line"  + (on ? " edge-line--active"  : "");
   const lC = (on: boolean) => "edge-label" + (on ? " edge-label--active" : "");
 
-  // Each dot group gets a unique class so CSS can target it per-state
   const dots = (cls: string, x1: number, x2: number) => `
     <circle class="${cls}" r="4" style="offset-path:path('M ${x1} ${CY} L ${x2} ${CY}')"></circle>
     <circle class="${cls}" r="4" style="offset-path:path('M ${x1} ${CY} L ${x2} ${CY}');animation-delay:0.25s"></circle>
     <circle class="${cls}" r="4" style="offset-path:path('M ${x1} ${CY} L ${x2} ${CY}');animation-delay:0.5s"></circle>`;
 
+  if (isTraining) {
+    // Training Agent path: Browser → IA → Training Agent → Training Gateway
+    return `<svg xmlns="${SVG_NS}" viewBox="0 0 760 60" preserveAspectRatio="xMidYMid meet">
+      <line class="${eC(aguiOn)}" x1="90"  y1="${CY}" x2="185" y2="${CY}"/>
+      <text class="${lC(aguiOn)}" x="137" y="${CY - 10}">AG-UI</text>
+
+      <line class="${eC(ta2aOn)}" x1="345" y1="${CY}" x2="440" y2="${CY}"/>
+      <text class="${lC(ta2aOn)}" x="397" y="${CY - 10}">A2A</text>
+      ${s === "asking-training-agent" || s === "training-searching" ? dots("dot-ta-fwd",  345, 440) : ""}
+      ${s === "ta-returning"          ? dots("dot-ta-back", 440, 345) : ""}
+
+      <line class="${eC(isTraining)}" x1="575" y1="${CY}" x2="650" y2="${CY}"/>
+      <text class="${lC(isTraining)}" x="612" y="${CY - 10}">MCP</text>
+      ${s === "training-searching"      ? dots("dot-ta-mcp-fwd",  575, 650) : ""}
+      ${s === "training-mcp-returning"  ? dots("dot-ta-mcp-back", 650, 575) : ""}
+
+      <rect class="node-rect"          x="0"   y="${NT}" width="90"  height="${NH}" rx="8"/>
+      <text class="node-label"         x="45"  y="${CY}">Browser</text>
+
+      <rect class="node-rect${iaCls}"  x="185" y="${NT}" width="160" height="${NH}" rx="8"/>
+      <text class="node-label"         x="265" y="${CY}">Interaction Agent</text>
+
+      <rect class="node-rect${taCls}"  x="440" y="${NT}" width="135" height="${NH}" rx="8"/>
+      <text class="node-label"         x="507" y="${CY}">Training Agent</text>
+
+      <rect class="node-rect${tgCls}"  x="650" y="${NT}" width="110" height="${NH}" rx="8"/>
+      <text class="node-label"         x="705" y="${CY}">Training Gateway</text>
+    </svg>`;
+  }
+
+  // Advisor path (default): Browser → IA → Advisor → Weaviate
   return `<svg xmlns="${SVG_NS}" viewBox="0 0 760 60" preserveAspectRatio="xMidYMid meet">
     <line class="${eC(aguiOn)}" x1="90"  y1="${CY}" x2="185" y2="${CY}"/>
     <text class="${lC(aguiOn)}" x="137" y="${CY - 10}">AG-UI</text>
@@ -52,8 +93,8 @@ function buildSvgSource(s: FlowState): string {
 
     <line class="${eC(mcpOn)}" x1="555" y1="${CY}" x2="650" y2="${CY}"/>
     <text class="${lC(mcpOn)}" x="602" y="${CY - 10}">MCP</text>
-    ${s === "searching"      ? dots("dot-mcp-fwd", 555, 650) : ""}
-    ${s === "mcp-returning"  ? dots("dot-mcp-back", 650, 555) : ""}
+    ${s === "searching"     ? dots("dot-mcp-fwd",  555, 650) : ""}
+    ${s === "mcp-returning" ? dots("dot-mcp-back", 650, 555) : ""}
 
     <rect class="node-rect"               x="0"   y="${NT}" width="90"  height="${NH}" rx="8"/>
     <text class="node-label"              x="45"  y="${CY}">Browser</text>
@@ -61,10 +102,10 @@ function buildSvgSource(s: FlowState): string {
     <rect class="node-rect${iaCls}"       x="185" y="${NT}" width="160" height="${NH}" rx="8"/>
     <text class="node-label"              x="265" y="${CY}">Interaction Agent</text>
 
-    <rect class="node-rect${advisorCls}"  x="440" y="${NT}" width="115" height="${NH}" rx="8"/>
+    <rect class="node-rect${advCls}"      x="440" y="${NT}" width="115" height="${NH}" rx="8"/>
     <text class="node-label"              x="497" y="${CY}">Advisor</text>
 
-    <rect class="node-rect${weaviateCls}" x="650" y="${NT}" width="110" height="${NH}" rx="8"/>
+    <rect class="node-rect${weavCls}"     x="650" y="${NT}" width="110" height="${NH}" rx="8"/>
     <text class="node-label"              x="705" y="${CY}">Weaviate</text>
   </svg>`;
 }
@@ -117,21 +158,28 @@ export class SoofiAgentFlow extends LitElement {
 
     /* ── Dot base (invisible until a state rule gives them an animation) ── */
     .dot-a2a-fwd, .dot-a2a-back,
-    .dot-mcp-fwd, .dot-mcp-back {
+    .dot-mcp-fwd, .dot-mcp-back,
+    .dot-ta-fwd,  .dot-ta-back,
+    .dot-ta-mcp-fwd, .dot-ta-mcp-back {
       fill: var(--color-primary, #1a73e8);
       opacity: 0;
     }
 
     /* ── Looping dots: outgoing journey, active phase ───────────────────── */
-    .state-asking-advisor .dot-a2a-fwd,
-    .state-searching      .dot-mcp-fwd {
+    .state-asking-advisor       .dot-a2a-fwd,
+    .state-searching            .dot-mcp-fwd,
+    .state-asking-training-agent .dot-ta-fwd,
+    .state-training-searching   .dot-ta-mcp-fwd {
       animation: flow 0.75s linear infinite;
     }
 
     /* ── One-shot run-out: completing the final trip ────────────────────── */
-    .state-searching      .dot-a2a-fwd,
-    .state-mcp-returning  .dot-mcp-back,
-    .state-a2a-returning  .dot-a2a-back {
+    .state-searching            .dot-a2a-fwd,
+    .state-mcp-returning        .dot-mcp-back,
+    .state-a2a-returning        .dot-a2a-back,
+    .state-training-searching   .dot-ta-fwd,
+    .state-training-mcp-returning .dot-ta-mcp-back,
+    .state-ta-returning         .dot-ta-back {
       animation: flow-out 0.8s linear forwards;
     }
 

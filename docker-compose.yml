@@ -246,6 +246,30 @@ services:
         condition: service_healthy
 
   # ===========================================
+  # Training Agent - LangGraph + A2A
+  # ===========================================
+  training-agent:
+    build: ./training-agent
+    container_name: training-agent
+    restart: unless-stopped
+    env_file:
+      - .env
+      - ${ENV_SECRETS_FILE}
+    environment:
+      - TRAINING_GATEWAY_MCP_URL=http://training-gateway:8000/mcp
+      - INTERACTION_MODEL=${INTERACTION_MODEL}
+    networks:
+      - soofi-network
+    depends_on:
+      training-gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket; s=socket.create_connection(('localhost',8000),2); s.close()\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===========================================
   # Interaction Agent - LangGraph + A2A
   # ===========================================
   interaction-agent:
@@ -258,10 +282,15 @@ services:
       - ${ENV_SECRETS_FILE}
     environment:
       - ADVISOR_A2A_URL=http://advisor:8000
+      - TRAINING_AGENT_A2A_URL=http://training-agent:8000
+      - INTERACTION_MODEL=${INTERACTION_MODEL}
+
     networks:
       - soofi-network
     depends_on:
       advisor:
+        condition: service_healthy
+      training-agent:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import socket; s=socket.create_connection(('localhost',8000),2); s.close()\""]

@@ -1,4 +1,4 @@
-"""A2A AgentExecutor that delegates to the LangGraph advisor graph."""
+"""A2A AgentExecutor that delegates to the LangGraph training agent graph."""
 
 import json
 import logging
@@ -13,13 +13,20 @@ from langgraph.graph.state import CompiledStateGraph
 
 logger = logging.getLogger(__name__)
 
-# Protocol constants for the soofi event envelope shared with interaction-agent/graph.py
+# Protocol constants for the soofi event envelope shared with interaction-agent
 _SOOFI_EVENT_KEY = "__soofi_event"
+_EVENT_JOB_STARTED = "job_started"
 _EVENT_SEARCH_STATUS = "search_status"
 
+# Tool name that signals a training job was started
+_START_TRAINING_TOOL = "start_training_job"
 
-class AdvisorAgentExecutor(AgentExecutor):
-    """Wraps the LangGraph advisor graph as an A2A AgentExecutor.
+# MCP tool names — emit status event when these start
+_MCP_TOOLS = {"start_training_job", "get_job_status", "list_training_jobs", "cancel_training_job"}
+
+
+class TrainingAgentExecutor(AgentExecutor):
+    """Wraps the LangGraph training agent graph as an A2A AgentExecutor.
 
     Accepts a callable that returns the graph, so the executor can be
     instantiated before the graph is built (during module-level setup).
@@ -38,7 +45,7 @@ class AdvisorAgentExecutor(AgentExecutor):
                     status=TaskStatus(
                         state=TaskState.failed,
                         message=new_agent_text_message(
-                            "Advisor graph not initialized yet.",
+                            "Training agent graph not initialized yet.",
                             context.context_id,
                             context.task_id,
                         ),
@@ -78,20 +85,18 @@ class AdvisorAgentExecutor(AgentExecutor):
             )
         )
 
-        # Run the LangGraph agent with thread_id for conversation memory.
-        # Stream each LLM token as a TaskStatusUpdateEvent so the client
-        # can display partial results in real time.
         config = {"configurable": {"thread_id": thread_id}}
         collected: list[str] = []
+
         try:
             async for event in graph.astream_events(
                 {"messages": [HumanMessage(content=user_text)]},
                 version="v2",
                 config=config,
             ):
-                if event["event"] == "on_tool_start" and "search_documents" in event.get("name", ""):
+                if event["event"] == "on_tool_start" and event.get("name") in _MCP_TOOLS:
                     status_json = json.dumps(
-                        {_SOOFI_EVENT_KEY: _EVENT_SEARCH_STATUS, "text": "Suche in der Wissensdatenbank"},
+                        {_SOOFI_EVENT_KEY: _EVENT_SEARCH_STATUS, "text": "Rufe Training Gateway auf"},
                         ensure_ascii=False,
                     )
                     await event_queue.enqueue_event(
@@ -107,6 +112,38 @@ class AdvisorAgentExecutor(AgentExecutor):
                             final=False,
                         )
                     )
+
+                elif event["event"] == "on_tool_end":
+                    # Emit job_started envelope when start_training_job completes successfully
+                    if event.get("name") == _START_TRAINING_TOOL:
+                        output = event.get("data", {}).get("output")
+                        if output:
+                            try:
+                                result = json.loads(output) if isinstance(output, str) else output
+                            except (json.JSONDecodeError, ValueError):
+                                result = None
+
+                            job_id = result.get("job_id") if isinstance(result, dict) else None
+                            failed = result.get("status") == "failed" if isinstance(result, dict) else False
+
+                            if job_id and not failed:
+                                envelope = json.dumps(
+                                    {_SOOFI_EVENT_KEY: _EVENT_JOB_STARTED, "job_id": job_id},
+                                    ensure_ascii=False,
+                                )
+                                await event_queue.enqueue_event(
+                                    TaskStatusUpdateEvent(
+                                        task_id=context.task_id,
+                                        context_id=context.context_id,
+                                        status=TaskStatus(
+                                            state=TaskState.working,
+                                            message=new_agent_text_message(
+                                                envelope, context.context_id, context.task_id
+                                            ),
+                                        ),
+                                        final=False,
+                                    )
+                                )
 
                 elif event["event"] == "on_chat_model_stream":
                     chunk = event["data"]["chunk"]
@@ -146,7 +183,7 @@ class AdvisorAgentExecutor(AgentExecutor):
             return
 
         response_text = "".join(collected) or "No response generated."
-        logger.info("A2A response: %s", response_text[:1000])
+        logger.info("A2A response: %s", response_text[:200])
 
         await event_queue.enqueue_event(
             Task(
