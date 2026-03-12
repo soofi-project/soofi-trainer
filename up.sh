@@ -18,8 +18,33 @@ source .env 2>/dev/null || true
 
 # Parse args
 BUILD_FLAG=""
-if [ "$1" == "--build" ]; then
-    BUILD_FLAG="--build"
+BACKEND_OVERRIDE="chatgpt"
+for arg in "$@"; do
+    case "$arg" in
+        --build)    BUILD_FLAG="--build" ;;
+        --chatgpt)  BACKEND_OVERRIDE="chatgpt" ;;
+        --ollama)   BACKEND_OVERRIDE="ollama" ;;
+        --lmstudio) BACKEND_OVERRIDE="lmstudio" ;;
+        --triton) BACKEND_OVERRIDE="triton" ;;
+        --*)
+            echo "[ERROR] Unknown flag: $arg"
+            echo "[HINT]  Available flags: --build, --chatgpt, --ollama, --lmstudio, --triton"
+            exit 1
+            ;;
+    esac
+done
+
+# Build compose file args
+COMPOSE_FILES="-f docker-compose.yml"
+if [ "$BACKEND_OVERRIDE" != "chatgpt" ]; then
+    OVERRIDE_FILE="docker-compose.${BACKEND_OVERRIDE}.yml"
+    if [ ! -f "$OVERRIDE_FILE" ]; then
+        echo "[ERROR] Override file not found: $OVERRIDE_FILE"
+        echo "[HINT]  Available backends: --chatgpt (default), --ollama, --lmstudio, --triton"
+        exit 1
+    fi
+    echo "[INFO] Backend profile: $BACKEND_OVERRIDE"
+    COMPOSE_FILES="$COMPOSE_FILES -f $OVERRIDE_FILE"
 fi
 
 # Start containers (build only if --build passed)
@@ -28,7 +53,7 @@ if [ -n "$BUILD_FLAG" ]; then
 else
     echo "[INFO] Starting containers..."
 fi
-docker compose up -d --wait --remove-orphans $BUILD_FLAG
+docker compose $COMPOSE_FILES up -d --wait --remove-orphans $BUILD_FLAG
 
 # Check container status
 echo ""

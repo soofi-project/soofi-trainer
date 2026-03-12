@@ -18,6 +18,7 @@ import yaml
 from langchain_core.documents import Document
 from minio import Minio
 from langchain.embeddings.base import init_embeddings
+from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
 from weaviate.classes.config import DataType, Property
 from weaviate.classes.query import Filter
@@ -287,12 +288,9 @@ def ingest() -> None:
     # --- Config ---
     collection_name = os.getenv("WEAVIATE_COLLECTION")
     if not collection_name:
-        raise RuntimeError("WEAVIATE_COLLECTION is not set")
+        raise RuntimeError("WEAVIATE_COLLECTION env var required.")
     embedding_model = os.getenv("EMBEDDING_MODEL")
 
-    if not collection_name:
-        raise RuntimeError("WEAVIATE_COLLECTION env var required.")
-    
     if not embedding_model:
         raise RuntimeError(
             "EMBEDDING_MODEL env var required. "
@@ -333,6 +331,8 @@ def ingest() -> None:
         # --- Embeddings ---
         logger.info("Initializing embedding model: %s", embedding_model)
         embeddings = init_embeddings(embedding_model)
+        if isinstance(embeddings, OpenAIEmbeddings):
+            embeddings.check_embedding_ctx_length = False
 
         # --- Process files ---
         stats = {"added": 0, "updated": 0, "deleted": 0, "skipped": 0}

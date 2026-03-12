@@ -61,10 +61,6 @@ graph: CompiledStateGraph | None = None
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     global graph
 
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        raise RuntimeError("OPENAI_API_KEY is not set")
-
     graph = build_graph()
     logger.info("Interaction Agent graph built successfully")
     yield

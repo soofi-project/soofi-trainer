@@ -20,7 +20,7 @@ function slugify(text: string): string {
   return text
     .toLowerCase()
     .trim()
-    .replace(/[^\w\s-]/g, "")
+    .replace(/[^\p{L}\p{N}\s_-]/gu, "")
     .replace(/\s+/g, "-");
 }
 
@@ -1323,8 +1323,10 @@ class SoofiChat extends SignalWatcher(LitElement) {
         this.searching = false;
         break;
 
-
       case "RUN_FINISHED": {
+        if (this._flowTimer) clearTimeout(this._flowTimer);
+        this._flowTimer = null;
+        this.flowState = "idle";
         this.searching = false;
         // Safety net: if the flow is still in an active (pre-return) state,
         // TOOL_CALL_END was likely never received — reset to idle.

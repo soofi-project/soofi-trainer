@@ -1,0 +1,22 @@
+# ===========================================
+# Soofi Trainer - Triton Backend Override
+# ===========================================
+# Usage: ./up.sh --triton
+# Requires NVIDIA Triton Inference Server running with the model loaded.
+# Embeddings: still provided by OpenAI (OPENAI_API_KEY required).
+
+services:
+  advisor:
+    environment:
+      - ADVISOR_MODEL=qwen3.5-122b
+      - OPENAI_BASE_URL=http://10.2.10.33:9000/v1
+
+  interaction-agent:
+    environment:
+      - INTERACTION_MODEL=qwen3.5-122b
+      - OPENAI_BASE_URL=http://10.2.10.33:9000/v1
+
+  training-agent:
+    environment:
+      - INTERACTION_MODEL=qwen3.5-122b
+      - OPENAI_BASE_URL=http://10.2.10.33:9000/v1
