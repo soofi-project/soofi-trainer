@@ -884,7 +884,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
           <span class=${this.language === "de" ? "active" : ""}>DE</span>
           <span class=${this.language === "en" ? "active" : ""}>EN</span>
         </div>
-        <button class="reset-btn" title=${tr("reset_confirm", this.language)} @click=${() => { this.showResetDialog = true; }}>
+        <button class="reset-btn" title=${tr("reset_title", this.language)} @click=${() => { this.showResetDialog = true; }}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M3 12a9 9 0 1 1 3 6.36"/>
             <polyline points="3 16 3 12 7 12"/>
