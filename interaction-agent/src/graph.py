@@ -297,7 +297,10 @@ def build_graph() -> CompiledStateGraph:
         show_agent_card,
         control_doc_viewer,
     ]
-    llm = ChatOpenAI(model=model_name).bind_tools(tools, parallel_tool_calls=False)
+    llm = ChatOpenAI(
+        model=model_name,
+        **({"openai_api_base": base_url} if base_url else {}),
+    ).bind_tools(tools, parallel_tool_calls=False)
     tools = [ask_advisor_tool, ask_training_agent_tool, show_dashboard, control_doc_viewer]
     llm = ChatOpenAI(
         model=model_name,
