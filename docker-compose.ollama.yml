@@ -17,6 +17,11 @@ services:
       - INTERACTION_MODEL=qwen2.5:14b
       - OPENAI_BASE_URL=http://host.docker.internal:11434/v1
 
+  training-agent:
+    environment:
+      - INTERACTION_MODEL=qwen2.5:14b
+      - OPENAI_BASE_URL=http://host.docker.internal:11434/v1
+
   vector-mcp:
     environment:
       - EMBEDDING_MODEL=ollama:bge-m3

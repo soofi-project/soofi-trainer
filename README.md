@@ -10,6 +10,7 @@ An agentic system that guides users through the LLM specialization process — f
 | Open WebUI | http://localhost:3000 | Chat interface |
 | Interaction Agent | docker-internal (interaction-agent:8000) | LangGraph ReAct agent, AG-UI SSE, A2A orchestrator |
 | Advisor | docker-internal (advisor:8000) | LangGraph LLM specialization advisor (A2A) |
+| Training Agent | docker-internal (training-agent:8000) | LangGraph training job manager (A2A) |
 | STT | http://localhost:8010 | Speech-to-text service (OpenAI Whisper-1) |
 | TTS | http://localhost:8011 | Text-to-speech service (OpenAI tts-1) |
 | Training Gateway | docker-internal (training-gateway:8000) | Training job management (MCP) |
@@ -143,6 +144,7 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 ./up.sh                # OpenAI (default)
 ./up.sh --ollama       # Ollama (local)
 ./up.sh --lmstudio     # LM Studio (local)
+./up.sh --triton       # NVIDIA Triton (H200)
 ```
 
 | Profile | Chat endpoint | Embeddings | Requires |
@@ -150,11 +152,13 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 | _(default)_ | `api.openai.com` | OpenAI | `OPENAI_API_KEY` in `~/.env.secrets` |
 | `--ollama` | Ollama (`localhost:11434`) | Ollama `bge-m3` | Ollama running + models pulled |
 | `--lmstudio` | LM Studio (`localhost:1234`) | LM Studio `bge-m3` | LM Studio server running + models loaded |
+| `--triton` | Triton (`10.2.10.33:9000`) | OpenAI | Triton running + model loaded, `OPENAI_API_KEY` for embeddings |
 
 Model names and all other backend settings are configured in the respective override file:
 
 - `docker-compose.ollama.yml` — Ollama models, endpoint, embedding model
 - `docker-compose.lmstudio.yml` — LM Studio models, endpoint, embedding model
+- `docker-compose.triton.yml` — Triton endpoint and model
 
 To change the model, edit the override file and restart with `./up.sh --ollama` (no `--build` needed).
 

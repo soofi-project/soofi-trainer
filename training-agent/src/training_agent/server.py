@@ -53,8 +53,8 @@ app.add_middleware(
 agent_card = AgentCard(
     name="Soofi Training Agent",
     description=(
-        "Training job manager — starts, monitors and cancels LLM training jobs "
-        "(LoRA, QLoRA, SFT, DPO) via the Training Gateway (language: German)"
+        "Trainingsmanager — startet, überwacht und bricht LLM-Trainingsjobs ab "
+        "(LoRA, QLoRA, SFT, DPO) über das Training Gateway"
     ),
     url="http://training-agent:8000/a2a/",
     version="0.1.0",
@@ -62,8 +62,8 @@ agent_card = AgentCard(
     skills=[
         AgentSkill(
             id="training_management",
-            name="Training Management",
-            description="Start, monitor and cancel LLM training jobs",
+            name="Trainingsverwaltung",
+            description="Trainingsjobs starten, überwachen und abbrechen",
             tags=["training", "lora", "qlora", "fine-tuning", "jobs"],
         )
     ],

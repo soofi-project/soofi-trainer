@@ -77,6 +77,26 @@ interface DashboardEmbedInfo {
   description: string;
 }
 
+interface AgentCardData {
+  name: string;
+  description?: string;
+  url?: string;
+  version?: string;
+  protocolVersion?: string;
+  preferredTransport?: string;
+  defaultInputModes?: string[];
+  defaultOutputModes?: string[];
+  capabilities?: { streaming?: boolean; [key: string]: unknown };
+  skills?: Array<{
+    id?: string;
+    name?: string;
+    description?: string;
+    tags?: string[];
+  }>;
+  _status: "online" | "offline";
+  _error?: string;
+}
+
 // ---------------------------------------------------------------------------
 // Minimal A2UI theme — provides base styling for all standard components.
 // Full Soofi branding is planned for T-07-2.
@@ -554,6 +574,111 @@ class SoofiChat extends SignalWatcher(LitElement) {
       }
     }
 
+    /* Agent card accordion */
+    .agent-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .agent-card-accordion {
+      border: 1px solid var(--color-border, #dadce0);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .agent-card-accordion summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      cursor: pointer;
+      font-weight: 500;
+      background: #fafafa;
+      list-style: none;
+      user-select: none;
+    }
+    .agent-card-accordion summary::-webkit-details-marker { display: none; }
+    .agent-card-accordion summary::before {
+      content: "\\25B6";
+      font-size: 10px;
+      margin-right: 8px;
+      transition: transform 0.2s;
+    }
+    .agent-card-accordion[open] summary::before {
+      transform: rotate(90deg);
+    }
+    .agent-card-accordion[open] summary {
+      border-bottom: 1px solid var(--color-border, #dadce0);
+    }
+    .agent-card-details {
+      padding: 12px 16px;
+    }
+    .agent-card-name {
+      flex: 1;
+    }
+    .agent-card-status {
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-weight: 500;
+    }
+    .agent-card-status--offline {
+      background: #fce8e6;
+      color: #c5221f;
+    }
+    .agent-card__desc {
+      margin: 0 0 12px 0;
+      color: var(--color-text-secondary, #5f6368);
+    }
+    .agent-card__row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 6px 0;
+      border-bottom: 1px solid #f1f3f4;
+    }
+    .agent-card__row:last-child { border-bottom: none; }
+    .agent-card__label {
+      font-weight: 500;
+      font-size: 13px;
+      color: var(--color-text-secondary, #5f6368);
+      min-width: 80px;
+    }
+    .agent-card__offline-msg {
+      margin: 8px 0 0;
+      color: var(--color-text-secondary, #5f6368);
+      font-style: italic;
+    }
+    .agent-card__skills {
+      margin-top: 12px;
+    }
+    .agent-card__skill {
+      margin: 8px 0;
+      padding: 8px 12px;
+      background: #f8f9fa;
+      border-radius: 6px;
+    }
+    .agent-card__skill strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+    .agent-card__skill p {
+      margin: 0 0 6px 0;
+      font-size: 13px;
+      color: var(--color-text-secondary, #5f6368);
+    }
+    .agent-card__tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .agent-card__tag {
+      font-size: 11px;
+      padding: 1px 6px;
+      border-radius: 10px;
+      background: #e8f0fe;
+      color: var(--color-primary, #1a73e8);
+    }
+
     /* Streaming indicator */
     .streaming-dot::after {
       content: "\u25CF";
@@ -588,6 +713,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
   @state() private docViewerUrl: string | null = null;
   @state() private docContent = "";
   @state() private docViewerAnchors: string[] = [];
+  @state() private agentCards: Array<[string, AgentCardData]> | null = null;
 
   // All /docs/ links seen in the conversation, in order of appearance
   private docLinks: string[] = [];
@@ -793,7 +919,35 @@ class SoofiChat extends SignalWatcher(LitElement) {
               </div>
             </div>
           `
-        : nothing}
+        : this.agentCards
+          ? html`
+              <div class="doc-viewer">
+                <div class="doc-viewer__header">
+                  <span>Agentenkarten</span>
+                  <button class="doc-viewer__close" @click=${this.closeAgentCards}>&times;</button>
+                </div>
+                <div class="doc-viewer__body agent-cards">
+                  ${this.agentCards.length === 1
+                    ? this.renderAgentCard(this.agentCards[0][1])
+                    : this.agentCards.map(
+                        ([name, card]) => html`
+                          <details class="agent-card-accordion">
+                            <summary>
+                              <span class="agent-card-name">${card.name || name}</span>
+                              ${card._status === "offline"
+                                ? html`<span class="agent-card-status agent-card-status--offline">Nicht erreichbar</span>`
+                                : nothing}
+                            </summary>
+                            <div class="agent-card-details">
+                              ${this.renderAgentCard(card)}
+                            </div>
+                          </details>
+                        `
+                      )}
+                </div>
+              </div>
+            `
+          : nothing}
     `;
   }
 
@@ -1078,9 +1232,11 @@ class SoofiChat extends SignalWatcher(LitElement) {
         if (this._flowTimer) clearTimeout(this._flowTimer);
         this.searching = true;
         this.searchStatusLabel = "";
-        this.flowState = event.tool === "ask_training_agent_tool"
-          ? "asking-training-agent"
-          : "asking-advisor";
+        if (event.tool === "ask_training_agent_tool") {
+          this.flowState = "asking-training-agent";
+        } else if (event.tool === "ask_advisor_tool") {
+          this.flowState = "asking-advisor";
+        }
         break;
 
       case "TOOL_CALL_END":
@@ -1095,7 +1251,8 @@ class SoofiChat extends SignalWatcher(LitElement) {
             this.flowState = "ta-returning";
             this._flowTimer = setTimeout(() => { this.flowState = "idle"; }, 900);
           }, 900);
-        } else {
+        } else if (this.flowState === "asking-advisor" || this.flowState === "searching"
+            || this.flowState === "mcp-returning" || this.flowState === "a2a-returning") {
           // Advisor: MCP back → A2A back → idle
           this.flowState = "mcp-returning";
           this._flowTimer = setTimeout(() => {
@@ -1103,15 +1260,17 @@ class SoofiChat extends SignalWatcher(LitElement) {
             this._flowTimer = setTimeout(() => { this.flowState = "idle"; }, 900);
           }, 900);
         }
+        // Other tools (show_agent_card, show_dashboard, etc.): no flow animation
         break;
 
       case "SEARCH_STATUS":
         this.searchStatusLabel = (event.label as string) || "";
         if (this.flowState === "asking-training-agent") {
           this.flowState = "training-searching";
-        } else if (this.flowState !== "training-searching") {
+        } else if (this.flowState === "asking-advisor") {
           this.flowState = "searching";
         }
+        // Other tools (show_agent_card, etc.): label shown but no flow animation
         break;
 
       case "SPEECH_TEXT":
@@ -1123,18 +1282,31 @@ class SoofiChat extends SignalWatcher(LitElement) {
         this.handleDocViewerEvent(event);
         break;
 
+      case "AGENT_CARD":
+        this.handleAgentCardEvent(event);
+        break;
+
       case "TEXT_MESSAGE_END":
         this.currentMsgId = null;
         this.searching = false;
         break;
 
-
-      case "RUN_FINISHED":
+      case "RUN_FINISHED": {
         if (this._flowTimer) clearTimeout(this._flowTimer);
         this._flowTimer = null;
         this.flowState = "idle";
         this.searching = false;
+        // Safety net: if the flow is still in an active (pre-return) state,
+        // TOOL_CALL_END was likely never received — reset to idle.
+        // Don't interrupt return animations (they have their own timers).
+        const stuck = ["asking-advisor", "asking-training-agent", "searching", "training-searching"];
+        if (stuck.includes(this.flowState)) {
+          if (this._flowTimer) clearTimeout(this._flowTimer);
+          this._flowTimer = null;
+          this.flowState = "idle";
+        }
         break;
+      }
 
       case "STATE_SNAPSHOT": {
         const snapshot = event.snapshot as Record<string, unknown> | undefined;
@@ -1215,6 +1387,8 @@ class SoofiChat extends SignalWatcher(LitElement) {
   }
 
   private async openDocViewer(url: string): Promise<void> {
+    // Close agent cards if open — they share the panel
+    this.agentCards = null;
     this.docViewerUrl = url;
     // Sync index for next/previous navigation
     const idx = this.docLinks.indexOf(url);
@@ -1303,6 +1477,114 @@ class SoofiChat extends SignalWatcher(LitElement) {
         this.openDocViewer(this.docLinks[idx]);
       }
     }
+  }
+
+  // -----------------------------------------------------------------------
+  // Agent card viewer
+  // -----------------------------------------------------------------------
+
+  private renderAgentCard(card: AgentCardData) {
+    if (card._status === "offline") {
+      return html`
+        <div class="agent-card">
+          <div class="agent-card__row">
+            <span class="agent-card__label">Status</span>
+            <span class="agent-card-status agent-card-status--offline">Nicht erreichbar</span>
+          </div>
+          <p class="agent-card__offline-msg">
+            Dieser Agent ist derzeit nicht verfügbar.
+          </p>
+        </div>
+      `;
+    }
+    return html`
+      <div class="agent-card">
+        ${card.description
+          ? html`<p class="agent-card__desc">${card.description}</p>`
+          : nothing}
+        ${card.version
+          ? html`<div class="agent-card__row">
+              <span class="agent-card__label">Version</span>
+              <span>${card.version}</span>
+            </div>`
+          : nothing}
+        ${card.protocolVersion
+          ? html`<div class="agent-card__row">
+              <span class="agent-card__label">Protokoll</span>
+              <span>A2A ${card.protocolVersion}</span>
+            </div>`
+          : nothing}
+        ${card.preferredTransport
+          ? html`<div class="agent-card__row">
+              <span class="agent-card__label">Transport</span>
+              <span>${card.preferredTransport}</span>
+            </div>`
+          : nothing}
+        ${card.capabilities
+          ? html`<div class="agent-card__row">
+              <span class="agent-card__label">Streaming</span>
+              <span>${card.capabilities.streaming ? "Ja" : "Nein"}</span>
+            </div>`
+          : nothing}
+        ${card.defaultInputModes?.length
+          ? html`<div class="agent-card__row">
+              <span class="agent-card__label">Input</span>
+              <span>${card.defaultInputModes.join(", ")}</span>
+            </div>`
+          : nothing}
+        ${card.defaultOutputModes?.length
+          ? html`<div class="agent-card__row">
+              <span class="agent-card__label">Output</span>
+              <span>${card.defaultOutputModes.join(", ")}</span>
+            </div>`
+          : nothing}
+        ${card.skills?.length
+          ? html`
+              <div class="agent-card__skills">
+                <span class="agent-card__label">Skills</span>
+                ${card.skills.map(
+                  (skill) => html`
+                    <div class="agent-card__skill">
+                      <strong>${skill.name || skill.id}</strong>
+                      ${skill.description
+                        ? html`<p>${skill.description}</p>`
+                        : nothing}
+                      ${skill.tags?.length
+                        ? html`<div class="agent-card__tags">
+                            ${skill.tags.map(
+                              (tag) =>
+                                html`<span class="agent-card__tag">${tag}</span>`
+                            )}
+                          </div>`
+                        : nothing}
+                    </div>
+                  `
+                )}
+              </div>
+            `
+          : nothing}
+      </div>
+    `;
+  }
+
+  private handleAgentCardEvent(event: AgUiEvent): void {
+    const action = event.action as string;
+    if (action === "close") {
+      this.closeAgentCards();
+      return;
+    }
+    if (action === "open") {
+      const cards = event.cards as Array<[string, AgentCardData]>;
+      if (cards?.length) {
+        // Close doc viewer if open — they share the panel
+        this.closeDocViewer();
+        this.agentCards = cards;
+      }
+    }
+  }
+
+  private closeAgentCards(): void {
+    this.agentCards = null;
   }
 
   private collectDocAnchors(basePath: string): string[] {
