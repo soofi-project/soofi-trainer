@@ -117,7 +117,7 @@ app.mount("/a2a", _a2a_app)
 
 
 @app.get("/health")
-async def health() -> dict:
+async def health() -> dict[str, str]:
     if graph is None:
         return {"status": "error", "detail": "Graph not initialized"}
     return {"status": "ok"}
