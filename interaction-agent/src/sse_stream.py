@@ -13,6 +13,7 @@ from langchain_core.messages import AIMessageChunk, ToolMessage
 from langgraph.graph.state import CompiledStateGraph
 
 from .constants import AGENT_CARD_EVENT, AGENT_CARD_KEY, CONTROL_DOC_VIEWER_TOOL, DOC_VIEWER_KEY
+from .i18n import Language, tr
 from .speech import RE_SENTENCE_END, generate_speech_text
 
 logger = logging.getLogger(__name__)
@@ -111,10 +112,16 @@ class SSEStream:
         self,
         graph: CompiledStateGraph,
         trackers: list[ToolStreamTracker],
+        language: Language = "de",
     ) -> None:
         self._graph = graph
+        self._language = language
         # Deep-copy so concurrent requests don't share mutable tracker state
         self._trackers = {t.tool_name: copy.deepcopy(t) for t in trackers}
+        # Translate i18n keys in tracker labels to the requested language
+        for t in self._trackers.values():
+            if t.on_start_label:
+                t.on_start_label = tr(t.on_start_label, self._language)
         self._msg_id = ""
         self._response_text = ""
         self._chunk_buffer = ""
@@ -168,7 +175,7 @@ class SSEStream:
                 {
                     "type": "TEXT_MESSAGE_CONTENT",
                     "messageId": self._msg_id,
-                    "delta": "\n\n[Fehler bei der Verarbeitung]",
+                    "delta": tr("sse_error", self._language),
                 }
             )
 
@@ -185,7 +192,9 @@ class SSEStream:
         # Fallback speech if no sentence boundary was hit during streaming
         if self._response_text and not self._speech_emitted:
             speech = generate_speech_text(
-                self._response_text, has_search_results=self._has_search_results()
+                self._response_text,
+                has_search_results=self._has_search_results(),
+                lang=self._language,
             )
             if speech:
                 yield _sse({"type": "SPEECH_TEXT", "text": speech})
@@ -377,7 +386,9 @@ class SSEStream:
         if not RE_SENTENCE_END.search(self._response_text):
             return []
         speech = generate_speech_text(
-            self._response_text, has_search_results=self._has_search_results()
+            self._response_text,
+            has_search_results=self._has_search_results(),
+            lang=self._language,
         )
         if not speech:
             return []

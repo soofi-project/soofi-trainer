@@ -13,6 +13,7 @@ import "@a2ui/lit/ui";
 
 import "./components/agent-flow.js";
 import type { FlowState } from "./components/agent-flow.js";
+import { tr, type Language } from "./i18n.js";
 
 // Slugify helper — must match _slugify() in knowledge ingestion
 function slugify(text: string): string {
@@ -219,6 +220,31 @@ class SoofiChat extends SignalWatcher(LitElement) {
     header h1 {
       font-size: 20px;
       font-weight: 500;
+      color: var(--color-text, #202124);
+      flex: 1;
+    }
+    .lang-toggle {
+      display: flex;
+      border-radius: 16px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      background: var(--color-hover, #f1f3f4);
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.15);
+    }
+    .lang-toggle span {
+      padding: 4px 10px;
+      border-radius: 16px;
+      color: var(--color-text-secondary, #5f6368);
+      transition: all 0.2s;
+    }
+    .lang-toggle span.active {
+      background: var(--color-primary, #1a73e8);
+      color: #fff;
+      box-shadow: 0 2px 4px rgba(26, 115, 232, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    }
+    .lang-toggle span:not(.active):hover {
       color: var(--color-text, #202124);
     }
 
@@ -700,6 +726,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
   // Signal-reactive A2UI message processor
   #processor = v0_8.Data.createSignalA2uiMessageProcessor();
 
+  @state() private language: Language = "de";
   @state() private messages: ChatMessage[] = [];
   @state() private inputValue = "";
   @state() private streaming = false;
@@ -766,6 +793,10 @@ class SoofiChat extends SignalWatcher(LitElement) {
       <div class="chat-column">
       <header>
         <h1>Soofi Trainer</h1>
+        <div class="lang-toggle" @click=${this.toggleLanguage}>
+          <span class=${this.language === "de" ? "active" : ""}>DE</span>
+          <span class=${this.language === "en" ? "active" : ""}>EN</span>
+        </div>
       </header>
 
       <div class="messages" id="messages" @click=${this.onMessagesClick}>
@@ -813,7 +844,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
                   class="dashboard-card__btn"
                   href=${this.dashboardEmbed.url}
                   target="_blank"
-                  >${this.dashboardEmbed.title} \u00f6ffnen</a
+                  >${this.dashboardEmbed.title} ${tr("open_dashboard", this.language)}</a
                 >
               </div>
             `
@@ -828,7 +859,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
               </svg>
-              ${this.searchStatusLabel || "Überlege"}
+              ${this.searchStatusLabel || tr("thinking", this.language)}
               <span class="searching-bar__dots">
                 <span>.</span><span>.</span><span>.</span>
               </span>
@@ -842,7 +873,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#fff">
                 <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/>
               </svg>
-              Aufnahme läuft…
+              ${tr("recording", this.language)}
             </div>
           `
         : nothing}
@@ -850,7 +881,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
       <div class="input-bar">
         <input
           type="text"
-          placeholder="Nachricht eingeben\u2026"
+          placeholder=${tr("placeholder", this.language)}
           .value=${this.inputValue}
           @input=${this.onInput}
           @keydown=${this.onKeydown}
@@ -861,8 +892,8 @@ class SoofiChat extends SignalWatcher(LitElement) {
               <button
                 class="ptt-button ${this.isRecording ? "recording" : ""}"
                 title=${voiceActivation === "push-to-talk"
-                  ? "Gedrückt halten zum Sprechen"
-                  : "Klicken zum Starten/Stoppen"}
+                  ? tr("ptt_hold", this.language)
+                  : tr("ptt_toggle", this.language)}
                 @pointerdown=${voiceActivation === "push-to-talk"
                   ? this.startRecording
                   : nothing}
@@ -887,7 +918,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
           @click=${this.sendMessage}
           ?disabled=${this.streaming || !this.inputValue.trim()}
         >
-          Senden
+          ${tr("send", this.language)}
         </button>
       </div>
       </div>
@@ -923,7 +954,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
           ? html`
               <div class="doc-viewer">
                 <div class="doc-viewer__header">
-                  <span>Agentenkarten</span>
+                  <span>${tr("agent_cards", this.language)}</span>
                   <button class="doc-viewer__close" @click=${this.closeAgentCards}>&times;</button>
                 </div>
                 <div class="doc-viewer__body agent-cards">
@@ -935,7 +966,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
                             <summary>
                               <span class="agent-card-name">${card.name || name}</span>
                               ${card._status === "offline"
-                                ? html`<span class="agent-card-status agent-card-status--offline">Nicht erreichbar</span>`
+                                ? html`<span class="agent-card-status agent-card-status--offline">${tr("agent_offline", this.language)}</span>`
                                 : nothing}
                             </summary>
                             <div class="agent-card-details">
@@ -1161,6 +1192,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
         body: JSON.stringify({
           messages: history,
           session_id: this.sessionId,
+          language: this.language,
         }),
       });
 
@@ -1200,7 +1232,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
       const msgs = [...this.messages];
       const lastAssistant = msgs[msgs.length - 1];
       if (lastAssistant?.role === "assistant") {
-        lastAssistant.text = `Fehler: ${err instanceof Error ? err.message : "Unbekannter Fehler"}`;
+        lastAssistant.text = `${tr("error_prefix", this.language)}: ${err instanceof Error ? err.message : tr("error_unknown", this.language)}`;
       }
       this.messages = msgs;
     } finally {
@@ -1401,7 +1433,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
     try {
       const resp = await fetch(basePath);
       if (!resp.ok) {
-        this.docContent = `<p>Fehler beim Laden: HTTP ${resp.status}</p>`;
+        this.docContent = `<p>${tr("doc_load_error", this.language)}: HTTP ${resp.status}</p>`;
         return;
       }
       const mdText = await resp.text();
@@ -1422,7 +1454,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
         this.scrollToAnchor(fragment);
       }
     } catch {
-      this.docContent = "<p>Fehler beim Laden des Dokuments.</p>";
+      this.docContent = `<p>${tr("doc_load_error_generic", this.language)}</p>`;
     }
   }
 
@@ -1489,10 +1521,10 @@ class SoofiChat extends SignalWatcher(LitElement) {
         <div class="agent-card">
           <div class="agent-card__row">
             <span class="agent-card__label">Status</span>
-            <span class="agent-card-status agent-card-status--offline">Nicht erreichbar</span>
+            <span class="agent-card-status agent-card-status--offline">${tr("agent_offline", this.language)}</span>
           </div>
           <p class="agent-card__offline-msg">
-            Dieser Agent ist derzeit nicht verfügbar.
+            ${tr("agent_offline_msg", this.language)}
           </p>
         </div>
       `;
@@ -1504,44 +1536,44 @@ class SoofiChat extends SignalWatcher(LitElement) {
           : nothing}
         ${card.version
           ? html`<div class="agent-card__row">
-              <span class="agent-card__label">Version</span>
+              <span class="agent-card__label">${tr("agent_field_version", this.language)}</span>
               <span>${card.version}</span>
             </div>`
           : nothing}
         ${card.protocolVersion
           ? html`<div class="agent-card__row">
-              <span class="agent-card__label">Protokoll</span>
+              <span class="agent-card__label">${tr("agent_field_protocol", this.language)}</span>
               <span>A2A ${card.protocolVersion}</span>
             </div>`
           : nothing}
         ${card.preferredTransport
           ? html`<div class="agent-card__row">
-              <span class="agent-card__label">Transport</span>
+              <span class="agent-card__label">${tr("agent_field_transport", this.language)}</span>
               <span>${card.preferredTransport}</span>
             </div>`
           : nothing}
         ${card.capabilities
           ? html`<div class="agent-card__row">
-              <span class="agent-card__label">Streaming</span>
-              <span>${card.capabilities.streaming ? "Ja" : "Nein"}</span>
+              <span class="agent-card__label">${tr("agent_field_streaming", this.language)}</span>
+              <span>${card.capabilities.streaming ? tr("streaming_yes", this.language) : tr("streaming_no", this.language)}</span>
             </div>`
           : nothing}
         ${card.defaultInputModes?.length
           ? html`<div class="agent-card__row">
-              <span class="agent-card__label">Input</span>
+              <span class="agent-card__label">${tr("agent_field_input", this.language)}</span>
               <span>${card.defaultInputModes.join(", ")}</span>
             </div>`
           : nothing}
         ${card.defaultOutputModes?.length
           ? html`<div class="agent-card__row">
-              <span class="agent-card__label">Output</span>
+              <span class="agent-card__label">${tr("agent_field_output", this.language)}</span>
               <span>${card.defaultOutputModes.join(", ")}</span>
             </div>`
           : nothing}
         ${card.skills?.length
           ? html`
               <div class="agent-card__skills">
-                <span class="agent-card__label">Skills</span>
+                <span class="agent-card__label">${tr("agent_field_skills", this.language)}</span>
                 ${card.skills.map(
                   (skill) => html`
                     <div class="agent-card__skill">
@@ -1585,6 +1617,10 @@ class SoofiChat extends SignalWatcher(LitElement) {
 
   private closeAgentCards(): void {
     this.agentCards = null;
+  }
+
+  private toggleLanguage(): void {
+    this.language = this.language === "de" ? "en" : "de";
   }
 
   private collectDocAnchors(basePath: string): string[] {

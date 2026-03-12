@@ -3,6 +3,7 @@
 import logging
 import os
 
+from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver
@@ -10,7 +11,7 @@ from langgraph.graph import MessagesState, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import ToolNode
 
-from .prompts import SYSTEM_PROMPT
+from .prompts import SYSTEM_PROMPT_DE
 
 logger = logging.getLogger(__name__)
 
@@ -29,8 +30,9 @@ def build_graph(tools: list[BaseTool]) -> CompiledStateGraph:
     ).bind_tools(tools, parallel_tool_calls=False)
     tool_node = ToolNode(tools)
 
-    async def agent(state: MessagesState) -> MessagesState:
-        system = {"role": "system", "content": SYSTEM_PROMPT}
+    async def agent(state: MessagesState, config: RunnableConfig) -> MessagesState:
+        prompt = config.get("configurable", {}).get("system_prompt", SYSTEM_PROMPT_DE)
+        system = {"role": "system", "content": prompt}
         response = await llm.ainvoke([system] + state["messages"])
         if hasattr(response, "tool_calls") and response.tool_calls:
             for tc in response.tool_calls:

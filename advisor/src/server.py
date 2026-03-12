@@ -12,9 +12,9 @@ from a2a.server.apps import A2AFastAPIApplication
 from a2a.server.request_handlers import DefaultRequestHandler
 from a2a.server.tasks import InMemoryTaskStore
 from a2a.types import AgentCapabilities, AgentCard, AgentSkill
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage
 from langgraph.graph.state import CompiledStateGraph
 
@@ -59,32 +59,64 @@ app.add_middleware(
 # A2A server (mounted as sub-app; graph is resolved lazily at request time)
 # ---------------------------------------------------------------------------
 
-agent_card = AgentCard(
-    name="Soofi Advisor",
-    description=(
-        "Fachberater für LLM-Spezialisierung — analysiert Anwendungsfälle "
-        "und empfiehlt Methoden wie RAG, LoRA oder QLoRA"
-    ),
-    url="http://advisor:8000/a2a/",
-    version="0.1.0",
-    capabilities=AgentCapabilities(streaming=True),
-    skills=[
-        AgentSkill(
-            id="llm_specialization",
-            name="LLM-Spezialisierung",
-            description="Analysiert Anwendungsfälle und empfiehlt Spezialisierungsmethoden",
-            tags=["llm", "rag", "lora", "fine-tuning"],
-        )
-    ],
-    default_input_modes=["text/plain"],
-    default_output_modes=["text/plain"],
-)
+_ADVISOR_I18N = {
+    "description": {
+        "de": (
+            "Fachberater für LLM-Spezialisierung — analysiert Anwendungsfälle "
+            "und empfiehlt Methoden wie RAG, LoRA oder QLoRA"
+        ),
+        "en": (
+            "Domain expert for LLM specialization — analyzes use cases "
+            "and recommends methods like RAG, LoRA, or QLoRA"
+        ),
+    },
+    "skill_name": {"de": "LLM-Spezialisierung", "en": "LLM Specialization"},
+    "skill_desc": {
+        "de": "Analysiert Anwendungsfälle und empfiehlt Spezialisierungsmethoden",
+        "en": "Analyzes use cases and recommends specialization methods",
+    },
+}
+
+
+def _build_agent_card(lang: str = "de") -> AgentCard:
+    t = _ADVISOR_I18N
+    lc = "en" if lang == "en" else "de"
+    return AgentCard(
+        name="Soofi Advisor",
+        description=t["description"][lc],
+        url="http://advisor:8000/a2a/",
+        version="0.1.0",
+        capabilities=AgentCapabilities(streaming=True),
+        skills=[
+            AgentSkill(
+                id="llm_specialization",
+                name=t["skill_name"][lc],
+                description=t["skill_desc"][lc],
+                tags=["llm", "rag", "lora", "fine-tuning"],
+            )
+        ],
+        default_input_modes=["text/plain"],
+        default_output_modes=["text/plain"],
+    )
+
+
+# Default DE card for A2A mount (protocol requires a static card)
+agent_card = _build_agent_card("de")
 
 _a2a_handler = DefaultRequestHandler(
     agent_executor=AdvisorAgentExecutor(lambda: graph),
     task_store=InMemoryTaskStore(),
 )
-app.mount("/a2a", A2AFastAPIApplication(agent_card, _a2a_handler).build())
+# Register the i18n agent card route BEFORE mounting the A2A sub-app,
+# so Starlette matches this specific path before the /a2a/ prefix mount.
+@app.get("/a2a/.well-known/agent-card.json")
+async def agent_card_i18n(lang: str = Query("de")) -> JSONResponse:
+    card = _build_agent_card(lang)
+    return JSONResponse(card.model_dump(by_alias=True, exclude_none=True))
+
+
+_a2a_app = A2AFastAPIApplication(agent_card, _a2a_handler).build()
+app.mount("/a2a", _a2a_app)
 
 
 # ---------------------------------------------------------------------------

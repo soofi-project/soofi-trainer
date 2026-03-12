@@ -2,6 +2,7 @@
 
 import re
 
+from .i18n import Language, tr
 
 _RE_MD_LINK = re.compile(r"\[([^\]]+)\]\([^)]+\)")
 _RE_MD_FORMAT = re.compile(r"[*_`]+")
@@ -10,12 +11,12 @@ _SPEECH_MIN_CHARS = 15  # don't speak trivially short responses
 RE_SENTENCE_END = re.compile(r"(?<![A-Z0-9])[.!?]\s")  # sentence boundary for early TTS trigger
 # Lines that start a structured markdown block — stop collecting intro before these
 _RE_STRUCTURE_LINE = re.compile(r"^\s*(?:#{1,6}\s|[-*]\s|\d+\.\s)")
-# Spoken when the response starts directly with structure (no intro prose)
-_SPEECH_FALLBACK = "Ich habe folgendes gefunden."
 _SPEECH_MAX_CHARS = 200  # upper limit to avoid reading very long intros
 
 
-def generate_speech_text(text: str, *, has_search_results: bool = False) -> str:
+def generate_speech_text(
+    text: str, *, has_search_results: bool = False, lang: Language = "de"
+) -> str:
     """Extract speakable intro prose from a Markdown response for TTS.
 
     - Collects lines up to the first structural element (header, bullet, list)
@@ -35,7 +36,7 @@ def generate_speech_text(text: str, *, has_search_results: bool = False) -> str:
     # Whole response starts with structure — give a short spoken acknowledgement
     # Only use the search fallback when there were actual search results
     if not intro:
-        return _SPEECH_FALLBACK if has_search_results else ""
+        return tr("speech_fallback", lang) if has_search_results else ""
 
     # Too short to speak — return empty so caller can retry after more text arrives
     if len(intro) < _SPEECH_MIN_CHARS:
