@@ -1,10 +1,9 @@
 # ===========================================
-# Soofi Trainer - Ollama Backend Override
+# Soofi Trainer - Triton Backend Override
 # ===========================================
-# Usage: ./up.sh --ollama
-# Requires Ollama running locally with the models pulled:
-#   ollama pull qwen2.5:7b
-#   ollama pull bge-m3
+# Usage: ./up.sh --triton
+# Requires NVIDIA Triton Inference Server running with the model loaded.
+# Embeddings: still provided by OpenAI (OPENAI_API_KEY required).
 
 services:
   advisor:
