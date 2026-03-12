@@ -34,6 +34,7 @@ from .constants import (
     SOOFI_EVENT_SEARCH_STATUS,
     TRAINING_AGENT_KEY_CHUNK,
     TRAINING_AGENT_KEY_JOB_STARTED,
+    TRAINING_AGENT_KEY_STATUS,
     TRAINING_EVENT,
 )
 from .prompts import SYSTEM_PROMPT
@@ -48,6 +49,7 @@ _training_context_id: contextvars.ContextVar[str | None] = contextvars.ContextVa
     "_training_context_id", default=None
 )
 
+base_url = os.getenv("OPENAI_BASE_URL") or None
 model_name = os.getenv("INTERACTION_MODEL")
 if not model_name:
     raise RuntimeError("INTERACTION_MODEL env var required.")
@@ -131,6 +133,7 @@ async def show_agent_card(
     return f"{len(names)} Agentenkarten geöffnet."
 
 
+
 @tool
 async def ask_advisor_tool(question: str) -> str:
     """Ask the Advisor agent a domain question via A2A.
@@ -202,6 +205,10 @@ async def ask_training_agent_tool(question: str) -> str:
             if event_type == SOOFI_EVENT_JOB_STARTED:
                 await adispatch_custom_event(
                     TRAINING_EVENT, {TRAINING_AGENT_KEY_JOB_STARTED: parsed.get("job_id", "")}
+                )
+            elif event_type == SOOFI_EVENT_SEARCH_STATUS:
+                await adispatch_custom_event(
+                    TRAINING_EVENT, {TRAINING_AGENT_KEY_STATUS: parsed.get("text", "")}
                 )
             else:
                 full_text += chunk
@@ -291,6 +298,11 @@ def build_graph() -> CompiledStateGraph:
         control_doc_viewer,
     ]
     llm = ChatOpenAI(model=model_name).bind_tools(tools, parallel_tool_calls=False)
+    tools = [ask_advisor_tool, ask_training_agent_tool, show_dashboard, control_doc_viewer]
+    llm = ChatOpenAI(
+        model=model_name,
+        **({"openai_api_base": base_url} if base_url else {}),
+    ).bind_tools(tools, parallel_tool_calls=False)
     tool_node = ToolNode(tools)
 
     async def agent(state: MessagesState) -> MessagesState:

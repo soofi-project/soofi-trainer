@@ -1,0 +1,28 @@
+# ===========================================
+# Soofi Trainer - Ollama Backend Override
+# ===========================================
+# Usage: ./up.sh --ollama
+# Requires Ollama running locally with the models pulled:
+#   ollama pull qwen2.5:7b
+#   ollama pull bge-m3
+
+services:
+  advisor:
+    environment:
+      - ADVISOR_MODEL=qwen2.5:14b
+      - OPENAI_BASE_URL=http://host.docker.internal:11434/v1
+
+  interaction-agent:
+    environment:
+      - INTERACTION_MODEL=qwen2.5:14b
+      - OPENAI_BASE_URL=http://host.docker.internal:11434/v1
+
+  vector-mcp:
+    environment:
+      - EMBEDDING_MODEL=ollama:bge-m3
+      - OLLAMA_HOST=http://host.docker.internal:11434
+
+  knowledge-ingestion:
+    environment:
+      - EMBEDDING_MODEL=ollama:bge-m3
+      - OLLAMA_HOST=http://host.docker.internal:11434
