@@ -1536,44 +1536,44 @@ class SoofiChat extends SignalWatcher(LitElement) {
           : nothing}
         ${card.version
           ? html`<div class="agent-card__row">
-              <span class="agent-card__label">Version</span>
+              <span class="agent-card__label">${tr("agent_field_version", this.language)}</span>
               <span>${card.version}</span>
             </div>`
           : nothing}
         ${card.protocolVersion
           ? html`<div class="agent-card__row">
-              <span class="agent-card__label">Protokoll</span>
+              <span class="agent-card__label">${tr("agent_field_protocol", this.language)}</span>
               <span>A2A ${card.protocolVersion}</span>
             </div>`
           : nothing}
         ${card.preferredTransport
           ? html`<div class="agent-card__row">
-              <span class="agent-card__label">Transport</span>
+              <span class="agent-card__label">${tr("agent_field_transport", this.language)}</span>
               <span>${card.preferredTransport}</span>
             </div>`
           : nothing}
         ${card.capabilities
           ? html`<div class="agent-card__row">
-              <span class="agent-card__label">Streaming</span>
+              <span class="agent-card__label">${tr("agent_field_streaming", this.language)}</span>
               <span>${card.capabilities.streaming ? tr("streaming_yes", this.language) : tr("streaming_no", this.language)}</span>
             </div>`
           : nothing}
         ${card.defaultInputModes?.length
           ? html`<div class="agent-card__row">
-              <span class="agent-card__label">Input</span>
+              <span class="agent-card__label">${tr("agent_field_input", this.language)}</span>
               <span>${card.defaultInputModes.join(", ")}</span>
             </div>`
           : nothing}
         ${card.defaultOutputModes?.length
           ? html`<div class="agent-card__row">
-              <span class="agent-card__label">Output</span>
+              <span class="agent-card__label">${tr("agent_field_output", this.language)}</span>
               <span>${card.defaultOutputModes.join(", ")}</span>
             </div>`
           : nothing}
         ${card.skills?.length
           ? html`
               <div class="agent-card__skills">
-                <span class="agent-card__label">Skills</span>
+                <span class="agent-card__label">${tr("agent_field_skills", this.language)}</span>
                 ${card.skills.map(
                   (skill) => html`
                     <div class="agent-card__skill">
