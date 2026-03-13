@@ -249,6 +249,7 @@ services:
   # Training Agent - LangGraph + A2A
   # ===========================================
   training-agent:
+    image: dfkisoofi/training-agent:${TRAININGAGENT_VERSION}
     build: ./training-agent
     container_name: training-agent
     restart: unless-stopped
