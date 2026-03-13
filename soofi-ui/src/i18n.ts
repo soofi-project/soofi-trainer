@@ -32,6 +32,13 @@ const strings: Record<string, Record<Language, string>> = {
   },
   streaming_yes: { de: "Ja", en: "Yes" },
   streaming_no: { de: "Nein", en: "No" },
+  agent_field_version: { de: "Version", en: "Version" },
+  agent_field_protocol: { de: "Protokoll", en: "Protocol" },
+  agent_field_transport: { de: "Transport", en: "Transport" },
+  agent_field_streaming: { de: "Streaming", en: "Streaming" },
+  agent_field_input: { de: "Input", en: "Input" },
+  agent_field_output: { de: "Output", en: "Output" },
+  agent_field_skills: { de: "Skills", en: "Skills" },
 
   // Reset dialog
   reset_title: { de: "Gespräch zurücksetzen?", en: "Reset conversation?" },

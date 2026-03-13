@@ -52,6 +52,7 @@ _training_context_id: contextvars.ContextVar[str | None] = contextvars.ContextVa
 )
 _language: contextvars.ContextVar[Language] = contextvars.ContextVar("_language", default="de")
 
+base_url = os.getenv("OPENAI_BASE_URL") or None
 model_name = os.getenv("INTERACTION_MODEL")
 if not model_name:
     raise RuntimeError("INTERACTION_MODEL env var required.")
@@ -134,6 +135,7 @@ async def show_agent_card(
     if len(names) == 1:
         return tr("card_opened", lang, name=names[0])
     return tr("cards_opened", lang, count=len(names))
+
 
 
 @tool
@@ -254,6 +256,7 @@ async def control_training_view(action: Literal["open", "close"]) -> str:
     return tr("training_view_opened", lang)
 
 
+
 @tool
 def control_doc_viewer(action: str, state: Annotated[dict, InjectedState], index: int = 1) -> str:
     """Control the document viewer panel in the UI.
@@ -308,7 +311,10 @@ def build_graph() -> CompiledStateGraph:
         control_doc_viewer,
         control_training_view,
     ]
-    llm = ChatOpenAI(model=model_name).bind_tools(tools, parallel_tool_calls=False)
+    llm = ChatOpenAI(
+        model=model_name,
+        **({"openai_api_base": base_url} if base_url else {}),
+    ).bind_tools(tools, **({"parallel_tool_calls": False} if not base_url else {}))
     tool_node = ToolNode(tools)
 
     async def agent(state: MessagesState) -> MessagesState:

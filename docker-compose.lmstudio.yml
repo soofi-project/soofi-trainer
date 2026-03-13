@@ -1,0 +1,37 @@
+# ===========================================
+# Soofi Trainer - LM Studio Backend Override
+# ===========================================
+# Usage: ./up.sh --lmstudio
+# Requires LM Studio running locally with a model loaded.
+# Set ADVISOR_MODEL / INTERACTION_MODEL to the exact model identifier
+# shown in LM Studio (e.g. "qwen2.5-7b-instruct").
+#
+# Requires LM Studio running with two models loaded simultaneously:
+#   - Chat model:      qwen2.5-14b-instruct
+#   - Embedding model: bge-m3-GGUF/bge-m3-Q8_0.gguf (gpustack/bge-m3-GGUF)
+
+services:
+  advisor:
+    environment:
+      - ADVISOR_MODEL=qwen2.5-14b-instruct
+      - OPENAI_BASE_URL=http://host.docker.internal:1234/v1
+
+  interaction-agent:
+    environment:
+      - INTERACTION_MODEL=qwen2.5-14b-instruct
+      - OPENAI_BASE_URL=http://host.docker.internal:1234/v1
+
+  training-agent:
+    environment:
+      - INTERACTION_MODEL=qwen2.5-14b-instruct
+      - OPENAI_BASE_URL=http://host.docker.internal:1234/v1
+
+  vector-mcp:
+    environment:
+      - EMBEDDING_MODEL=openai:bge-m3-GGUF/bge-m3-Q8_0.gguf
+      - OPENAI_BASE_URL=http://host.docker.internal:1234/v1
+
+  knowledge-ingestion:
+    environment:
+      - EMBEDDING_MODEL=openai:bge-m3-GGUF/bge-m3-Q8_0.gguf
+      - OPENAI_BASE_URL=http://host.docker.internal:1234/v1

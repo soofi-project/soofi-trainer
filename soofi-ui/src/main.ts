@@ -21,7 +21,7 @@ function slugify(text: string): string {
   return text
     .toLowerCase()
     .trim()
-    .replace(/[^\w\s-]/g, "")
+    .replace(/[^\p{L}\p{N}\s_-]/gu, "")
     .replace(/\s+/g, "-");
 }
 
@@ -824,6 +824,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
   @state() private searchStatusLabel = "";
   @state() private flowState: FlowState = "idle";
   private _flowTimer: ReturnType<typeof setTimeout> | null = null;
+  private _fetchController: AbortController | null = null;
   @state() private docViewerUrl: string | null = null;
   @state() private docContent = "";
   @state() private docViewerAnchors: string[] = [];
@@ -848,6 +849,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
   // TTS audio queue — reset on each new message to cancel pending clips
   private audioQueue: Promise<void> = Promise.resolve();
   private ttsGeneration = 0;
+  private sttGeneration = 0;
   private currentAudio: HTMLAudioElement | null = null;
 
   // True while streaming a response that was triggered by voice input (no input focus after)
@@ -886,7 +888,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
           <span class=${this.language === "de" ? "active" : ""}>DE</span>
           <span class=${this.language === "en" ? "active" : ""}>EN</span>
         </div>
-        <button class="reset-btn" title=${tr("reset_confirm", this.language)} @click=${() => { this.showResetDialog = true; }}>
+        <button class="reset-btn" title=${tr("reset_title", this.language)} @click=${() => { this.showResetDialog = true; }}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M3 12a9 9 0 1 1 3 6.36"/>
             <polyline points="3 16 3 12 7 12"/>
@@ -1249,6 +1251,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
 
     if (this.audioChunks.length === 0) return;
 
+    const sttGen = this.sttGeneration;
     const blob = new Blob(this.audioChunks, { type: "audio/webm" });
     const formData = new FormData();
     formData.append("file", blob, "audio.webm");
@@ -1261,7 +1264,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
       if (!resp.ok) return;
       const data = (await resp.json()) as { text: string };
       const text = data.text?.trim();
-      if (text) {
+      if (text && sttGen === this.sttGeneration) {
         this.inputValue = text;
         this._voiceSession = true;
         this.sendMessage();
@@ -1304,6 +1307,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
     // Add placeholder assistant message
     this.messages = [...this.messages, { role: "assistant", text: "" }];
 
+    this._fetchController = new AbortController();
     try {
       // Send full conversation history so the agent has context
       const history = this.messages
@@ -1318,6 +1322,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
           session_id: this.sessionId,
           language: this.language,
         }),
+        signal: this._fetchController.signal,
       });
 
       if (!response.ok || !response.body) {
@@ -1352,6 +1357,8 @@ class SoofiChat extends SignalWatcher(LitElement) {
         }
       }
     } catch (err) {
+      // Abort signals a deliberate reset — suppress the error
+      if (err instanceof Error && err.name === "AbortError") return;
       // Show error in the assistant message
       const msgs = [...this.messages];
       const lastAssistant = msgs[msgs.length - 1];
@@ -1360,6 +1367,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
       }
       this.messages = msgs;
     } finally {
+      this._fetchController = null;
       this.streaming = false;
     }
   }
@@ -1447,8 +1455,10 @@ class SoofiChat extends SignalWatcher(LitElement) {
         this.searching = false;
         break;
 
-
       case "RUN_FINISHED": {
+        if (this._flowTimer) clearTimeout(this._flowTimer);
+        this._flowTimer = null;
+        this.flowState = "idle";
         this.searching = false;
         // Safety net: if the flow is still in an active (pre-return) state,
         // TOOL_CALL_END was likely never received — reset to idle.
@@ -1666,44 +1676,44 @@ class SoofiChat extends SignalWatcher(LitElement) {
           : nothing}
         ${card.version
           ? html`<div class="agent-card__row">
-              <span class="agent-card__label">Version</span>
+              <span class="agent-card__label">${tr("agent_field_version", this.language)}</span>
               <span>${card.version}</span>
             </div>`
           : nothing}
         ${card.protocolVersion
           ? html`<div class="agent-card__row">
-              <span class="agent-card__label">Protokoll</span>
+              <span class="agent-card__label">${tr("agent_field_protocol", this.language)}</span>
               <span>A2A ${card.protocolVersion}</span>
             </div>`
           : nothing}
         ${card.preferredTransport
           ? html`<div class="agent-card__row">
-              <span class="agent-card__label">Transport</span>
+              <span class="agent-card__label">${tr("agent_field_transport", this.language)}</span>
               <span>${card.preferredTransport}</span>
             </div>`
           : nothing}
         ${card.capabilities
           ? html`<div class="agent-card__row">
-              <span class="agent-card__label">Streaming</span>
+              <span class="agent-card__label">${tr("agent_field_streaming", this.language)}</span>
               <span>${card.capabilities.streaming ? tr("streaming_yes", this.language) : tr("streaming_no", this.language)}</span>
             </div>`
           : nothing}
         ${card.defaultInputModes?.length
           ? html`<div class="agent-card__row">
-              <span class="agent-card__label">Input</span>
+              <span class="agent-card__label">${tr("agent_field_input", this.language)}</span>
               <span>${card.defaultInputModes.join(", ")}</span>
             </div>`
           : nothing}
         ${card.defaultOutputModes?.length
           ? html`<div class="agent-card__row">
-              <span class="agent-card__label">Output</span>
+              <span class="agent-card__label">${tr("agent_field_output", this.language)}</span>
               <span>${card.defaultOutputModes.join(", ")}</span>
             </div>`
           : nothing}
         ${card.skills?.length
           ? html`
               <div class="agent-card__skills">
-                <span class="agent-card__label">Skills</span>
+                <span class="agent-card__label">${tr("agent_field_skills", this.language)}</span>
                 ${card.skills.map(
                   (skill) => html`
                     <div class="agent-card__skill">
@@ -1759,6 +1769,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
 
   private confirmReset(): void {
     this.showResetDialog = false;
+    this._fetchController?.abort();
     // Cancel all running jobs and purge the DB
     fetch("/api/training/jobs", { method: "DELETE" }).catch(() => {});
     this.messages = [];
@@ -1771,6 +1782,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
     this.docContent = "";
     this.docViewerAnchors = [];
     this.agentCards = null;
+    this.#processor.clearSurfaces();
     this.surfaceEntries = [];
     this.dashboardEmbed = null;
     this.trainingProgressVisible = false;
@@ -1789,6 +1801,8 @@ class SoofiChat extends SignalWatcher(LitElement) {
     // Cancel flow animation timer
     if (this._flowTimer) clearTimeout(this._flowTimer);
     this._flowTimer = null;
+    // Cancel any in-flight STT fetch
+    this.sttGeneration++;
     // Cancel any pending TTS
     this.ttsGeneration++;
     this.audioQueue = Promise.resolve();
