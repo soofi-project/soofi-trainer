@@ -12,7 +12,14 @@ from typing import Any, AsyncGenerator
 from langchain_core.messages import AIMessageChunk, ToolMessage
 from langgraph.graph.state import CompiledStateGraph
 
-from .constants import AGENT_CARD_EVENT, AGENT_CARD_KEY, CONTROL_DOC_VIEWER_TOOL, DOC_VIEWER_KEY
+from .constants import (
+    AGENT_CARD_EVENT,
+    AGENT_CARD_KEY,
+    CONTROL_DOC_VIEWER_TOOL,
+    DOC_VIEWER_KEY,
+    TRAINING_VIEW_EVENT,
+    TRAINING_VIEW_KEY,
+)
 from .i18n import Language, tr
 from .speech import RE_SENTENCE_END, generate_speech_text
 
@@ -246,6 +253,23 @@ class SSEStream:
                     yield _sse({"type": "TOOL_CALL_END", "tool": "show_agent_card"})
                 logger.info("Emitting AGENT_CARD event: %s", card_cmd.get("action"))
                 yield _sse({"type": "AGENT_CARD", **card_cmd})
+            return
+
+        # Training view events — dispatched from control_training_view tool
+        if event.get("name") == TRAINING_VIEW_EVENT:
+            view_data = event.get("data", {})
+            view_cmd = view_data.get(TRAINING_VIEW_KEY)
+            if view_cmd:
+                action = view_cmd.get("action", "open")
+                yield _sse(
+                    {
+                        "type": "STATE_SNAPSHOT",
+                        "snapshot": {
+                            "custom_component": "soofi-training-progress",
+                            "action": action,
+                        },
+                    }
+                )
             return
 
         data = event.get("data", {})

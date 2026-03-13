@@ -351,6 +351,19 @@ async def cancel_job(job_id: str) -> Job | None:
         return job
 
 
+async def delete_all_jobs() -> int:
+    """Delete all jobs from the database. Returns the number of deleted rows."""
+    async with _write_lock:
+        conn = await get_db()
+        cursor = await conn.execute("SELECT COUNT(*) FROM jobs")
+        row = await cursor.fetchone()
+        count = row[0] if row else 0
+        await conn.execute("DELETE FROM jobs")
+        await conn.commit()
+        logger.info("Deleted all %d jobs", count)
+        return count
+
+
 async def _save_job(job: Job) -> None:
     """Update an existing job in the database."""
     db = await get_db()

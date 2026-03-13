@@ -3,6 +3,7 @@
 import logging
 import os
 
+from langchain_core.messages import ToolMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool
 from langchain_openai import ChatOpenAI
@@ -35,10 +36,26 @@ def build_graph(tools: list[BaseTool]) -> CompiledStateGraph:
         return {"messages": [response]}
 
     async def log_tool_results(state: MessagesState) -> MessagesState:
-        result = await tool_node.ainvoke(state)
-        for msg in result["messages"]:
-            logger.info(f"Tool result ({msg.name}): {str(msg.content)[:500]}")
-        return result
+        try:
+            result = await tool_node.ainvoke(state)
+            for msg in result["messages"]:
+                logger.info(f"Tool result ({msg.name}): {str(msg.content)[:500]}")
+            return result
+        except Exception as e:
+            logger.exception("Tool execution failed")
+            last = state["messages"][-1]
+            if not (hasattr(last, "tool_calls") and last.tool_calls):
+                raise
+            return {
+                "messages": [
+                    ToolMessage(
+                        content=f"Tool error: {e}",
+                        tool_call_id=tc["id"],
+                        name=tc["name"],
+                    )
+                    for tc in last.tool_calls
+                ]
+            }
 
     def should_continue(state: MessagesState) -> str:
         if not state["messages"]:

@@ -13,6 +13,7 @@ import "@a2ui/lit/ui";
 
 import "./components/agent-flow.js";
 import type { FlowState } from "./components/agent-flow.js";
+import "./components/training-progress.js";
 import { tr, type Language } from "./i18n.js";
 
 // Slugify helper — must match _slugify() in knowledge ingestion
@@ -829,6 +830,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
   @state() private docViewerAnchors: string[] = [];
   @state() private agentCards: Array<[string, AgentCardData]> | null = null;
   @state() private showResetDialog = false;
+  @state() private trainingProgressVisible = false;
 
   // All /docs/ links seen in the conversation, in order of appearance
   private docLinks: string[] = [];
@@ -1073,7 +1075,22 @@ class SoofiChat extends SignalWatcher(LitElement) {
                 </div>
               </div>
             `
-          : nothing}
+          : this.trainingProgressVisible
+            ? html`
+                <div class="doc-viewer">
+                  <div class="doc-viewer__header">
+                    <span>${tr("training_jobs", this.language)}</span>
+                    <button class="doc-viewer__close" @click=${() => { this.trainingProgressVisible = false; }}>&times;</button>
+                  </div>
+                  <div class="doc-viewer__body">
+                    <soofi-training-progress
+                      .language=${this.language}
+                      .visible=${this.trainingProgressVisible}
+                    ></soofi-training-progress>
+                  </div>
+                </div>
+              `
+            : nothing}
 
       ${this.showResetDialog
         ? html`
@@ -1457,6 +1474,14 @@ class SoofiChat extends SignalWatcher(LitElement) {
 
       case "STATE_SNAPSHOT": {
         const snapshot = event.snapshot as Record<string, unknown> | undefined;
+        if (snapshot?.custom_component === "soofi-training-progress") {
+          const action = snapshot.action as string | undefined;
+          if (action === "close") {
+            this.trainingProgressVisible = false;
+          } else {
+            this.trainingProgressVisible = true;
+          }
+        }
         if (snapshot?.a2ui) {
           const a2uiMessages =
             snapshot.a2ui as v0_8.Types.ServerToClientMessage[];
@@ -1745,6 +1770,8 @@ class SoofiChat extends SignalWatcher(LitElement) {
   private confirmReset(): void {
     this.showResetDialog = false;
     this._fetchController?.abort();
+    // Cancel all running jobs and purge the DB
+    fetch("/api/training/jobs", { method: "DELETE" }).catch(() => {});
     this.messages = [];
     this.inputValue = "";
     this.streaming = false;
@@ -1758,6 +1785,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
     this.#processor.clearSurfaces();
     this.surfaceEntries = [];
     this.dashboardEmbed = null;
+    this.trainingProgressVisible = false;
     this.docLinks = [];
     this.docLinksCurrentIdx = -1;
     this.sessionId = crypto.randomUUID();

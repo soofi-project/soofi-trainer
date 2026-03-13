@@ -83,7 +83,7 @@ User (Soofi UI :8501)
 LangGraph ReAct agent — the orchestrator that the UI talks to. Streams responses via AG-UI SSE protocol.
 
 - `src/agent.py` — FastAPI app, AG-UI SSE endpoint, utility LLM (STT refiner, speech text)
-- `src/graph.py` — LangGraph `StateGraph` with tools: `ask_advisor_tool`, `ask_training_agent_tool`, `show_dashboard`, `control_doc_viewer`
+- `src/graph.py` — LangGraph `StateGraph` with tools: `ask_advisor_tool`, `ask_training_agent_tool`, `show_agent_card`, `control_doc_viewer`, `control_training_view`
 - `src/sse_stream.py` — SSE streaming state machine with URL-safe text emission, tool stream tracking, doc viewer events
 - `src/a2a_client.py` — A2A client for advisor and training agent communication
 - `src/constants.py` — Shared event keys between graph.py and sse_stream.py

@@ -45,6 +45,15 @@ _STRINGS: dict[str, dict[Language, str]] = {
         "de": "Ungültiger Index {index}. Es gibt {total} Quelldokument(e) (1\u2013{total}).",
         "en": "Invalid index {index}. There are {total} source document(s) (1\u2013{total}).",
     },
+    # Training view labels
+    "training_view_opened": {
+        "de": "Trainingsübersicht geöffnet.",
+        "en": "Training overview opened.",
+    },
+    "training_view_closed": {
+        "de": "Trainingsübersicht geschlossen.",
+        "en": "Training overview closed.",
+    },
     # SSE error
     "sse_error": {
         "de": "\n\n[Fehler bei der Verarbeitung]",

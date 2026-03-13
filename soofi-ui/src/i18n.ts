@@ -49,6 +49,26 @@ const strings: Record<string, Record<Language, string>> = {
   reset_confirm: { de: "Zurücksetzen", en: "Reset" },
   reset_cancel: { de: "Abbrechen", en: "Cancel" },
 
+  // Training progress
+  training_jobs: { de: "Trainingsaufträge", en: "Training Jobs" },
+  training_dataset: { de: "Datensatz", en: "Dataset" },
+  training_no_jobs: { de: "Keine Trainingsaufträge", en: "No training jobs" },
+  // Training status labels
+  status_running: { de: "Läuft", en: "Running" },
+  status_completed: { de: "Abgeschlossen", en: "Completed" },
+  status_failed: { de: "Fehlgeschlagen", en: "Failed" },
+  status_cancelled: { de: "Abgebrochen", en: "Cancelled" },
+  status_queued: { de: "Wartend", en: "Queued" },
+  // Training phase names
+  phase_data_preparation: { de: "Datenvorbereitung", en: "Data Preparation" },
+  phase_training: { de: "Training", en: "Training" },
+  phase_model_upload: { de: "Modell-Upload", en: "Model Upload" },
+  // Training metric labels
+  metric_epoch: { de: "Epoche", en: "Epoch" },
+  metric_loss: { de: "Verlust", en: "Loss" },
+  metric_eta: { de: "Verbleibend", en: "ETA" },
+  metric_duration: { de: "Dauer", en: "Duration" },
+
   // Errors
   error_prefix: { de: "Fehler", en: "Error" },
   error_unknown: { de: "Unbekannter Fehler", en: "Unknown error" },

@@ -35,6 +35,8 @@ from .constants import (
     TRAINING_AGENT_KEY_JOB_STARTED,
     TRAINING_AGENT_KEY_STATUS,
     TRAINING_EVENT,
+    TRAINING_VIEW_EVENT,
+    TRAINING_VIEW_KEY,
 )
 from .i18n import Language, tr
 from .prompts import get_system_prompt
@@ -235,6 +237,25 @@ async def ask_training_agent_tool(question: str) -> str:
     return full_text
 
 
+@tool
+async def control_training_view(action: Literal["open", "close"]) -> str:
+    """Open or close the training jobs panel in the UI.
+
+    Use this tool when the user asks to see the training jobs overview,
+    the job list, or wants to close the training panel.
+
+    Args:
+        action: "open" to show the training jobs panel, "close" to hide it.
+    """
+    lang = _language.get()
+    await adispatch_custom_event(
+        TRAINING_VIEW_EVENT, {TRAINING_VIEW_KEY: {"action": action}}
+    )
+    if action == "close":
+        return tr("training_view_closed", lang)
+    return tr("training_view_opened", lang)
+
+
 
 @tool
 def control_doc_viewer(action: str, state: Annotated[dict, InjectedState], index: int = 1) -> str:
@@ -288,6 +309,7 @@ def build_graph() -> CompiledStateGraph:
         ask_training_agent_tool,
         show_agent_card,
         control_doc_viewer,
+        control_training_view,
     ]
     llm = ChatOpenAI(
         model=model_name,
