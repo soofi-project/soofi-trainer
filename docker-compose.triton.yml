@@ -8,15 +8,32 @@
 services:
   advisor:
     environment:
-      - ADVISOR_MODEL=qwen3.5-122b
-      - OPENAI_BASE_URL=http://10.2.10.33:9000/v1
+      ADVISOR_MODEL: qwen3.5-122b
+      #ADVISOR_MODEL: qwen3.5-122b-gptq-int4
+    #  ADVISOR_MODEL: qwen3.5-35b
+      OPENAI_BASE_URL: http://10.2.10.33:9000/v1
 
   interaction-agent:
     environment:
-      - INTERACTION_MODEL=qwen3.5-122b
-      - OPENAI_BASE_URL=http://10.2.10.33:9000/v1
+      INTERACTION_MODEL: qwen3.5-122b
+     # INTERACTION_MODEL: qwen3.5-122b-gptq-int4
+      #INTERACTION_MODEL: qwen3.5-35b
+      OPENAI_BASE_URL: http://10.2.10.33:9000/v1
 
   training-agent:
     environment:
-      - INTERACTION_MODEL=qwen3.5-122b
-      - OPENAI_BASE_URL=http://10.2.10.33:9000/v1
+      TRAINING_MODEL: qwen3.5-122b
+      #TRAINING_MODEL: qwen3.5-122b-gptq-int4
+      # TRAINING_MODEL: qwen3.5-35b
+      OPENAI_BASE_URL: http://10.2.10.33:9000/v1
+
+  # knowledge-ingestion:
+  #   environment:
+  #     EMBEDDING_MODEL: openai:qwen3-embed-8b
+  #     OPENAI_BASE_URL: http://10.2.10.33:9000/v1
+
+
+  # vector-mcp:
+  #   environment:
+  #     EMBEDDING_MODEL: openai:qwen3-embed-8b
+  #     OPENAI_BASE_URL: http://10.2.10.33:9000/v1
