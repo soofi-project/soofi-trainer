@@ -9,6 +9,7 @@
   - [T-07-6](T-07-6-interaction-agent.md)
   - [T-07-7](T-07-7-a2a-status-push.md)
   - [T-07-8](T-07-8-language-toggle.md)
+  - [T-07-9](T-07-9-session-reset.md)
 
 # Story
 
@@ -61,6 +62,7 @@ The A2UI frontend (`soofi-ui`) is added as a new service alongside Open WebUI in
 | [T-07-6](T-07-6-interaction-agent.md) | Interaction Agent (A2A Orchestrator) | [T-07-1](T-07-1-a2ui-frontend.md) |
 | [T-07-7](T-07-7-a2a-status-push.md) | Async A2A Status Push | [T-07-6](T-07-6-interaction-agent.md) |
 | [T-07-8](T-07-8-language-toggle.md) | Runtime Language Toggle (DE/EN) | [T-07-6](T-07-6-interaction-agent.md), [T-07-7](T-07-7-a2a-status-push.md) |
+| [T-07-9](T-07-9-session-reset.md) | Session Reset Button | [T-07-6](T-07-6-interaction-agent.md) |
 
 ## Future Extensions
 

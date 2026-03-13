@@ -40,6 +40,15 @@ const strings: Record<string, Record<Language, string>> = {
   agent_field_output: { de: "Output", en: "Output" },
   agent_field_skills: { de: "Skills", en: "Skills" },
 
+  // Reset dialog
+  reset_title: { de: "Gespräch zurücksetzen?", en: "Reset conversation?" },
+  reset_body: {
+    de: "Das aktuelle Gespräch wird gelöscht und eine neue Session gestartet.",
+    en: "The current conversation will be cleared and a new session started.",
+  },
+  reset_confirm: { de: "Zurücksetzen", en: "Reset" },
+  reset_cancel: { de: "Abbrechen", en: "Cancel" },
+
   // Errors
   error_prefix: { de: "Fehler", en: "Error" },
   error_unknown: { de: "Unbekannter Fehler", en: "Unknown error" },
