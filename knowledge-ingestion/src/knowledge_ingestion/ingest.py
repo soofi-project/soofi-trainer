@@ -74,7 +74,7 @@ def connect_weaviate() -> weaviate.WeaviateClient:
     last_exc: Exception | None = None
     for attempt in range(1, WEAVIATE_CONNECT_RETRIES + 1):
         try:
-            client = weaviate.connect_to_local(host=host, port=port)
+            client = weaviate.connect_to_local(host=host, port=port, skip_init_checks=False)
             logger.info("Connected to Weaviate at %s:%s", host, port)
             return client
         except Exception as exc:
