@@ -34,18 +34,28 @@ async def delete_all_jobs() -> dict:
     """Cancel all active jobs, stop their containers, and delete all jobs from the DB."""
     jobs = await db.list_jobs()
     stopped = 0
+    stop_errors: list[str] = []
     for job in jobs:
         if job.status in (JobStatus.running, JobStatus.queued) and job.container_id:
             try:
                 await backends.get_backend().stop_container(job.container_id)
                 stopped += 1
             except backends.BackendError as e:
-                logger.warning(
+                logger.error(
                     "Failed to stop container %s for job %s: %s",
                     job.container_id,
                     job.id,
                     e,
                 )
+                stop_errors.append(f"job {job.id} (container {job.container_id}): {e}")
+
+    if stop_errors:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Could not stop all containers — DB not cleared to avoid orphans. "
+            f"Failures: {'; '.join(stop_errors)}",
+        )
+
     deleted = await db.delete_all_jobs()
     return {"deleted": deleted, "containers_stopped": stopped}
 

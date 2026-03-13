@@ -42,20 +42,20 @@ def build_graph(tools: list[BaseTool]) -> CompiledStateGraph:
                 logger.info(f"Tool result ({msg.name}): {str(msg.content)[:500]}")
             return result
         except Exception as e:
-            # Ensure every tool_call gets a ToolMessage so the history stays valid
             logger.exception("Tool execution failed")
             last = state["messages"][-1]
-            error_messages = []
-            if hasattr(last, "tool_calls") and last.tool_calls:
-                for tc in last.tool_calls:
-                    error_messages.append(
-                        ToolMessage(
-                            content=f"Tool error: {e}",
-                            tool_call_id=tc["id"],
-                            name=tc["name"],
-                        )
+            if not (hasattr(last, "tool_calls") and last.tool_calls):
+                raise
+            return {
+                "messages": [
+                    ToolMessage(
+                        content=f"Tool error: {e}",
+                        tool_call_id=tc["id"],
+                        name=tc["name"],
                     )
-            return {"messages": error_messages}
+                    for tc in last.tool_calls
+                ]
+            }
 
     def should_continue(state: MessagesState) -> str:
         if not state["messages"]:

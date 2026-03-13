@@ -218,12 +218,8 @@ export class TrainingProgress extends LitElement {
         return now - updatedAt < RECENT_THRESHOLD_MS;
       });
 
-      // Stop polling if all jobs are terminal (will restart when visible toggles)
-      if (
-        allJobs.length > 0 &&
-        allJobs.every((j) => TERMINAL_STATUSES.has(j.status)) &&
-        this.jobs.length === 0  // all filtered out (older than threshold)
-      ) {
+      // Stop polling once all jobs have reached a terminal state
+      if (allJobs.length > 0 && allJobs.every((j) => TERMINAL_STATUSES.has(j.status))) {
         this._stopPolling();
       }
     } catch {
