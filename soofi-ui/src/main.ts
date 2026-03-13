@@ -823,6 +823,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
   @state() private searchStatusLabel = "";
   @state() private flowState: FlowState = "idle";
   private _flowTimer: ReturnType<typeof setTimeout> | null = null;
+  private _fetchController: AbortController | null = null;
   @state() private docViewerUrl: string | null = null;
   @state() private docContent = "";
   @state() private docViewerAnchors: string[] = [];
@@ -846,6 +847,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
   // TTS audio queue — reset on each new message to cancel pending clips
   private audioQueue: Promise<void> = Promise.resolve();
   private ttsGeneration = 0;
+  private sttGeneration = 0;
   private currentAudio: HTMLAudioElement | null = null;
 
   // True while streaming a response that was triggered by voice input (no input focus after)
@@ -1232,6 +1234,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
 
     if (this.audioChunks.length === 0) return;
 
+    const sttGen = this.sttGeneration;
     const blob = new Blob(this.audioChunks, { type: "audio/webm" });
     const formData = new FormData();
     formData.append("file", blob, "audio.webm");
@@ -1244,7 +1247,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
       if (!resp.ok) return;
       const data = (await resp.json()) as { text: string };
       const text = data.text?.trim();
-      if (text) {
+      if (text && sttGen === this.sttGeneration) {
         this.inputValue = text;
         this._voiceSession = true;
         this.sendMessage();
@@ -1287,6 +1290,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
     // Add placeholder assistant message
     this.messages = [...this.messages, { role: "assistant", text: "" }];
 
+    this._fetchController = new AbortController();
     try {
       // Send full conversation history so the agent has context
       const history = this.messages
@@ -1301,6 +1305,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
           session_id: this.sessionId,
           language: this.language,
         }),
+        signal: this._fetchController.signal,
       });
 
       if (!response.ok || !response.body) {
@@ -1335,6 +1340,8 @@ class SoofiChat extends SignalWatcher(LitElement) {
         }
       }
     } catch (err) {
+      // Abort signals a deliberate reset — suppress the error
+      if (err instanceof Error && err.name === "AbortError") return;
       // Show error in the assistant message
       const msgs = [...this.messages];
       const lastAssistant = msgs[msgs.length - 1];
@@ -1343,6 +1350,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
       }
       this.messages = msgs;
     } finally {
+      this._fetchController = null;
       this.streaming = false;
     }
   }
@@ -1736,6 +1744,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
 
   private confirmReset(): void {
     this.showResetDialog = false;
+    this._fetchController?.abort();
     this.messages = [];
     this.inputValue = "";
     this.streaming = false;
@@ -1746,6 +1755,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
     this.docContent = "";
     this.docViewerAnchors = [];
     this.agentCards = null;
+    this.#processor.clearSurfaces();
     this.surfaceEntries = [];
     this.dashboardEmbed = null;
     this.docLinks = [];
@@ -1763,6 +1773,8 @@ class SoofiChat extends SignalWatcher(LitElement) {
     // Cancel flow animation timer
     if (this._flowTimer) clearTimeout(this._flowTimer);
     this._flowTimer = null;
+    // Cancel any in-flight STT fetch
+    this.sttGeneration++;
     // Cancel any pending TTS
     this.ttsGeneration++;
     this.audioQueue = Promise.resolve();
