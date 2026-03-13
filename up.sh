@@ -26,9 +26,10 @@ for arg in "$@"; do
         --ollama)   BACKEND_OVERRIDE="ollama" ;;
         --lmstudio) BACKEND_OVERRIDE="lmstudio" ;;
         --triton) BACKEND_OVERRIDE="triton" ;;
+        --vllm) BACKEND_OVERRIDE="vllm" ;;
         --*)
             echo "[ERROR] Unknown flag: $arg"
-            echo "[HINT]  Available flags: --build, --chatgpt, --ollama, --lmstudio, --triton"
+            echo "[HINT]  Available flags: --build, --chatgpt, --ollama, --lmstudio, --triton, --vllm"
             exit 1
             ;;
     esac
@@ -40,7 +41,7 @@ if [ "$BACKEND_OVERRIDE" != "chatgpt" ]; then
     OVERRIDE_FILE="docker-compose.${BACKEND_OVERRIDE}.yml"
     if [ ! -f "$OVERRIDE_FILE" ]; then
         echo "[ERROR] Override file not found: $OVERRIDE_FILE"
-        echo "[HINT]  Available backends: --chatgpt (default), --ollama, --lmstudio, --triton"
+        echo "[HINT]  Available backends: --chatgpt (default), --ollama, --lmstudio, --triton, --vllm"
         exit 1
     fi
     echo "[INFO] Backend profile: $BACKEND_OVERRIDE"
