@@ -137,6 +137,15 @@ Embedding model configurable via `EMBEDDING_MODEL` env var in `provider:model` f
 
 Issue docs live in `docs/issues/` as markdown files, organized by user stories (US-01 through US-07) with sub-tasks (T-xx-x). Branch naming follows `feature/T-xx-x-description` pattern.
 
+## Code Review Workflow
+
+- Use the `code-review:code-review` skill (`Skill` tool) — never review manually
+- Post inline comments for all issues with confidence score **≥ 75**
+- Post valid issues with score **< 75** as a single general comment at the end of the MR (Sammelkommentar)
+- **Always ask for explicit approval before posting any comment** — never post without the user releasing it
+- GitLab API: `curl --header "PRIVATE-TOKEN: ..." https://mrk40.dfki.de/api/v4/projects/519/...`
+- GitLab token in `~/.env.secrets` (field: `GITLAB_KEY`)
+
 ## Python Standards
 
 - Python >= 3.11 required
