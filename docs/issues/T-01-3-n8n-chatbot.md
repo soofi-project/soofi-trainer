@@ -1,6 +1,6 @@
 # Task
 
-- user story: #US-01
+- user story: [US-01](US-01-infrastructure.md)
 
 /label ~UserStory_US-01
 /label ~Task
@@ -25,7 +25,7 @@ Set up n8n as the agent backend and create a simple chatbot workflow. Open WebUI
 - Persistent data volume keeps the local state safe during normal usage
 - On fresh start (after `down.sh --clean` or first setup), workflows from the repo are automatically imported into n8n
 - To share workflow changes with the team: export from n8n, commit the JSON to the repo
-- Depends on T-01-2 (Stack Management Scripts) for the `--clean` flag behavior
+- Depends on [T-01-2](T-01-2-stack-management-scripts.md) (Stack Management Scripts) for the `--clean` flag behavior
 
 ## Dummy Chatbot Workflow
 

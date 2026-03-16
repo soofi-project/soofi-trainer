@@ -18,8 +18,34 @@ source .env 2>/dev/null || true
 
 # Parse args
 BUILD_FLAG=""
-if [ "$1" == "--build" ]; then
-    BUILD_FLAG="--build"
+BACKEND_OVERRIDE="chatgpt"
+for arg in "$@"; do
+    case "$arg" in
+        --build)    BUILD_FLAG="--build" ;;
+        --chatgpt)  BACKEND_OVERRIDE="chatgpt" ;;
+        --ollama)   BACKEND_OVERRIDE="ollama" ;;
+        --lmstudio) BACKEND_OVERRIDE="lmstudio" ;;
+        --triton) BACKEND_OVERRIDE="triton" ;;
+        --vllm) BACKEND_OVERRIDE="vllm" ;;
+        --*)
+            echo "[ERROR] Unknown flag: $arg"
+            echo "[HINT]  Available flags: --build, --chatgpt, --ollama, --lmstudio, --triton, --vllm"
+            exit 1
+            ;;
+    esac
+done
+
+# Build compose file args
+COMPOSE_FILES="-f docker-compose.yml"
+if [ "$BACKEND_OVERRIDE" != "chatgpt" ]; then
+    OVERRIDE_FILE="docker-compose.${BACKEND_OVERRIDE}.yml"
+    if [ ! -f "$OVERRIDE_FILE" ]; then
+        echo "[ERROR] Override file not found: $OVERRIDE_FILE"
+        echo "[HINT]  Available backends: --chatgpt (default), --ollama, --lmstudio, --triton, --vllm"
+        exit 1
+    fi
+    echo "[INFO] Backend profile: $BACKEND_OVERRIDE"
+    COMPOSE_FILES="$COMPOSE_FILES -f $OVERRIDE_FILE"
 fi
 
 # Start containers (build only if --build passed)
@@ -28,7 +54,7 @@ if [ -n "$BUILD_FLAG" ]; then
 else
     echo "[INFO] Starting containers..."
 fi
-docker compose up -d --wait $BUILD_FLAG
+docker compose $COMPOSE_FILES up -d --wait --remove-orphans $BUILD_FLAG
 
 # Check container status
 echo ""
@@ -41,9 +67,13 @@ echo "========================================"
 echo "  Services are ready!"
 echo "========================================"
 echo ""
-echo "  Open WebUI:    http://localhost:${OPENWEBUI_PORT:-3000}"
-echo "  MCP Inspector: http://localhost:${MCPINSPECTOR_CLIENT_PORT:-6274}/?transport=streamablehttp&serverUrl=http://vector-mcp:8000/mcp/&MCP_PROXY_AUTH_TOKEN=${MCP_AUTH_TOKEN:-dev-stack-token-12345}"
-echo "  Weaviate:      http://localhost:${WEAVIATE_PORT:-8070}"
+echo "  Soofi UI:      http://localhost:${SOOFI_UI_PORT}"
+echo "  Open WebUI:          http://localhost:${OPENWEBUI_PORT}"
+echo "  Vector MCP Inspector:   http://localhost:${MCPINSPECTOR_CLIENT_PORT}/?transport=streamable-http&serverUrl=http://vector-mcp:8000/mcp/&MCP_PROXY_AUTH_TOKEN=${MCP_AUTH_TOKEN}"
+echo "  Training MCP Inspector: http://localhost:${MCPINSPECTOR_CLIENT_PORT}/?transport=streamable-http&serverUrl=http://training-gateway:8000/mcp/&MCP_PROXY_AUTH_TOKEN=${MCP_AUTH_TOKEN}"
+echo "  Weaviate:            http://localhost:${WEAVIATE_PORT}"
+echo "  N8N:           http://localhost:${N8N_EXTERNAL_PORT} (admin@example.com / S8fi-password)"
+echo "  MinIO Console: http://localhost:${MINIO_CONSOLE_PORT}/browser/${MINIO_BUCKET}  ($MINIO_ACCESS_KEY | $MINIO_SECRET_KEY)"
 echo ""
 echo "========================================"
 echo ""

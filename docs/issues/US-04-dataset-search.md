@@ -1,12 +1,9 @@
-# User Story
+# User story
 
 - tasks:
-  - #T-04-1
-  - #T-04-2
-  - #T-04-3
-
-/label ~UserStory
-/milestone %ProductBacklog
+  - #14
+  - #15
+  - #16
 
 # Story
 
@@ -20,8 +17,8 @@ When the user has no own data or is looking for additional public datasets, the 
 
 | Source | MCP Endpoint | Task |
 |--------|-------------|------|
-| HuggingFace Hub | `search_huggingface_datasets` | T-04-1 |
-| Eclipse Dataspace | `search_eclipse_dataspace` | T-04-2 |
+| HuggingFace Hub | `search_huggingface_datasets` | [T-04-1](T-04-1-huggingface-mcp.md) |
+| Eclipse Dataspace | `search_eclipse_dataspace` | [T-04-2](T-04-2-eclipse-dataspace-mcp.md) |
 
 ## Use Cases
 
@@ -33,16 +30,16 @@ When the user has no own data or is looking for additional public datasets, the 
 ## Workflow
 
 ```
-                         ┌─────────────┐     ┌──────────────┐
-                    ┌───▶│ HuggingFace │────▶│   Dataset    │
-                    │    │ MCP Server  │     │   Results    │
-┌─────────────┐     │    └─────────────┘     └──────────────┘
-│   Agent     │─────┤
-│             │     │    ┌─────────────┐     ┌──────────────┐
-│             │     └───▶│  Eclipse    │────▶│   Dataset    │
-└─────────────┘          │ Dataspace   │     │   Results    │
-                         │ MCP Server  │     │              │
-                         └─────────────┘     └──────────────┘
+                         +--------------+     +--------------+
+                    +--->| HuggingFace  |---->|   Dataset    |
+                    |    | MCP Server   |     |   Results    |
++--------------+    |    +--------------+     +--------------+
+|   Agent      |----+
+|              |    |    +--------------+     +--------------+
+|              |    +--->|  Eclipse     |---->|   Dataset    |
++--------------+         | Dataspace   |     |   Results    |
+                         | MCP Server  |     |              |
+                         +--------------+     +--------------+
 ```
 
 1. Agent determines during interview: User needs datasets
@@ -72,9 +69,9 @@ The agent presents found datasets with:
 
 # Acceptance Criteria
 
-- [ ] HuggingFace MCP endpoint implemented (T-04-1)
-- [ ] Eclipse Dataspace MCP endpoint implemented (T-04-2)
-- [ ] Agent can trigger dataset search on one or both sources (T-04-3)
+- [ ] HuggingFace MCP endpoint implemented ([T-04-1](T-04-1-huggingface-mcp.md))
+- [ ] Eclipse Dataspace MCP endpoint implemented ([T-04-2](T-04-2-eclipse-dataspace-mcp.md))
+- [ ] Agent can trigger dataset search on one or both sources ([T-04-3](T-04-3-agent-integration.md))
 - [ ] Search results are filtered meaningfully
 - [ ] Agent explains why datasets fit
-- [ ] Dataset recommendation included in report (T-03-3)
+- [ ] Dataset recommendation included in report (#11)

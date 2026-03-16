@@ -6,7 +6,7 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# ---- system deps (optional, aber sinnvoll) ----
+# ---- system deps ----
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates \
  && rm -rf /var/lib/apt/lists/*
@@ -14,17 +14,10 @@ RUN apt-get update \
 # ---- install package ----
 COPY pyproject.toml .
 COPY src/ ./src/
-COPY scripts/ ./scripts/
 RUN pip install --no-cache-dir .
 
 # ---- runtime config ----
 EXPOSE 8000
-
-ENV WEAVIATE_SCHEME=http
-ENV WEAVIATE_HOST=weaviate
-ENV WEAVIATE_PORT=8080
-ENV WEAVIATE_GRPC_PORT=50051
-ENV WEAVIATE_COLLECTION=SoofiKnowledge
 
 # ---- start ----
 CMD ["python", "-u", "src/vector_mcp/server.py"]

@@ -1,6 +1,6 @@
 # Task
 
-- user story: #US-01
+- user story: [US-01](US-01-infrastructure.md)
 
 /label ~UserStory_US-01
 /label ~Task

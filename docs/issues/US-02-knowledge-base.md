@@ -1,11 +1,11 @@
-# User Story
+# User story
 
 - tasks:
-  - #T-02-1
-  - #T-02-2
-
-/label ~UserStory
-/milestone %ProductBacklog
+  - #6
+  - #7 
+  - #19
+  - #21 
+  - #50
 
 # Story
 
@@ -26,7 +26,7 @@ The agent should know about:
 - Common pitfalls and how to avoid them
 - Cost and resource considerations
 - Example use cases
-- **All LLM Specialization Methods** (see T-02-2):
+- **All LLM Specialization Methods** (see [T-02-2](T-02-2-knowledge-documents.md)):
   - Continued Pretraining
   - Supervised Fine-Tuning (SFT)
   - LoRA (Low-Rank Adaptation)
@@ -42,16 +42,16 @@ The agent should know about:
 
 ```
                         docker-compose up
-                              │
-┌──────────────┐    ┌─────────▼─────────┐    ┌──────────────┐
-│  knowledge/  │───▶│    Ingestion      │───▶│   Weaviate   │
-│  (Markdown)  │    │    Container      │    │ (Knowledge)  │
-└──────────────┘    └───────────────────┘    └──────┬───────┘
-                                                    │
-┌──────────────┐    ┌───────────────────┐           │
-│  Agent (n8n  │───▶│   Vector MCP      │───────────┘
-│  / LangGraph)│    │ (search_documents)│
-└──────────────┘    └───────────────────┘
+                              |
++----------------+    +-------------------+    +--------------+
+|  knowledge/    |--->|    Ingestion      |--->|   Weaviate   |
+|  (Markdown)    |    |    Container      |    | (Knowledge)  |
++----------------+    +-------------------+    +------+-------+
+                                                      |
++----------------+    +-------------------+           |
+|  Agent (n8n    |--->|   Vector MCP      |-----------+
+|  / LangGraph)  |    | (search_documents)|
++----------------+    +-------------------+
 ```
 
 The Vector MCP server (`dfkibasys/aas-vector-mcp`) provides:
@@ -63,6 +63,8 @@ The Vector MCP server (`dfkibasys/aas-vector-mcp`) provides:
 - [ ] Weaviate collection "SoofiKnowledge" is created automatically on startup
 - [ ] All knowledge documents are ingested via the ingestion container
 - [ ] Re-running `docker-compose up` skips unchanged files (hash-based)
-- [ ] Knowledge about all 10 specialization methods is ingested (T-02-2)
+- [ ] Knowledge about all 10 specialization methods is ingested ([T-02-2](T-02-2-knowledge-documents.md))
 - [ ] Agent can retrieve relevant knowledge via Vector MCP
 - [ ] Search results are relevant to user queries
+- [ ] Reranking improves search result quality when enabled ([T-02-3](T-02-3-reranking.md))
+- [ ] Knowledge documents are accessible via clickable URLs ([T-02-4](T-02-4-minio-knowledge-urls.md))

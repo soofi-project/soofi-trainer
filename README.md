@@ -6,10 +6,20 @@ An agentic system that guides users through the LLM specialization process — f
 
 | Service | URL | Description |
 |---------|-----|-------------|
+| Soofi UI | http://localhost:3001 | A2UI chat frontend (Lit Web Components) |
 | Open WebUI | http://localhost:3000 | Chat interface |
-| Vector MCP | docker-internal (vector-mcp:8000) | Knowledge base search |
+| Interaction Agent | docker-internal (interaction-agent:8000) | LangGraph ReAct agent, AG-UI SSE, A2A orchestrator |
+| Advisor | docker-internal (advisor:8000) | LangGraph LLM specialization advisor (A2A) |
+| Training Agent | docker-internal (training-agent:8000) | LangGraph training job manager (A2A) |
+| STT | http://localhost:8010 | Speech-to-text service (OpenAI Whisper-1) |
+| TTS | http://localhost:8011 | Text-to-speech service (OpenAI tts-1) |
+| Training Gateway | docker-internal (training-gateway:8000) | Training job management (MCP) |
+| Vector MCP | docker-internal (vector-mcp:8000) | Knowledge base search (MCP) |
 | MCP Inspector | http://localhost:6274 | MCP debugging tool |
 | Weaviate | http://localhost:8070 | Vector database |
+| N8N | http://localhost:5678 | Workflow Automation Platform |
+| MinIO | http://localhost:9000 | S3-compatible object storage |
+| MinIO Console | http://localhost:9001 | MinIO admin UI |
 
 ## Quick Start
 
@@ -36,8 +46,13 @@ EOF
 
 ### 3. Open the UI
 
-- **Chat**: http://localhost:3000
-- **MCP Inspector**: http://localhost:6274/?transport=streamablehttp&serverUrl=http://vector-mcp:8000/mcp/&MCP_PROXY_AUTH_TOKEN=dev-stack-token-12345
+- **Soofi UI (A2UI)**: http://localhost:3001
+- **Chat (Open WebUI)**: http://localhost:3000
+- **MCP Inspector**: http://localhost:6274/?transport=streamable-http&serverUrl=http://vector-mcp:8000/mcp/&MCP_PROXY_AUTH_TOKEN=dev-stack-token-12345
+
+### 4. Try the Soofi UI
+
+Open http://localhost:3001 and ask the agent about LLM specialization methods (RAG, LoRA, QLoRA, SFT, DPO, …). Push-to-talk: hold **Space** to record, release to send. The agent searches the knowledge base and streams a spoken response.
 
 ### Stop the stack
 
@@ -54,6 +69,9 @@ The stack uses named Docker volumes (prefixed with `soofi-trainer_`):
 |--------|---------|
 | `soofi-trainer_weaviate_data` | Weaviate vector database |
 | `soofi-trainer_open_webui_data` | Open WebUI settings & chat history |
+| `soofi-trainer_minio_data` | MinIO object storage |
+| `soofi-trainer_postgres_data` | N8N PostgreSQL database |
+| `soofi-trainer_n8n_data` | N8N encryption keys & config |
 
 To delete a single volume (containers must be stopped):
 
@@ -68,21 +86,129 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `ENV_SECRETS_FILE` | `~/.env.secrets` | Path to secrets file |
+| `WEAVIATE_VERSION` | `1.35.7` | Weaviate Image version |
 | `WEAVIATE_PORT` | `8070` | Weaviate HTTP port |
 | `WEAVIATE_COLLECTION` | `SoofiKnowledge` | Weaviate collection name |
+| `EMBEDDING_MODEL` | `openai:text-embedding-3-large` | Embedding model (`provider:model`, e.g. `ollama:bge-m3`) |
+| `OLLAMA_HOST` | _(unset)_ | Ollama base URL — only needed when using an Ollama embedding model (e.g. `http://host.docker.internal:11434`) |
+| `ADVISOR_NAME` | `soofi-advisor` | Model name shown in Open WebUI |
+| `ADVISOR_MODEL` | `gpt-4o-mini` | LLM model for the advisor agent |
+| `MCPINSPECTOR_VERSION` | `0.18.0` | MCP Inspector Image version |
 | `MCPINSPECTOR_CLIENT_PORT` | `6274` | MCP Inspector UI port |
 | `MCPINSPECTOR_PROXY_PORT` | `6277` | MCP Inspector proxy port |
-| `EMBEDDING_MODEL` | `openai:text-embedding-3-large` | Embedding model (provider:model) |
+| `MCP_AUTH_TOKEN` | `dev-stack-token-12345` | MCP Auth token |
+| `SOOFI_UI_PORT` | `3001` | Soofi UI (A2UI frontend) port |
+| `OPENWEBUI_VERSION` | `v0.7.2` | Open WebUI Image version|
 | `OPENWEBUI_PORT` | `3000` | Open WebUI port |
+| `POSTGRES_VERSION` | `18-alpine` | PostgreSQL Image version |
+| `N8N_VERSION` | `2.8.3` | N8N Image version |
+| `N8N_HOST` | `localhost` | Host name n8n runs on |
+| `N8N_PROTOCOL` | `http` | The protocol used to reach n8n |
+| `N8N_EXTERNAL_PORT` | `5678` | The HTTP port n8n runs on |
+| `GENERIC_TIMEZONE` | `Europe/Berlin` | The n8n instance timezone |
+| `MINIO_VERSION` | `RELEASE.2025-09-07T16-13-09Z` | MinIO image version |
+| `MINIO_ACCESS_KEY` | `soofi` | MinIO user name |
+| `MINIO_SECRET_KEY` | `soofi-minio-secret` | MinIO password |
+| `MINIO_BUCKET` | `knowledge` | MinIO bucket name for knowledge data |
+| `MINIO_PORT` | `9000` | MinIO API port |
+| `MINIO_CONSOLE_PORT` | `9001` | MinIO Console UI port |
+| `KNOWLEDGE_BASE_URL` | `http://localhost:9000/knowledge` | Base URL for knowledge source links |
+| `INTERACTION_MODEL` | `gpt-4o-mini` | LLM model for the interaction agent |
+| `STT_PROVIDER` | `openai` | STT provider (`openai`) |
+| `STT_LANGUAGE` | `de` | Whisper transcription language |
+| `STT_PORT` | `8010` | STT service external port |
+| `STT_VERSION` | `0.1.0` | STT service image version |
+| `WHISPER_PROMPT` | `RAG, LoRA, …` | Domain vocabulary bias for Whisper |
+| `TTS_PROVIDER` | `openai` | TTS provider (`openai`) |
+| `TTS_MODEL` | `tts-1` | OpenAI TTS model |
+| `TTS_VOICE` | `alloy` | OpenAI TTS voice |
+| `TTS_SPEED` | `1.3` | TTS playback speed |
+| `TTS_PORT` | `8011` | TTS service external port |
+| `TTS_VERSION` | `0.1.0` | TTS service image version |
+| `VITE_VOICE_CONTROLS_VISIBLE` | `true` | Show on-screen mic button ¹ |
+| `VITE_VOICE_ACTIVATION` | `push-to-talk` | Voice activation mode (`push-to-talk` \| `toggle`) ¹ |
+| `TRAINING_BACKEND` | `local` | Training backend: `local` (subprocess) or `docker` (Docker API) |
+| `TRAINING_DOCKER_HOST` | _(unset)_ | Remote Docker API URL — leave unset to use the local socket |
+| `TRAINING_IMAGE` | `soofi-trainer-dummy-training:latest` | Docker image for training containers |
+| `TRAINING_GPU_DEVICE` | `all` | GPU device ID (`all` or e.g. `0`) |
+| `TRAINING_DEFAULT_DURATION` | `120` | Default simulation duration in seconds |
+| `OPENAI_BASE_URL` | _(unset)_ | LLM endpoint override — set in backend profile files (`docker-compose.ollama.yml` etc.), not in `.env` |
+
+> ¹ These are Vite build args, not runtime environment variables. Changing them requires a rebuild (`./up.sh --build`).
+
+## Local Inference
+
+`up.sh` supports backend profiles via compose override files. STT/TTS are unaffected.
+
+```bash
+./up.sh                # OpenAI (default)
+./up.sh --ollama       # Ollama (local)
+./up.sh --lmstudio     # LM Studio (local)
+./up.sh --triton       # NVIDIA Triton (H200)
+```
+
+| Profile | Chat endpoint | Embeddings | Requires |
+|---------|--------------|------------|---------|
+| _(default)_ | `api.openai.com` | OpenAI | `OPENAI_API_KEY` in `~/.env.secrets` |
+| `--ollama` | Ollama (`localhost:11434`) | Ollama `bge-m3` | Ollama running + models pulled |
+| `--lmstudio` | LM Studio (`localhost:1234`) | LM Studio `bge-m3` | LM Studio server running + models loaded |
+| `--triton` | Triton (`10.2.10.33:9000`) | OpenAI | Triton running + model loaded, `OPENAI_API_KEY` for embeddings |
+
+Model names and all other backend settings are configured in the respective override file:
+
+- `docker-compose.ollama.yml` — Ollama models, endpoint, embedding model
+- `docker-compose.lmstudio.yml` — LM Studio models, endpoint, embedding model
+- `docker-compose.triton.yml` — Triton endpoint and model
+
+To change the model, edit the override file and restart with `./up.sh --ollama` (no `--build` needed).
+
+> **Note:** When switching the embedding model (e.g. from OpenAI to Ollama), the vector dimensions change and existing Weaviate data becomes incompatible. Wipe the volume before restarting:
+> ```bash
+> ./down.sh --clean
+> ./up.sh --ollama
+> ```
 
 ## Project Structure
 
 ```
 soofi-trainer/
+├── knowledge/              # Markdown knowledge documents + YAML metadata
+├── knowledge-ingestion/    # One-shot ingestion container (local build)
+├── advisor/                # LangGraph advisor agent (local build)
+│   ├── src/               # Python source (LangGraph + FastAPI)
+│   ├── Dockerfile
+│   └── pyproject.toml
 ├── vector-mcp/             # Vector MCP server (local build)
 │   ├── src/vector_mcp/     # Python source
 │   ├── Dockerfile
 │   └── pyproject.toml
+├── soofi-ui/              # A2UI Lit frontend (local build)
+│   ├── src/               # TypeScript source (Lit components)
+│   ├── Dockerfile
+│   └── package.json
+├── interaction-agent/     # LangGraph ReAct agent, AG-UI SSE, A2A orchestrator (local build)
+│   ├── src/               # Python source (LangGraph + FastAPI)
+│   ├── Dockerfile
+│   └── pyproject.toml
+├── stt/                   # Speech-to-text service (local build)
+│   ├── src/               # Python source (FastAPI + OpenAI Whisper)
+│   ├── Dockerfile
+│   └── pyproject.toml
+├── tts/                   # Text-to-speech service (local build)
+│   ├── src/               # Python source (FastAPI + OpenAI tts-1)
+│   ├── Dockerfile
+│   └── pyproject.toml
+├── training-pipeline/         # Training job orchestration
+│   ├── training-container/    # Simulated training workload
+│   └── training-gateway/      # MCP server for training job management
+├── n8n/
+│   ├── initdb/
+│   ├── workflows/
+│   ├── import_workflows.sh
+│   └── init_script.sh
+├── openwebui/
+│   ├── functions/
+│   └── import_functions.sh
 ├── docker-compose.yml      # Service orchestration
 ├── up.sh                   # Start stack
 ├── down.sh                 # Stop stack
@@ -97,15 +223,48 @@ The Vector MCP server exposes two tools:
 - **`search_documents`** — Semantic search over the knowledge base, with optional metadata filters
 - **`list_metadata`** — Discover available metadata fields and values for filtering
 
-### Load test data
+### Knowledge base
 
-The knowledge base starts empty. To seed sample documents for testing:
+Knowledge documents live in `knowledge/` as markdown files with YAML metadata. The `knowledge-ingestion` container automatically loads them into Weaviate on `./up.sh`. It runs once, detects changes via SHA-256 hashes, and exits.
+
+> **Note:** If you enable MinIO on an existing stack, run `./down.sh --clean` first. The source URLs in Weaviate change from relative paths to MinIO URLs, so a fresh ingestion is required.
+
+To re-run ingestion after editing documents:
 
 ```bash
-docker exec vector-mcp python scripts/seed_testdata.py
+docker compose up knowledge-ingestion
 ```
 
-This creates the collection (if needed) and inserts test documents with real embeddings.
+## N8N
+
+### Import N8N workflows
+N8N starts without workflows. Execute the following to load all workflows from `n8n/workflows`
+
+```bash
+./n8n/import_workflows.sh
+```
+
+### Set up credentials
+Workflows that use OpenAI (e.g. Advisor-Agent) need credentials. These are not exported with workflows and must be created manually:
+
+1. Go to **Settings → Credentials → Add Credential → OpenAI API**
+2. Set the API Key to `{{ $env.OPENAI_API_KEY }}` (pulls the key from the environment)
+
+### Backup N8N DB
+Create a new database dump if the existing SQL cannot be imported anymore (e.g. due to N8N updates).
+
+```bash
+docker exec -t postgres pg_dump -U n8n n8n > n8n-backup-$(date +%Y%m%d-%H%M).sql
+```
+
+## OpenWebUI
+
+### Load OpenWebUI functions
+OpenWebUI starts without functions (e.g. to connect to N8N). Execute the following to load all functions from `openwebui/functions`
+
+```bash
+./openwebui/import_functions.sh
+```
 
 ## License
 

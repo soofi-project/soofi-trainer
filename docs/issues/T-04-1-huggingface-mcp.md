@@ -1,6 +1,6 @@
 # Task
 
-- user story: #US-04
+- user story: [US-04](US-04-dataset-search.md)
 
 /label ~UserStory_US-04
 /label ~Task

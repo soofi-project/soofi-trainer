@@ -1,6 +1,6 @@
 # Task
 
-- user story: #US-02
+- user story: [US-02](US-02-knowledge-base.md)
 
 /label ~UserStory_US-02
 /label ~Task
@@ -11,7 +11,7 @@
 
 **Knowledge Documents for LLM Specialization Methods**
 
-Create markdown documents covering all LLM specialization methods and related best practices. These files are placed in the `knowledge/` folder and automatically ingested into Weaviate by the ingestion container (T-02-1).
+Create markdown documents covering all LLM specialization methods and related best practices. These files are placed in the `knowledge/` folder and automatically ingested into Weaviate by the ingestion container ([T-02-1](T-02-1-knowledge-ingestion-container.md)).
 
 ## Folder Structure
 
