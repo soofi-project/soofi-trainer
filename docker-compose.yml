@@ -1,5 +1,8 @@
 name: soofi-trainer
 
+include:
+  - compose/monitoring.yml
+
 services:
   # ===========================================
   # Weaviate - Vector Database

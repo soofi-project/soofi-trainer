@@ -1,0 +1,54 @@
+name: soofi-monitoring
+
+services:
+  # ===========================================
+  # Prometheus - Monitoring system & time series database
+  # ===========================================
+  prometheus:
+    image: prom/prometheus:v3.10.0
+    container_name: prometheus
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - soofi-network
+
+  # ===========================================
+  # Grafana - Monitoring Dashboard
+  # ===========================================
+  grafana:
+    image: grafana/grafana:12.3
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+      - GF_SECURITY_ALLOW_EMBEDDING=true
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - soofi-network
+
+# ===========================================
+# Networks
+# ===========================================
+networks:
+  soofi-network:
+    driver: bridge
+    name: soofi-network
+
+# ===========================================
+# Volumes
+# ===========================================
+volumes:
+  prometheus_data:
+  grafana_data:
