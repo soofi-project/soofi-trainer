@@ -21,13 +21,10 @@ Introduce a thin root `docker-compose.yml` that only declares shared resources (
 
 ```
 docker-compose.yml           ← root: networks, volumes, includes
-compose/infra.yml            ← Weaviate, MinIO, PostgreSQL
-compose/knowledge.yml        ← Vector MCP, Knowledge Ingestion
-compose/agents.yml           ← Advisor, Training Agent, Interaction Agent
-compose/training.yml         ← Training Gateway, Training Container
-compose/ui.yml               ← Soofi UI, Open WebUI, MCP Inspector
-compose/voice.yml            ← STT, TTS
-compose/tools.yml            ← N8N
+compose/knowledge.yml        ← Weaviate, Vector MCP, MinIO, Knowledge Ingestion, Advisor Agent
+compose/training.yml         ← Training Agent, Training Gateway, Training Container
+compose/interaction.yml      ← Interaction Agent, Soofi UI, STT, TTS
+compose/tools.yml            ← PostgreSQL, N8N, Open WebUI, MCP Inspector
 ```
 
 Root file example:
@@ -35,12 +32,9 @@ Root file example:
 name: soofi-trainer
 
 include:
-  - compose/infra.yml
   - compose/knowledge.yml
-  - compose/agents.yml
   - compose/training.yml
-  - compose/ui.yml
-  - compose/voice.yml
+  - compose/interaction.yml
   - compose/tools.yml
 
 networks:
@@ -62,34 +56,25 @@ volumes:
 
 ### 2. Port reassignment
 
-Current ports are assigned ad-hoc. Define a clean range layout:
+Ports are documented per compose file to make the layout traceable:
 
-| Range  | Purpose                | Services |
-|--------|------------------------|----------|
-| `3xxx` | Web UIs                | Soofi UI `:3001`, Open WebUI `:3000` |
-| `5xxx` | Workflow tooling       | N8N `:5678` |
-| `6xxx` | Dev/debug tools        | MCP Inspector Client `:6274`, Proxy `:6277` |
-| `8xxx` | APIs & databases       | Weaviate `:8070`, Training Gateway `:8099` |
-| `8xxx` | Voice services         | STT `:8010`, TTS `:8011` |
-| `9xxx` | Object storage         | MinIO API `:9000`, Console `:9001` |
+| Compose file | Service | Port | Notes |
+|---|---|---|---|
+| `knowledge.yml` | Weaviate | `:8070` | Vector DB HTTP API |
+| `knowledge.yml` | MinIO API | `:9000` | S3-compatible object storage |
+| `knowledge.yml` | MinIO Console | `:9001` | MinIO admin UI |
+| `training.yml` | Training Gateway | `:8099` | Training job management API |
+| `interaction.yml` | Soofi UI | `:3001` | Voice UI (nginx + Lit) |
+| `interaction.yml` | STT | `:8010` | Speech-to-text |
+| `interaction.yml` | TTS | `:8011` | Text-to-speech |
+| `tools.yml` | Open WebUI | `:3000` | Chat interface |
+| `tools.yml` | N8N | `:5678` | Workflow automation |
+| `tools.yml` | MCP Inspector Client | `:6274` | MCP debug UI |
+| `tools.yml` | MCP Inspector Proxy | `:6277` | MCP debug proxy |
 
-**Proposed reassignments** (any port collisions or gaps to resolve):
+Services without external ports (internal only): Vector MCP, Knowledge Ingestion, Advisor, Interaction Agent, Training Agent, Training Container, PostgreSQL.
 
-| Service | Current | Proposed | Reason |
-|---------|---------|----------|--------|
-| Weaviate | `8070` | `8070` | keep — already in range |
-| MinIO API | `9000` | `9000` | keep |
-| MinIO Console | `9001` | `9001` | keep |
-| Open WebUI | `3000` | `3000` | keep |
-| Soofi UI | `3001` | `3001` | keep |
-| STT | `8010` | `8010` | keep |
-| TTS | `8011` | `8011` | keep |
-| N8N | `5678` | `5678` | keep |
-| MCP Inspector Client | `6274` | `6274` | keep |
-| MCP Inspector Proxy | `6277` | `6277` | keep |
-| Training Gateway | `8099` | `8099` | keep |
-
-> Note: If the `dataset-agent` service (referenced in `interaction-agent` env `AGENT_REGISTRY`) gains an external port, it should be assigned in the `8xxx` API range.
+> Note: If the `dataset-agent` service gains an external port, it should be assigned in the `8xxx` range alongside Training Gateway.
 
 ### 3. README / CLAUDE.md updates
 
