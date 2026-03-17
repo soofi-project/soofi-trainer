@@ -90,6 +90,7 @@ Services without external ports (internal only): Vector MCP, Knowledge Ingestion
 - [ ] All external ports documented in `.env` remain reachable at the same addresses
 - [ ] No port conflicts between services
 - [ ] `docker compose config` validates without errors
+- [ ] Inference backend overrides still work: `docker compose -f docker-compose.yml -f docker-compose.triton.yml up` (analog für ollama, vllm, lmstudio)
 - [ ] CLAUDE.md Architecture table updated with sub-file locations
 
 # Branches
