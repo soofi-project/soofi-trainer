@@ -1,6 +1,8 @@
 name: soofi-trainer
 
 include:
+  - path: compose/admin.yml
+    project_directory: .
   - path: compose/knowledge.yml
     project_directory: .
   - path: compose/training.yml
@@ -20,3 +22,10 @@ networks:
   soofi-training-network:
     driver: bridge
     name: soofi-training-network
+  soofi-admin-network:
+    driver: bridge
+    name: soofi-admin-network
+  soofi-proxy-network:
+    driver: bridge
+    name: soofi-proxy-network
+
