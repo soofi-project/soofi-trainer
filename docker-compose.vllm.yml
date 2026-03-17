@@ -8,24 +8,24 @@
 services:
   advisor:
     environment:
-     # ADVISOR_MODEL: qwen35-122b-fp8
+      ADVISOR_MODEL: qwen35-122b-fp8
       #ADVISOR_MODEL: qwen3.5-122b-gptq-int4
-      ADVISOR_MODEL: qwen35-35b-fp8
+     # ADVISOR_MODEL: qwen35-35b-fp8
       OPENAI_BASE_URL: http://10.2.10.33:4000/v1
 
   interaction-agent:
     environment:
      
-     # INTERACTION_MODEL: qwen35-122b-fp8
+      INTERACTION_MODEL: qwen35-122b-fp8
      # INTERACTION_MODEL: qwen3.5-122b-gptq-int4
-      INTERACTION_MODEL: qwen35-35b-fp8
+     # INTERACTION_MODEL: qwen35-35b-fp8
       OPENAI_BASE_URL: http://10.2.10.33:4000/v1
 
   training-agent:
     environment:
-      #TRAINING_MODEL: qwen35-122b-fp8
+      TRAINING_MODEL: qwen35-122b-fp8
       #TRAINING_MODEL: qwen3.5-122b-gptq-int4
-      TRAINING_MODEL: qwen35-35b-fp8
+      #TRAINING_MODEL: qwen35-35b-fp8
       OPENAI_BASE_URL: http://10.2.10.33:4000/v1
 
   knowledge-ingestion:
