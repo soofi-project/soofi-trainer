@@ -27,6 +27,7 @@ services:
   # Training Gateway - Training Job Management
   # ===========================================
   training-gateway:
+    image: dfkisoofi/training-gateway:${TRAINING_GATEWAY_VERSION}
     build: ./training-pipeline/training-gateway
     container_name: training-gateway
     restart: unless-stopped

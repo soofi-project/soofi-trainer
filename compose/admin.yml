@@ -9,26 +9,25 @@ services:
     ports:
       - "${PORTAINER_PORT}:9000"
     command: --admin-password-file=/secrets/admin-password
-    environment:
-      - VIRTUAL_HOST=portainer.${EXTERNAL_HOSTNAME}
-      - VIRTUAL_PORT=9000
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./compose/config/portainer/admin-password:/secrets/admin-password
+      - ./compose/admin/portainer/admin-password:/secrets/admin-password
     networks:
       - soofi-admin-network
-      - soofi-proxy-network
 
-  nginx-proxy:
-    image: nginxproxy/nginx-proxy:${NGINX_PROXY_VERSION}
-    container_name: proxy
+  landingpage:
+    image: dfkisoofi/landingpage:${LANDING_PAGE_VERSION}
+    container_name: landingpage
     restart: always
+    build: ./landingpage
     ports:
-      - "${NGINX_PROXY_PORT}:80"
+      - "${LANDING_PAGE_PORT}:80"
+    env_file:
+      - .env
     volumes:
-      - /var/run/docker.sock:/tmp/docker.sock:ro      
-      - ./compose/config/nginx-proxy/proxy.conf:/etc/nginx/proxy.conf
-    environment:
-      - DEFAULT_HOST=${EXTERNAL_HOSTNAME}
+      - ./compose/admin/landingpage/content/index.html:/usr/share/nginx/html/index.html
+      - ./compose/admin/landingpage/content/favicon.ico:/usr/share/nginx/html/favicon.ico
+      - ./compose/admin/landingpage/content/media:/usr/share/nginx/html/media
+      - ./compose/admin/landingpage/content/slides:/slides-templates:ro
     networks:
-      - soofi-proxy-network
+      - soofi-network
