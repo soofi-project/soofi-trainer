@@ -1,10 +1,10 @@
 # User story
 
 - tasks:
-  - #9
-  - #10
-  - #11
-  - #12
+  - [T-03-1](T-03-1-langgraph-agent.md) #9
+  - [T-03-2](T-03-2-agent-prompts.md) #10
+  - [T-03-3](T-03-3-decision-logic.md) #11
+  - [T-03-4](T-03-4-ci-pipeline.md) #12
 
 # Story
 
