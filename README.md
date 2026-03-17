@@ -40,8 +40,9 @@ EOF
 ### 2. Start the stack
 
 ```bash
-./up.sh              # Start containers
-./up.sh --build      # Rebuild and start containers
+./up.sh              # Start containers (picks up .env changes without rebuild)
+./up.sh --build      # Rebuild images and start containers
+./up.sh --vllm       # Use H200 backend (local STT/TTS, vLLM via LiteLLM)
 ```
 
 ### 3. Open the UI
@@ -86,7 +87,7 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `ENV_SECRETS_FILE` | `~/.env.secrets` | Path to secrets file |
-| `WEAVIATE_VERSION` | `1.35.7` | Weaviate Image version |
+| `WEAVIATE_VERSION` | `1.36.2` | Weaviate Image version |
 | `WEAVIATE_PORT` | `8070` | Weaviate HTTP port |
 | `WEAVIATE_COLLECTION` | `SoofiKnowledge` | Weaviate collection name |
 | `EMBEDDING_MODEL` | `openai:text-embedding-3-large` | Embedding model (`provider:model`, e.g. `ollama:bge-m3`) |
@@ -112,47 +113,68 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 | `MINIO_BUCKET` | `knowledge` | MinIO bucket name for knowledge data |
 | `MINIO_PORT` | `9000` | MinIO API port |
 | `MINIO_CONSOLE_PORT` | `9001` | MinIO Console UI port |
-| `KNOWLEDGE_BASE_URL` | `http://localhost:9000/knowledge` | Base URL for knowledge source links |
+| `KNOWLEDGE_BASE_URL` | `/docs` | Base URL for knowledge source links |
 | `INTERACTION_MODEL` | `gpt-4o-mini` | LLM model for the interaction agent |
+| `TRAINING_AGENT_MODEL` | `gpt-4o-mini` | LLM model for the training agent |
 | `STT_PROVIDER` | `openai` | STT provider (`openai`) |
 | `STT_LANGUAGE` | `de` | Whisper transcription language |
 | `STT_PORT` | `8010` | STT service external port |
 | `STT_VERSION` | `0.1.0` | STT service image version |
-| `WHISPER_PROMPT` | `RAG, LoRA, …` | Domain vocabulary bias for Whisper |
+| `WHISPER_PROMPT_DE` | `Soofi, RAG, LoRA, …` | Domain vocabulary bias for Whisper (German) |
+| `WHISPER_PROMPT_EN` | `Soofi, RAG, LoRA, …` | Domain vocabulary bias for Whisper (English) |
 | `TTS_PROVIDER` | `openai` | TTS provider (`openai`) |
-| `TTS_MODEL` | `tts-1` | OpenAI TTS model |
-| `TTS_VOICE` | `alloy` | OpenAI TTS voice |
-| `TTS_SPEED` | `1.3` | TTS playback speed |
+| `TTS_MODEL` | `tts-1` | TTS model (Piper on H200) |
+| `TTS_SPEED` | `1.2` | TTS playback speed |
+| `TTS_DE_PHONETIC_KEYS` | _(see .env)_ | Pipe-separated English loanwords for phonetic replacement |
+| `TTS_DE_PHONETIC_VALUES` | _(see .env)_ | Pipe-separated German phonetic spellings (aligned 1:1 with KEYS) |
 | `TTS_PORT` | `8011` | TTS service external port |
 | `TTS_VERSION` | `0.1.0` | TTS service image version |
-| `VITE_VOICE_CONTROLS_VISIBLE` | `true` | Show on-screen mic button ¹ |
-| `VITE_VOICE_ACTIVATION` | `push-to-talk` | Voice activation mode (`push-to-talk` \| `toggle`) ¹ |
-| `TRAINING_BACKEND` | `local` | Training backend: `local` (subprocess) or `docker` (Docker API) |
+| `VITE_VOICE_CONTROLS_VISIBLE` | `true` | Show on-screen mic button |
+| `VITE_VOICE_ACTIVATION` | `push-to-talk` | Voice activation mode (`push-to-talk` \| `toggle`) |
+| `VITE_TTS_VOICE_DE` | `alloy` | TTS voice for German (alloy, echo, fable, nova) |
+| `VITE_TTS_VOICE_EN` | `onyx` | TTS voice for English (onyx, shimmer) |
+| `TRAINING_BACKEND` | `docker` | Training backend: `local` (subprocess) or `docker` (Docker API) |
 | `TRAINING_DOCKER_HOST` | _(unset)_ | Remote Docker API URL — leave unset to use the local socket |
-| `TRAINING_IMAGE` | `soofi-trainer-dummy-training:latest` | Docker image for training containers |
-| `TRAINING_GPU_DEVICE` | `all` | GPU device ID (`all` or e.g. `0`) |
+| `TRAINING_IMAGE_NAME` | `soofi-trainer-dummy-training` | Docker image name for training containers |
+| `TRAINING_IMAGE_VERSION` | `0.0.1` | Docker image version for training containers |
+| `TRAINING_GPU_DEVICE` | _(unset)_ | GPU device ID (`all` or e.g. `0`, empty = no GPU) |
 | `TRAINING_DEFAULT_DURATION` | `120` | Default simulation duration in seconds |
 | `OPENAI_BASE_URL` | _(unset)_ | LLM endpoint override — set in backend profile files (`docker-compose.ollama.yml` etc.), not in `.env` |
 
-> ¹ These are Vite build args, not runtime environment variables. Changing them requires a rebuild (`./up.sh --build`).
+> **Voice config**: `VITE_*` variables are injected at **runtime** via `docker-entrypoint.sh` → `env.js` → `window.__ENV`. Changing them in `.env` only requires a restart (`./up.sh`), not a rebuild. A one-time `./up.sh --build` is needed after upgrading to the entrypoint-based image.
+
+### Voice mapping (H200 / Piper)
+
+| Voice | Model | Language |
+|-------|-------|----------|
+| `alloy` | thorsten-high | German (male) |
+| `echo` | thorsten_emotional-medium | German (male) |
+| `fable` | thorsten_emotional-medium | German (male) |
+| `nova` | kerstin-low | German (female) |
+| `onyx` | lessac-high | English |
+| `shimmer` | lessac-high | English |
+
+The UI sends the voice from `VITE_TTS_VOICE_DE` (German) or `VITE_TTS_VOICE_EN` (English) based on the language toggle. German voices get phonetic preprocessing (`TTS_DE_PHONETIC_KEYS`/`VALUES`) to correct English loanword pronunciation in Piper.
 
 ## Local Inference
 
-`up.sh` supports backend profiles via compose override files. STT/TTS are unaffected.
+`up.sh` supports backend profiles via compose override files.
 
 ```bash
 ./up.sh                # OpenAI (default)
 ./up.sh --ollama       # Ollama (local)
 ./up.sh --lmstudio     # LM Studio (local)
 ./up.sh --triton       # NVIDIA Triton (H200)
+./up.sh --vllm         # vLLM via LiteLLM (H200) — STT/TTS local
 ```
 
-| Profile | Chat endpoint | Embeddings | Requires |
-|---------|--------------|------------|---------|
-| _(default)_ | `api.openai.com` | OpenAI | `OPENAI_API_KEY` in `~/.env.secrets` |
-| `--ollama` | Ollama (`localhost:11434`) | Ollama `bge-m3` | Ollama running + models pulled |
-| `--lmstudio` | LM Studio (`localhost:1234`) | LM Studio `bge-m3` | LM Studio server running + models loaded |
-| `--triton` | Triton (`10.2.10.33:9000`) | OpenAI | Triton running + model loaded, `OPENAI_API_KEY` for embeddings |
+| Profile | Chat endpoint | Embeddings | STT/TTS | Requires |
+|---------|--------------|------------|---------|---------|
+| _(default)_ | `api.openai.com` | OpenAI | OpenAI cloud | `OPENAI_API_KEY` in `~/.env.secrets` |
+| `--ollama` | Ollama (`localhost:11434`) | Ollama `bge-m3` | OpenAI cloud | Ollama running + models pulled |
+| `--lmstudio` | LM Studio (`localhost:1234`) | LM Studio `bge-m3` | OpenAI cloud | LM Studio server running + models loaded |
+| `--triton` | Triton (`10.2.10.33:9000`) | OpenAI | OpenAI cloud | Triton running + model loaded, `OPENAI_API_KEY` for embeddings |
+| `--vllm` | vLLM via LiteLLM (`10.2.10.33:4000`) | Qwen3-Embedding-8B | H200 local (Piper + Whisper) | H200 inference stack deployed |
 
 Model names and all other backend settings are configured in the respective override file:
 

@@ -1,31 +1,32 @@
 # ===========================================
-# Soofi Trainer - Triton Backend Override
+# Soofi Trainer - vLLM Backend Override
 # ===========================================
-# Usage: ./up.sh --triton
-# Requires NVIDIA Triton Inference Server running with the model loaded.
-# Embeddings: still provided by OpenAI (OPENAI_API_KEY required).
+# Usage: ./up.sh --vllm
+# Routes all services to H200 via LiteLLM (port 4000).
+# STT: faster-whisper (Whisper large-v3) on GPU 1
+# TTS: openedai-speech (Piper) on CPU
 
 services:
   advisor:
     environment:
-     # ADVISOR_MODEL: qwen35-122b-fp8
+      ADVISOR_MODEL: qwen35-122b-fp8
       #ADVISOR_MODEL: qwen3.5-122b-gptq-int4
-      ADVISOR_MODEL: qwen35-35b-fp8
+     # ADVISOR_MODEL: qwen35-35b-fp8
       OPENAI_BASE_URL: http://10.2.10.33:4000/v1
 
   interaction-agent:
     environment:
      
-     # INTERACTION_MODEL: qwen35-122b-fp8
+      INTERACTION_MODEL: qwen35-122b-fp8
      # INTERACTION_MODEL: qwen3.5-122b-gptq-int4
-      INTERACTION_MODEL: qwen35-35b-fp8
+     # INTERACTION_MODEL: qwen35-35b-fp8
       OPENAI_BASE_URL: http://10.2.10.33:4000/v1
 
   training-agent:
     environment:
-      #TRAINING_MODEL: qwen35-122b-fp8
-      #TRAINING_MODEL: qwen3.5-122b-gptq-int4
-      TRAINING_MODEL: qwen35-35b-fp8
+      TRAINING_AGENT_MODEL: qwen35-122b-fp8
+      #TRAINING_AGENT_MODEL: qwen3.5-122b-gptq-int4
+      #TRAINING_AGENT_MODEL: qwen35-35b-fp8
       OPENAI_BASE_URL: http://10.2.10.33:4000/v1
 
   knowledge-ingestion:
@@ -38,3 +39,12 @@ services:
     environment:
       EMBEDDING_MODEL: openai:qwen3-embedding-8b
       OPENAI_BASE_URL: http://10.2.10.33:4000/v1
+
+  stt:
+    environment:
+      STT_BASE_URL: http://10.2.10.33:4000/v1
+
+  tts:
+    environment:
+      TTS_BASE_URL: http://10.2.10.33:4000/v1
+      TTS_MODEL: tts-1

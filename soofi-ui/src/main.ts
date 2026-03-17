@@ -47,13 +47,22 @@ marked.use({
 });
 
 // ---------------------------------------------------------------------------
-// Voice config — baked in at build time via Vite (VITE_VOICE_* in .env)
+// Voice config — runtime (window.__ENV from env.js) with build-time fallback
 // ---------------------------------------------------------------------------
 
-const voiceControlsVisible: boolean =
-  import.meta.env.VITE_VOICE_CONTROLS_VISIBLE !== "false";
+declare global {
+  interface Window { __ENV?: Record<string, string>; }
+}
+
+function env(key: string, fallback: string): string {
+  return window.__ENV?.[key] || import.meta.env[key] || fallback;
+}
+
+const voiceControlsVisible: boolean = env("VITE_VOICE_CONTROLS_VISIBLE", "true") !== "false";
 const voiceActivation: "push-to-talk" | "toggle" =
-  import.meta.env.VITE_VOICE_ACTIVATION === "toggle" ? "toggle" : "push-to-talk";
+  env("VITE_VOICE_ACTIVATION", "push-to-talk") === "toggle" ? "toggle" : "push-to-talk";
+const ttsVoiceDe: string = env("VITE_TTS_VOICE_DE", "alloy");
+const ttsVoiceEn: string = env("VITE_TTS_VOICE_EN", "onyx");
 
 // ---------------------------------------------------------------------------
 // AG-UI event types we handle (text streaming layer)
@@ -1255,6 +1264,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
     const blob = new Blob(this.audioChunks, { type: "audio/webm" });
     const formData = new FormData();
     formData.append("file", blob, "audio.webm");
+    formData.append("language", this.language);
 
     try {
       const resp = await fetch("/api/stt/transcribe", {
@@ -1521,7 +1531,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
       const resp = await fetch("/api/tts/synthesize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, voice: this.language === "de" ? ttsVoiceDe : ttsVoiceEn, language: this.language }),
       });
       if (!resp.ok) return null;
       return await resp.blob();

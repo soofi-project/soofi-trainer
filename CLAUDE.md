@@ -110,7 +110,9 @@ Event envelope: `{"__soofi_event": "search_status", "text": "..."}` — JSON-wra
 Lit web component (`<soofi-chat>`) with AG-UI SSE client, voice controls, and doc viewer panel.
 
 - `src/main.ts` — Single-file Lit component with all styles, state, and rendering
-- `nginx.conf` — Reverse proxy routing `/api/` to interaction-agent, `/stt/` to STT, `/tts/` to TTS, `/docs/` to MinIO
+- `nginx.conf` — Reverse proxy routing `/api/` to interaction-agent, `/api/stt/` to STT, `/api/tts/` to TTS, `/docs/` to MinIO
+- `docker-entrypoint.sh` — Generates `env.js` from environment variables at container start (runtime VITE_* injection)
+- `Dockerfile` — Two-stage build (node → nginx), ENTRYPOINT runs entrypoint.sh
 
 ### Training Pipeline (`training-pipeline/`)
 - `training-gateway/` — FastAPI service managing training jobs via Docker containers
@@ -124,8 +126,15 @@ Python package (`soofi-vector-mcp`) built with FastMCP. Exposes Weaviate as MCP 
 Embedding model configurable via `EMBEDDING_MODEL` env var in `provider:model` format.
 
 ### Voice Pipeline (`stt/`, `tts/`)
-- `stt/src/server.py` — `POST /transcribe` (multipart), OpenAI whisper-1, `WHISPER_PROMPT` for domain vocab bias
-- `tts/src/server.py` — `POST /synthesize` (JSON), OpenAI tts-1, `TTS_SPEED=1.3`
+- `stt/src/server.py` — `POST /transcribe` (multipart), OpenAI whisper-1, language-specific prompts (`WHISPER_PROMPT_DE`/`WHISPER_PROMPT_EN`), phantom-prefix hallucination filter, 25 MB upload limit
+- `tts/src/server.py` — `POST /synthesize` (JSON `{text, voice, language}`), OpenAI tts-1, `TTS_SPEED` configurable, German phonetic preprocessing (`TTS_DE_PHONETIC_KEYS`/`VALUES`)
+
+### Soofi UI runtime env injection (`soofi-ui/`)
+VITE_* variables (voice controls, TTS voice selection) are injected at **runtime** — no rebuild needed:
+- `docker-entrypoint.sh` generates `/usr/share/nginx/html/env.js` with `window.__ENV` from container environment variables on every start
+- `index.html` loads `env.js` before `main.ts`
+- `main.ts` reads `window.__ENV` first, falls back to `import.meta.env` (build-time), then hardcoded defaults
+- Build-time ARGs in Dockerfile are kept as fallback for `npm run dev` (local development without Docker)
 
 ## Configuration
 
