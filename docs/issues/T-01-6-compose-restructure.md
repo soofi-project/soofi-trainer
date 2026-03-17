@@ -17,17 +17,17 @@ The root `docker-compose.yml` has grown to ~420 lines covering 14 services acros
 
 ### 1. Split into sub-compose files via `include`
 
-Introduce a thin root `docker-compose.yml` that only declares shared resources (networks, volumes) and pulls in domain files via `include`:
+Introduce a thin root `docker-compose.yml` that only declares shared networks and pulls in domain files via `include`. Volumes are declared in the sub-files alongside the services that use them — Docker Compose merges them automatically.
 
 ```
-docker-compose.yml           ← root: networks, volumes, includes
+docker-compose.yml           ← root: networks + includes only
 compose/knowledge.yml        ← Weaviate, Vector MCP, MinIO, Knowledge Ingestion, Advisor Agent
 compose/training.yml         ← Training Agent, Training Gateway, Training Container
 compose/interaction.yml      ← Interaction Agent, Soofi UI, STT, TTS
 compose/tools.yml            ← PostgreSQL, N8N, Open WebUI, MCP Inspector
 ```
 
-Root file example:
+Root file:
 ```yaml
 name: soofi-trainer
 
@@ -44,15 +44,15 @@ networks:
   soofi-training-network:
     driver: bridge
     name: soofi-training-network
-
-volumes:
-  weaviate_data:
-  open_webui_data:
-  postgres_data:
-  n8n_data:
-  minio_data:
-  training_gateway_data:
 ```
+
+Volume placement per sub-file:
+
+| Sub-file | Volumes |
+|---|---|
+| `knowledge.yml` | `weaviate_data`, `minio_data` |
+| `training.yml` | `training_gateway_data` |
+| `tools.yml` | `open_webui_data`, `postgres_data`, `n8n_data` |
 
 ### 2. Port reassignment
 
