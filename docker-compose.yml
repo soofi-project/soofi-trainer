@@ -1,7 +1,8 @@
 name: soofi-trainer
 
 include:
-  - compose/monitoring.yml
+  - path: compose/monitoring.yml
+    project_directory: .
 
 services:
   # ===========================================
