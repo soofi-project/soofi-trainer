@@ -5,7 +5,7 @@ Sovereign Open Source Foundational Models
 
 --
 
-## UIs & Tools 
+## Tools and more
 
 - [Soofi UI](http://${LANDING_PAGE_HOSTNAME}:${SOOFI_UI_PORT})
 - [Portainer](http://${LANDING_PAGE_HOSTNAME}:${PORTAINER_PORT})
@@ -21,7 +21,7 @@ Sovereign Open Source Foundational Models
 ---
 
 <iframe
-  src="http://${LANDING_PAGE_HOSTNAME}:${SOOFI_UI_PORT}$"
+  src="http://${LANDING_PAGE_HOSTNAME}:${SOOFI_UI_PORT}"
   style="width:95vw; height:95vh; border:none;"
   allow="microphone">
 </iframe>
@@ -31,6 +31,5 @@ Sovereign Open Source Foundational Models
 ## Embedded Image
 
 Path must be relative to `index.html`, not `slides.md`.
-
 
 ---
