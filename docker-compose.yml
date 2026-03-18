@@ -11,42 +11,10 @@ include:
     project_directory: .
   - path: compose/tools.yml
     project_directory: .
-  - path: edc-dev-stack/docker-compose-edc.yaml
+  - path: compose/aas.yml
     project_directory: .
-  - path: edc-dev-stack/docker-compose-mcp.yaml
+  - path: compose/edc.yml
     project_directory: .
-  - path: edc-dev-stack/docker-compose-flowise.yaml
-    project_directory: .
-  - path: edc-dev-stack/docker-compose-aas.yaml
-    project_directory: .
-
-  # ===========================================
-  # Postgres - Database for Dataspace
-  # ===========================================
-services:
-  postgres:
-    container_name: postgres
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: dataspace
-    image: bitnamilegacy/postgresql:17.2.0
-    configs:
-      - source: postgres_init_sql
-        target: /docker-entrypoint-initdb.d/init.sql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 10s
-      retries: 5
-    networks:
-      - soofi-network
-
-configs:
-  postgres_init_sql:
-    content: |
-      CREATE SCHEMA IF NOT EXISTS consumer;
-      CREATE SCHEMA IF NOT EXISTS provider;
 
 # ===========================================
 # Networks
@@ -61,4 +29,10 @@ networks:
   soofi-admin-network:
     driver: bridge
     name: soofi-admin-network
+  soofi-edc-network:
+    driver: bridge
+    name: soofi-edc-network
+  soofi-aas-network:
+    driver: bridge
+    name: soofi-aas-network
 

@@ -33,6 +33,12 @@
 				hash: true,
 				plugins: [ RevealMarkdown, RevealHighlight, RevealNotes ]
 			});
+			Reveal.on('ready', () => {
+				document.querySelectorAll('.reveal a[href^="http"]').forEach(a => {
+					a.target = '_blank';
+					a.rel = 'noopener';
+				});
+			});
 		</script>
 	</body>
 </html>
