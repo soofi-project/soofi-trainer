@@ -1,11 +1,11 @@
 # User story
 
 - tasks:
-  - #6
-  - #7 
-  - #19
-  - #21 
-  - #50
+  - [T-02-1](T-02-1-knowledge-ingestion-container.md) #6
+  - [T-02-2](T-02-2-knowledge-documents.md) #7
+  - [T-02-3](T-02-3-reranking.md) #19
+  - [T-02-4](T-02-4-minio-knowledge-urls.md) #21
+  - [T-02-5](T-02-5-docs-proxy.md) #50
 
 # Story
 
