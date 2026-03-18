@@ -31,6 +31,7 @@ services:
   # Vector MCP Server - Semantic Search
   # ===========================================
   vector-mcp:
+    image: dfkisoofi/vector-mcp:${SOOFI_TRAINER_VERSION}
     build: ./vector-mcp
     container_name: vector-mcp
     restart: unless-stopped
@@ -106,7 +107,7 @@ services:
   # Advisor - LangGraph LLM Specialization Advisor
   # ===========================================
   advisor:
-    image: dfkisoofi/advisor-agent:${ADVISOR_VERSION}
+    image: dfkisoofi/advisor-agent:${SOOFI_TRAINER_VERSION}
     build: ./advisor
     container_name: advisor
     restart: unless-stopped
@@ -181,7 +182,7 @@ services:
   # STT - Speech-to-Text Service
   # ===========================================
   stt:
-    image: dfkisoofi/soofi-stt:${STT_VERSION}
+    image: dfkisoofi/soofi-stt:${SOOFI_TRAINER_VERSION}
     build: ./stt
     container_name: stt
     restart: unless-stopped
@@ -202,7 +203,7 @@ services:
   # TTS - Text-to-Speech Service
   # ===========================================
   tts:
-    image: dfkisoofi/soofi-tts:${TTS_VERSION}
+    image: dfkisoofi/soofi-tts:${SOOFI_TRAINER_VERSION}
     build: ./tts
     container_name: tts
     restart: unless-stopped
@@ -223,7 +224,7 @@ services:
   # Soofi UI - A2UI Frontend
   # ===========================================
   soofi-ui:
-    image: dfkisoofi/soofi-ui:${SOOFI_UI_VERSION}
+    image: dfkisoofi/soofi-ui:${SOOFI_TRAINER_VERSION}
     build:
       context: ./soofi-ui
       args:
@@ -257,7 +258,7 @@ services:
   # Training Agent - LangGraph + A2A
   # ===========================================
   training-agent:
-    image: dfkisoofi/training-agent:${TRAININGAGENT_VERSION}
+    image: dfkisoofi/training-agent:${SOOFI_TRAINER_VERSION}
     build: ./training-agent
     container_name: training-agent
     restart: unless-stopped
@@ -281,7 +282,7 @@ services:
   # Interaction Agent - LangGraph + A2A
   # ===========================================
   interaction-agent:
-    image: dfkisoofi/soofi-ui-interaction-agent:${SOOFI_UI_INTERACTIONAGENT_VERSION}
+    image: dfkisoofi/soofi-ui-interaction-agent:${SOOFI_TRAINER_VERSION}
     build: ./interaction-agent
     container_name: interaction-agent
     restart: unless-stopped
@@ -364,6 +365,7 @@ services:
   # Training Gateway - Training Job Management
   # ===========================================
   training-gateway:
+    image: dfkisoofi/training-gateway:${SOOFI_TRAINER_VERSION}
     build: ./training-pipeline/training-gateway
     container_name: training-gateway
     restart: unless-stopped
@@ -398,9 +400,9 @@ services:
   # ===========================================
   training-container:
     build: ./training-pipeline/training-container
-    image: ${TRAINING_IMAGE_NAME}:${TRAINING_IMAGE_VERSION}
+    image: ${TRAINING_IMAGE_NAME}:${SOOFI_TRAINER_VERSION}
     container_name: training-container
-    entrypoint: echo image ${TRAINING_IMAGE_NAME}:${TRAINING_IMAGE_VERSION} available
+    entrypoint: echo image ${TRAINING_IMAGE_NAME}:${SOOFI_TRAINER_VERSION} available
 
 # ===========================================
 # Networks
