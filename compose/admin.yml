@@ -1,0 +1,33 @@
+services:      
+  # ===========================================
+  # Portainer - Docker Management UI
+  # ===========================================
+  portainer:
+    image: portainer/portainer-ce:${PORTAINER_VERSION}
+    container_name: portainer
+    restart: always
+    ports:
+      - "${PORTAINER_PORT}:9000"
+    command: --admin-password-file=/secrets/admin-password
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./compose/admin/portainer/admin-password:/secrets/admin-password
+    networks:
+      - soofi-admin-network
+
+  landingpage:
+    image: dfkisoofi/landingpage:${LANDING_PAGE_VERSION}
+    container_name: landingpage
+    restart: always
+    build: ./landingpage
+    ports:
+      - "${LANDING_PAGE_PORT}:80"
+    env_file:
+      - .env
+    volumes:
+      - ./compose/admin/landingpage/content/index.html:/usr/share/nginx/html/index.html
+      - ./compose/admin/landingpage/content/favicon.ico:/usr/share/nginx/html/favicon.ico
+      - ./compose/admin/landingpage/content/media:/usr/share/nginx/html/media
+      - ./compose/admin/landingpage/content/slides:/slides-templates:ro
+    networks:
+      - soofi-network
