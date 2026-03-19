@@ -35,4 +35,3 @@ networks:
   soofi-aas-network:
     driver: bridge
     name: soofi-aas-network
-

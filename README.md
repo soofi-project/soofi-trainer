@@ -66,8 +66,9 @@ EOF
 ### 2. Start the stack
 
 ```bash
-./up.sh              # Start containers
-./up.sh --build      # Rebuild and start containers
+./up.sh              # Start containers (picks up .env changes without rebuild)
+./up.sh --build      # Rebuild images and start containers
+./up.sh --vllm       # Use H200 backend (local STT/TTS, vLLM via LiteLLM)
 ```
 
 ### 3. Open the UI
@@ -202,25 +203,40 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 | `EDC_CONSUMER_PORT` | `8391` | EDC Consumer public endpoint port |
 | `EDC_CONSUMER_MCP_PORT` | `8392` | EDC Consumer MCP Server port |
 
-> ¹ These are Vite build args, not runtime environment variables. Changing them requires a rebuild (`./up.sh --build`).
+> **Voice config**: `VITE_*` variables are injected at **runtime** via `docker-entrypoint.sh` → `env.js` → `window.__ENV`. Changing them in `.env` only requires a restart (`./up.sh`), not a rebuild. A one-time `./up.sh --build` is needed after upgrading to the entrypoint-based image.
+
+### Voice mapping (H200 / Piper)
+
+| Voice | Model | Language |
+|-------|-------|----------|
+| `alloy` | thorsten-high | German (male) |
+| `echo` | thorsten_emotional-medium | German (male) |
+| `fable` | thorsten_emotional-medium | German (male) |
+| `nova` | kerstin-low | German (female) |
+| `onyx` | lessac-high | English |
+| `shimmer` | lessac-high | English |
+
+The UI sends the voice from `VITE_TTS_VOICE_DE` (German) or `VITE_TTS_VOICE_EN` (English) based on the language toggle. German voices get phonetic preprocessing (`TTS_DE_PHONETIC_KEYS`/`VALUES`) to correct English loanword pronunciation in Piper.
 
 ## Local Inference
 
-`up.sh` supports backend profiles via compose override files. STT/TTS are unaffected.
+`up.sh` supports backend profiles via compose override files.
 
 ```bash
 ./up.sh                # OpenAI (default)
 ./up.sh --ollama       # Ollama (local)
 ./up.sh --lmstudio     # LM Studio (local)
 ./up.sh --triton       # NVIDIA Triton (H200)
+./up.sh --vllm         # vLLM via LiteLLM (H200) — STT/TTS local
 ```
 
-| Profile | Chat endpoint | Embeddings | Requires |
-|---------|--------------|------------|---------|
-| _(default)_ | `api.openai.com` | OpenAI | `OPENAI_API_KEY` in `~/.env.secrets` |
-| `--ollama` | Ollama (`localhost:11434`) | Ollama `bge-m3` | Ollama running + models pulled |
-| `--lmstudio` | LM Studio (`localhost:1234`) | LM Studio `bge-m3` | LM Studio server running + models loaded |
-| `--triton` | Triton (`10.2.10.33:9000`) | OpenAI | Triton running + model loaded, `OPENAI_API_KEY` for embeddings |
+| Profile | Chat endpoint | Embeddings | STT/TTS | Requires |
+|---------|--------------|------------|---------|---------|
+| _(default)_ | `api.openai.com` | OpenAI | OpenAI cloud | `OPENAI_API_KEY` in `~/.env.secrets` |
+| `--ollama` | Ollama (`localhost:11434`) | Ollama `bge-m3` | OpenAI cloud | Ollama running + models pulled |
+| `--lmstudio` | LM Studio (`localhost:1234`) | LM Studio `bge-m3` | OpenAI cloud | LM Studio server running + models loaded |
+| `--triton` | Triton (`10.2.10.33:9000`) | OpenAI | OpenAI cloud | Triton running + model loaded, `OPENAI_API_KEY` for embeddings |
+| `--vllm` | vLLM via LiteLLM (`10.2.10.33:4000`) | Qwen3-Embedding-8B | H200 local (Piper + Whisper) | H200 inference stack deployed |
 
 To change the model, edit the override file and restart with `./up.sh --ollama` (no `--build` needed).
 
