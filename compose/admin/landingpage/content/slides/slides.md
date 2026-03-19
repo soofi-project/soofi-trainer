@@ -30,11 +30,7 @@ Sovereign Open Source Foundational Models
 
 ---
 
-<iframe
-  src="http://${LANDING_PAGE_HOSTNAME}:${SOOFI_UI_PORT}"
-  style="width:95vw; height:95vh; border:none;"
-  allow="microphone">
-</iframe>
+<!-- .slide: data-background-color="#0f1115" data-background-iframe="http://${LANDING_PAGE_HOSTNAME}:${SOOFI_UI_PORT}" data-background-interactive -->
 
 ---
 
