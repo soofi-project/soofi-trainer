@@ -25,4 +25,3 @@ networks:
   soofi-admin-network:
     driver: bridge
     name: soofi-admin-network
-
