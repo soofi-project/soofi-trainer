@@ -1624,6 +1624,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
           if (action === "close") {
             this.trainingProgressVisible = false;
           } else {
+            this._dismissSidePanel();
             this.trainingProgressVisible = true;
           }
         }
@@ -1704,8 +1705,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
   }
 
   private async openDocViewer(url: string): Promise<void> {
-    // Close agent cards if open — they share the panel
-    this.agentCards = null;
+    this._dismissSidePanel();
     this.docViewerUrl = url;
     // Sync index for next/previous navigation
     const idx = this.docLinks.indexOf(url);
@@ -1741,6 +1741,15 @@ class SoofiChat extends SignalWatcher(LitElement) {
     } catch {
       this.docContent = `<p>${tr("doc_load_error_generic", this.language)}</p>`;
     }
+  }
+
+  /** Dismiss whichever side-panel is currently visible. */
+  private _dismissSidePanel(): void {
+    this.docViewerUrl = null;
+    this.docContent = "";
+    this.docViewerAnchors = [];
+    this.agentCards = null;
+    this.trainingProgressVisible = false;
   }
 
   private closeDocViewer(): void {
@@ -1893,8 +1902,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
     if (action === "open") {
       const cards = event.cards as Array<[string, AgentCardData]>;
       if (cards?.length) {
-        // Close doc viewer if open — they share the panel
-        this.closeDocViewer();
+        this._dismissSidePanel();
         this.agentCards = cards;
       }
     }

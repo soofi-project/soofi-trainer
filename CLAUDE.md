@@ -40,6 +40,18 @@ mypy src/                # Type checking (strict, disallow_untyped_defs)
 pytest                   # Tests
 ```
 
+### Interaction Agent Tests
+```bash
+cd interaction-agent
+pytest tests/            # Pure function tests (no external deps)
+```
+
+### Advisor Tests
+```bash
+cd advisor
+pytest tests/            # Deduplication logic tests
+```
+
 ### Training Gateway Tests
 ```bash
 cd training-pipeline/training-gateway
@@ -87,13 +99,14 @@ LangGraph ReAct agent — the orchestrator that the UI talks to. Streams respons
 - `src/sse_stream.py` — SSE streaming state machine with URL-safe text emission, tool stream tracking, doc viewer events
 - `src/a2a_client.py` — A2A client for advisor and training agent communication
 - `src/constants.py` — Shared event keys between graph.py and sse_stream.py
-- `src/prompts.py` — System prompt (German)
+- `src/prompts.py` — System prompts (German + English)
 - `src/speech.py` — Speech text generation for TTS
 
 Key patterns:
 - **Streaming**: Uses `adispatch_custom_event()` from `langchain_core.callbacks` to emit custom events in `astream_events(version="v2")`. Do NOT use `get_stream_writer()` — it only works with `stream_mode="custom"`.
-- **Tool state injection**: `InjectedState` from `langgraph.prebuilt` injects conversation state into tools (e.g. `control_doc_viewer` validates doc link indices).
-- **Doc viewer**: `control_doc_viewer` returns JSON parsed by `_handle_tool_end` in `sse_stream.py` to emit `DOC_VIEWER` SSE events.
+- **ReAct short-circuit**: `after_tools()` conditional edge skips the second LLM call when a streaming tool (`ask_advisor_tool`, `ask_training_agent_tool`) already delivered the response. Scans ToolMessages in reverse, stops at the AI message boundary.
+- **RAG URL store**: `_rag_urls_store` is a module-level `OrderedDict` (LRU-bounded, max 256) keyed by `advisor_context_id`. Stores source URLs so `control_doc_viewer` can reference them across requests. Do NOT use `ContextVar` — it resets per async task.
+- **Doc viewer**: `control_doc_viewer` returns JSON parsed by `_handle_tool_end` in `sse_stream.py` to emit `DOC_VIEWER` SSE events. `_extract_tool_text()` handles all ToolMessage content formats (str, list-of-parts, list-of-str).
 
 ### Advisor (`advisor/`)
 LangGraph RAG agent — answers domain questions using knowledge documents from Weaviate.
@@ -104,12 +117,18 @@ LangGraph RAG agent — answers domain questions using knowledge documents from 
 - `src/prompts.py` — Advisor system prompt (German)
 - `src/tools.py` — MCP tool definitions
 
-Event envelope: `{"__soofi_event": "search_status", "text": "..."}` — JSON-wrapped to distinguish from text chunks in A2A streaming.
+Event envelope: `{"__soofi_event": "<type>", ...}` — JSON-wrapped to distinguish from text chunks in A2A streaming. Types: `search_status` (search progress label), `rag_sources` (retrieved documents with scores, deduplicated by file+section).
 
 ### Soofi UI (`soofi-ui/`)
-Lit web component (`<soofi-chat>`) with AG-UI SSE client, voice controls, and doc viewer panel.
+Lit web component (`<soofi-chat>`) with AG-UI SSE client, voice controls, and side panel (doc viewer / agent cards / training progress).
 
 - `src/main.ts` — Single-file Lit component with all styles, state, and rendering
+- `src/i18n.ts` — Minimal i18n (DE/EN) with `tr()` function
+
+Key patterns:
+- **Side panel mutual exclusion**: Doc viewer, agent cards, and training progress share one panel slot. `_dismissSidePanel()` clears all three before opening a new one — last one wins.
+- **RAG sources per message**: `RagSource[]` embedded in `ChatMessage`, buffered in `_pendingRagSources` during streaming, flushed to the message on `TOOL_CALL_END`.
+- **Streaming end**: `streaming = false` is set at `TOOL_CALL_END` for advisor/training tools (not at `RUN_FINISHED`), because the second LLM call is suppressed server-side.
 - `nginx.conf` — Reverse proxy routing `/api/` to interaction-agent, `/api/stt/` to STT, `/api/tts/` to TTS, `/docs/` to MinIO
 - `docker-entrypoint.sh` — Generates `env.js` from environment variables at container start (runtime VITE_* injection)
 - `Dockerfile` — Two-stage build (node → nginx), ENTRYPOINT runs entrypoint.sh

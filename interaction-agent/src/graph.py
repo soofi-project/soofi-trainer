@@ -1,6 +1,7 @@
 """LangGraph ReAct agent for the Soofi Interaction Agent."""
 
 import asyncio
+import collections
 import contextvars
 import json
 import logging
@@ -52,8 +53,10 @@ _training_context_id: contextvars.ContextVar[str | None] = contextvars.ContextVa
     "_training_context_id", default=None
 )
 _language: contextvars.ContextVar[Language] = contextvars.ContextVar("_language", default="de")
-# RAG source URLs per conversation — persisted across requests via advisor context_id
-_rag_urls_store: dict[str, list[str]] = {}
+# RAG source URLs per conversation — persisted across requests via advisor context_id.
+# LRU-bounded to prevent unbounded memory growth from long-running processes.
+_RAG_URLS_MAX = 256
+_rag_urls_store: collections.OrderedDict[str, list[str]] = collections.OrderedDict()
 
 base_url = os.getenv("OPENAI_BASE_URL") or None
 model_name = os.getenv("INTERACTION_MODEL")
@@ -181,6 +184,9 @@ async def ask_advisor_tool(question: str) -> str:
                 ]
                 ctx_key = _advisor_context_id.get() or ""
                 _rag_urls_store[ctx_key] = urls
+                _rag_urls_store.move_to_end(ctx_key)
+                while len(_rag_urls_store) > _RAG_URLS_MAX:
+                    _rag_urls_store.popitem(last=False)
             else:
                 full_text += chunk
                 await adispatch_custom_event(
@@ -334,6 +340,9 @@ def build_graph() -> CompiledStateGraph:
             logger.info("Tool result (%s): %s", msg.name, str(msg.content)[:500])
         return result
 
+    # Tools whose responses are already streamed to the user — no second LLM call needed
+    _STREAMING_TOOLS = {"ask_advisor_tool", "ask_training_agent_tool"}
+
     def should_continue(state: MessagesState) -> str:
         if not state["messages"]:
             return "__end__"
@@ -342,6 +351,16 @@ def build_graph() -> CompiledStateGraph:
             return "tools"
         return "__end__"
 
+    def after_tools(state: MessagesState) -> str:
+        """Skip the second LLM call if a streaming tool already delivered the response."""
+        for msg in reversed(state["messages"]):
+            # Stop at the last AI message — don't look further back
+            if hasattr(msg, "tool_calls"):
+                break
+            if hasattr(msg, "name") and msg.name in _STREAMING_TOOLS:
+                return "__end__"
+        return "agent"
+
     graph_builder = StateGraph(MessagesState)
     graph_builder.add_node("agent", agent)
     graph_builder.add_node("tools", run_tools)
@@ -349,7 +368,9 @@ def build_graph() -> CompiledStateGraph:
     graph_builder.add_conditional_edges(
         "agent", should_continue, {"tools": "tools", "__end__": "__end__"}
     )
-    graph_builder.add_edge("tools", "agent")
+    graph_builder.add_conditional_edges(
+        "tools", after_tools, {"agent": "agent", "__end__": "__end__"}
+    )
 
     return graph_builder.compile()
 
