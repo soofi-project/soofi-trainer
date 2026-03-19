@@ -64,8 +64,6 @@ _STRINGS: dict[str, dict[Language, str]] = {
         "de": "Ich habe folgendes gefunden.",
         "en": "Here is what I found.",
     },
-    # Cite sources suffix appended to advisor questions
-    "cite_sources": {"de": "Bitte Quellen angeben.", "en": "Please cite your sources."},
 }
 
 

@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 # Protocol constants for the soofi event envelope shared with interaction-agent/graph.py
 _SOOFI_EVENT_KEY = "__soofi_event"
 _EVENT_SEARCH_STATUS = "search_status"
+_EVENT_RAG_SOURCES = "rag_sources"
 _RE_LANG_TAG = re.compile(r"\[LANG:(de|en)\]\s*$")
 
 
@@ -122,6 +123,77 @@ class AdvisorAgentExecutor(AgentExecutor):
                             final=False,
                         )
                     )
+
+                elif (
+                    event["event"] == "on_tool_end"
+                    and "search_documents" in event.get("name", "")
+                ):
+                    raw_output = event.get("data", {}).get("output", "")
+                    # MCP tools return ToolMessage with .content as list of parts
+                    if hasattr(raw_output, "content"):
+                        raw_output = raw_output.content
+                    if isinstance(raw_output, list):
+                        text_parts = [
+                            p["text"] for p in raw_output
+                            if isinstance(p, dict) and p.get("type") == "text"
+                        ]
+                        raw_output = text_parts[0] if text_parts else ""
+                    try:
+                        tool_result = (
+                            json.loads(raw_output)
+                            if isinstance(raw_output, str)
+                            else raw_output
+                        )
+                    except (json.JSONDecodeError, TypeError):
+                        tool_result = None
+                    if isinstance(tool_result, dict):
+                        seen: dict[tuple[str, str], int] = {}
+                        sources = []
+                        for r in tool_result.get("results", []):
+                            score = r.get("reranker_score")
+                            if score is None:
+                                continue
+                            file = r.get("source_file", "")
+                            section = r.get("section_title", "")
+                            key = (file, section)
+                            if key in seen:
+                                # Keep the one with the higher score
+                                prev_idx = seen[key]
+                                if score > sources[prev_idx]["score"]:
+                                    sources[prev_idx] = {
+                                        "file": file,
+                                        "section": section,
+                                        "score": score,
+                                        "url": r.get("metadata", {}).get("source", ""),
+                                    }
+                                continue
+                            seen[key] = len(sources)
+                            sources.append({
+                                "file": file,
+                                "section": section,
+                                "score": score,
+                                "url": r.get("metadata", {}).get("source", ""),
+                            })
+                        if sources:
+                            sources_json = json.dumps(
+                                {_SOOFI_EVENT_KEY: _EVENT_RAG_SOURCES, "sources": sources},
+                                ensure_ascii=False,
+                            )
+                            await event_queue.enqueue_event(
+                                TaskStatusUpdateEvent(
+                                    task_id=context.task_id,
+                                    context_id=context.context_id,
+                                    status=TaskStatus(
+                                        state=TaskState.working,
+                                        message=new_agent_text_message(
+                                            sources_json,
+                                            context.context_id,
+                                            context.task_id,
+                                        ),
+                                    ),
+                                    final=False,
+                                )
+                            )
 
                 elif event["event"] == "on_chat_model_stream":
                     chunk = event["data"]["chunk"]

@@ -13,6 +13,7 @@ from langchain_core.messages import AIMessageChunk, ToolMessage
 from langgraph.graph.state import CompiledStateGraph
 
 from .constants import (
+    ADVISOR_KEY_RAG_SOURCES,
     AGENT_CARD_EVENT,
     AGENT_CARD_KEY,
     CONTROL_DOC_VIEWER_TOOL,
@@ -274,6 +275,11 @@ class SSEStream:
 
         data = event.get("data", {})
 
+        # RAG sources transparency panel (T-09-3)
+        rag_sources = data.get(ADVISOR_KEY_RAG_SOURCES)
+        if rag_sources is not None:
+            yield _sse({"type": "RAG_SOURCES", "sources": rag_sources})
+
         for tracker in self._trackers.values():
             # Status keys
             for status_key in tracker.status_keys:
@@ -312,6 +318,14 @@ class SSEStream:
         if tool_name == CONTROL_DOC_VIEWER_TOOL:
             raw = event.get("data", {}).get("output", "")
             content = raw.content if hasattr(raw, "content") else raw
+            # ToolMessage.content can be a list of content parts
+            if isinstance(content, list):
+                text_parts = [
+                    p["text"] for p in content
+                    if isinstance(p, dict) and p.get("type") == "text"
+                ]
+                content = text_parts[0] if text_parts else ""
+            logger.info("DOC_VIEWER raw content: %s (type=%s)", str(content)[:200], type(content).__name__)
             try:
                 data = json.loads(content) if isinstance(content, str) else {}
                 doc_cmd = data.get(DOC_VIEWER_KEY)
@@ -319,7 +333,7 @@ class SSEStream:
                     logger.info("Emitting DOC_VIEWER event: %s", doc_cmd)
                     yield _sse({"type": "DOC_VIEWER", **doc_cmd})
             except (json.JSONDecodeError, TypeError):
-                pass
+                logger.warning("Failed to parse DOC_VIEWER content: %s", str(content)[:200])
             return
 
         tracker = self._trackers.get(tool_name) if tool_name else None

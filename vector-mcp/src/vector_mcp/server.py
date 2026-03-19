@@ -2,6 +2,7 @@
 MCP Server for Soofi Knowledge Base Search
 """
 
+import json
 import logging
 import os
 from typing import Any
@@ -55,23 +56,28 @@ def get_embeddings():
 
 
 # -------------------------------------------------
-# Reranker (optional, Qwen3-Reranker via vLLM on H200)
+# Reranker
+#
+# RERANKER_MODE=dummy (default) — score derived from vector distance (1 - distance); no reordering
+# RERANKER_MODE=vllm            — real Qwen3-Reranker via vLLM (H200); requires RERANKER_URL + RERANKER_CANDIDATE_LIMIT
 # -------------------------------------------------
-RERANKER_ENABLED = os.getenv("RERANKER_ENABLED", "false").lower() == "true"
+RERANKER_MODE = os.getenv("RERANKER_MODE", "").lower()
 
-if RERANKER_ENABLED:
+if RERANKER_MODE == "vllm":
     RERANKER_URL = os.getenv("RERANKER_URL")
     if not RERANKER_URL:
-        raise RuntimeError("RERANKER_URL env var required when RERANKER_ENABLED=true")
+        raise RuntimeError("RERANKER_URL env var required when RERANKER_MODE=vllm")
     _candidate_limit = os.getenv("RERANKER_CANDIDATE_LIMIT")
     if not _candidate_limit:
-        raise RuntimeError("RERANKER_CANDIDATE_LIMIT env var required when RERANKER_ENABLED=true")
+        raise RuntimeError("RERANKER_CANDIDATE_LIMIT env var required when RERANKER_MODE=vllm")
     RERANKER_CANDIDATE_LIMIT = int(_candidate_limit)
-    logger.info(f"Reranker enabled: url={RERANKER_URL} candidate_limit={RERANKER_CANDIDATE_LIMIT}")
-else:
+    logger.info(f"Reranker: vllm mode, url={RERANKER_URL} candidate_limit={RERANKER_CANDIDATE_LIMIT}")
+elif RERANKER_MODE == "dummy":
     RERANKER_URL = ""
     RERANKER_CANDIDATE_LIMIT = 0
-    logger.info("Reranker disabled")
+    logger.info("Reranker: dummy mode (score = 1 - vector distance)")
+else:
+    raise RuntimeError(f"RERANKER_MODE must be 'dummy' or 'vllm', got: '{RERANKER_MODE}'")
 
 _reranker_client: httpx.Client | None = None
 
@@ -186,6 +192,12 @@ def search_documents(
     
         collection = client.collections.get(collection_name)
 
+        # Some models pass filters as a JSON string instead of a dict
+        if isinstance(filters, str):
+            try:
+                filters = json.loads(filters)
+            except (json.JSONDecodeError, TypeError):
+                filters = None
         filters_applied = filters or {}
         # Coerce list values to string — some models pass ["rag"] instead of "rag"
         filters_applied = {
@@ -206,7 +218,7 @@ def search_documents(
         query_vector = embeddings.embed_query(query)
 
         # Fetch more candidates when reranker is enabled
-        fetch_limit = RERANKER_CANDIDATE_LIMIT if RERANKER_ENABLED else limit
+        fetch_limit = RERANKER_CANDIDATE_LIMIT if RERANKER_MODE == "vllm" else limit
 
         search_kwargs = {
             "near_vector": query_vector,
@@ -222,19 +234,25 @@ def search_documents(
         for obj in response.objects:
             props = dict(obj.properties)
             text = props.pop("text", None)
+            source = props.get("source", "")
+            distance = (
+                float(obj.metadata.distance)
+                if obj.metadata and obj.metadata.distance is not None
+                else None
+            )
             results.append(
                 {
                     "text": text,
                     "metadata": props,
-                    "distance": float(obj.metadata.distance)
-                    if obj.metadata and obj.metadata.distance is not None
-                    else None,
+                    "distance": distance,
+                    "source_file": source.split("/")[-1].split("#")[0] if source else "",
+                    "section_title": props.get("section", ""),
                 }
             )
 
-        # Rerank if enabled
+        # Rerank if vllm mode, otherwise derive score from vector distance
         reranker_used = False
-        if RERANKER_ENABLED and results:
+        if RERANKER_MODE == "vllm" and results:
             texts = [r["text"] or "" for r in results]
             ranked = rerank(query, texts)
             if ranked is not None:
@@ -255,13 +273,19 @@ def search_documents(
                 results = results[:limit]
         else:
             results = results[:limit]
+            # Dummy mode: derive relevance score from cosine distance (score = 1 - distance)
+            for result in results:
+                if result["distance"] is not None:
+                    result["reranker_score"] = round(max(0.0, 1.0 - result["distance"]), 4)
 
+        scores_available = any(r.get("reranker_score") is not None for r in results)
         return {
             "results": results,
             "total": len(results),
             "query": query,
             "filters_applied": filters_applied,
             "reranker_used": reranker_used,
+            "scores_available": scores_available,
         }
 
     except Exception as e:

@@ -30,4 +30,8 @@ TRAINING_VIEW_EVENT = "training_view_event"
 # Must match the constants defined in advisor/src/a2a_handler.py.
 SOOFI_EVENT_KEY = "__soofi_event"
 SOOFI_EVENT_SEARCH_STATUS = "search_status"
+SOOFI_EVENT_RAG_SOURCES = "rag_sources"
 SOOFI_EVENT_JOB_STARTED = "job_started"
+
+# Key for RAG sources forwarded from advisor to SSE stream
+ADVISOR_KEY_RAG_SOURCES = "advisor_rag_sources"
