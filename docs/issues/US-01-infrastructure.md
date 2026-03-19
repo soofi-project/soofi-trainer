@@ -1,11 +1,12 @@
 # User story
 
 - tasks:
-  - #2
-  - #3
-  - #4
-  - #20 
-  - #42
+  - [T-01-1](T-01-1-docker-compose-foundation.md) #2
+  - [T-01-2](T-01-2-stack-management-scripts.md) #3
+  - [T-01-3](T-01-3-n8n-chatbot.md) #4
+  - [T-01-4](T-01-4-open-webui-healthcheck.md) #20
+  - [T-01-5](T-01-5-env-cleanup.md) #42
+  - [T-01-6](T-01-6-compose-restructure.md) #57
 
 
 # Story

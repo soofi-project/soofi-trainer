@@ -49,22 +49,39 @@ pytest tests/e2e/        # End-to-end tests
 
 ## Architecture
 
-### Services (docker-compose.yml)
+### Services
 
+The stack is split into domain-scoped sub-files under `compose/`, included by the root `docker-compose.yml`.
+
+**`compose/knowledge.yml`** — RAG knowledge pipeline
 | Service | Internal Port | External Port | Purpose |
 |---------|--------------|---------------|---------|
 | Weaviate | 8080 | 8070 | Vector database |
 | Vector MCP | 8000 | — | Semantic search MCP server (FastMCP + LangChain) |
+| MinIO | 9000 / 9001 | 9000 / 9001 | S3-compatible object storage for knowledge docs |
 | Knowledge Ingestion | — | — | One-shot loader for knowledge docs into Weaviate |
-| MinIO | 9000 / 9001 | configurable | S3-compatible object storage for training data |
 | Advisor | 8000 | — | LangGraph RAG advisor agent (A2A server) |
-| Interaction Agent | 8000 | — | LangGraph orchestrator agent (AG-UI SSE) |
-| Soofi UI | 80 | 8501 | Lit web component + nginx reverse proxy |
-| STT | 8000 | configurable | Speech-to-text service (OpenAI whisper-1) |
-| TTS | 8000 | configurable | Text-to-speech service (OpenAI tts-1) |
-| Training Gateway | 8000 | configurable | Training job management (Docker-based) |
+
+**`compose/training.yml`** — Training pipeline
+| Service | Internal Port | External Port | Purpose |
+|---------|--------------|---------------|---------|
+| Training Agent | 8000 | — | LangGraph training agent (A2A server) |
+| Training Gateway | 8000 | 8099 | Training job management (Docker-based) |
 | Training Container | — | — | Build-only image for LoRA/QLoRA training jobs |
-| N8N | 5678 | configurable | Workflow automation |
+
+**`compose/interaction.yml`** — User-facing voice UI
+| Service | Internal Port | External Port | Purpose |
+|---------|--------------|---------------|---------|
+| Interaction Agent | 8000 | — | LangGraph orchestrator agent (AG-UI SSE) |
+| Soofi UI | 80 | 3001 | Lit web component + nginx reverse proxy |
+| STT | 8000 | 8010 | Speech-to-text service (OpenAI whisper-1) |
+| TTS | 8000 | 8011 | Text-to-speech service (OpenAI tts-1) |
+
+**`compose/tools.yml`** — Dev & automation tooling
+| Service | Internal Port | External Port | Purpose |
+|---------|--------------|---------------|---------|
+| PostgreSQL | 5432 | — | N8N database |
+| N8N | 5678 | 5678 | Workflow automation |
 | Open WebUI | 8080 | 3000 | Alternative chat interface |
 | MCP Inspector | 6274 / 6277 | 6274 / 6277 | MCP debugging tool |
 

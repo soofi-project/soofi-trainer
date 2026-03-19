@@ -1,0 +1,104 @@
+services:
+  # ===========================================
+  # Interaction Agent - LangGraph + AG-UI SSE
+  # ===========================================
+  interaction-agent:
+    image: dfkisoofi/soofi-ui-interaction-agent:${SOOFI_UI_INTERACTIONAGENT_VERSION}
+    build: ./interaction-agent
+    container_name: interaction-agent
+    restart: unless-stopped
+    env_file:
+      - .env
+      - ${ENV_SECRETS_FILE}
+    environment:
+      - ADVISOR_A2A_URL=http://advisor:8000
+      - TRAINING_AGENT_A2A_URL=http://training-agent:8000
+      - AGENT_REGISTRY=interaction-agent=http://interaction-agent:8000,advisor=http://advisor:8000,training-agent=http://training-agent:8000,dataset-agent=http://dataset-agent:8000
+    networks:
+      - soofi-network
+    depends_on:
+      advisor:
+        condition: service_healthy
+      training-agent:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket; s=socket.create_connection(('localhost',8000),2); s.close()\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===========================================
+  # Soofi UI - A2UI Frontend
+  # ===========================================
+  soofi-ui:
+    image: dfkisoofi/soofi-ui:${SOOFI_UI_VERSION}
+    build:
+      context: ./soofi-ui
+      args:
+        # Build-time defaults (used by npm run dev and as fallback in the bundle).
+        # At runtime, docker-entrypoint.sh generates env.js from the environment
+        # variables below — no rebuild needed when changing these values.
+        VITE_VOICE_CONTROLS_VISIBLE: ${VITE_VOICE_CONTROLS_VISIBLE}
+        VITE_VOICE_ACTIVATION: ${VITE_VOICE_ACTIVATION}
+        VITE_TTS_VOICE_DE: ${VITE_TTS_VOICE_DE}
+        VITE_TTS_VOICE_EN: ${VITE_TTS_VOICE_EN}
+    container_name: soofi-ui
+    restart: unless-stopped
+    environment:
+      - VITE_VOICE_CONTROLS_VISIBLE=${VITE_VOICE_CONTROLS_VISIBLE}
+      - VITE_VOICE_ACTIVATION=${VITE_VOICE_ACTIVATION}
+      - VITE_TTS_VOICE_DE=${VITE_TTS_VOICE_DE}
+      - VITE_TTS_VOICE_EN=${VITE_TTS_VOICE_EN}
+    ports:
+      - "${SOOFI_UI_PORT}:80"
+    networks:
+      - soofi-network
+    depends_on:
+      interaction-agent:
+        condition: service_healthy
+      stt:
+        condition: service_healthy
+      tts:
+        condition: service_healthy
+
+  # ===========================================
+  # STT - Speech-to-Text Service
+  # ===========================================
+  stt:
+    image: dfkisoofi/soofi-stt:${STT_VERSION}
+    build: ./stt
+    container_name: stt
+    restart: unless-stopped
+    env_file:
+      - .env
+      - ${ENV_SECRETS_FILE}
+    ports:
+      - "${STT_PORT}:8000"
+    networks:
+      - soofi-network
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket; s=socket.create_connection(('localhost',8000),2); s.close()\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===========================================
+  # TTS - Text-to-Speech Service
+  # ===========================================
+  tts:
+    image: dfkisoofi/soofi-tts:${TTS_VERSION}
+    build: ./tts
+    container_name: tts
+    restart: unless-stopped
+    env_file:
+      - .env
+      - ${ENV_SECRETS_FILE}
+    ports:
+      - "${TTS_PORT}:8000"
+    networks:
+      - soofi-network
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket; s=socket.create_connection(('localhost',8000),2); s.close()\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
