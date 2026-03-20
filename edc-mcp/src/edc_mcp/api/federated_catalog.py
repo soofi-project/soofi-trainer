@@ -27,7 +27,9 @@ def get_graph() -> Dataset:
             _graph = Dataset(store="Oxigraph")
             logger.info("Initialized Oxigraph-backed Dataset (in-memory)")
         except Exception as e:
-            logger.warning(f"Failed to initialize Oxigraph store: {e}. Falling back to default store.")
+            logger.warning(
+                f"Failed to initialize Oxigraph store: {e}. Falling back to default store."
+            )
             _graph = Dataset()
     return _graph
 
@@ -48,11 +50,13 @@ def sanitize_jsonld_iris(obj: Any) -> Any:
     if isinstance(obj, dict):
         result = {}
         for key, value in obj.items():
-            if isinstance(key, str) and (key.startswith('http://') or key.startswith('https://')):
+            if isinstance(key, str) and (key.startswith("http://") or key.startswith("https://")):
                 if re.search(r'[\^$\[\]{}|\\<>"]', key):
-                    if '#' in key:
-                        base, fragment = key.rsplit('#', 1)
-                        fragment_encoded = re.sub(r'([\^$\[\]{}|\\])', lambda m: quote(m.group(1)), fragment)
+                    if "#" in key:
+                        base, fragment = key.rsplit("#", 1)
+                        fragment_encoded = re.sub(
+                            r"([\^$\[\]{}|\\])", lambda m: quote(m.group(1)), fragment
+                        )
                         key = f"{base}#{fragment_encoded}"
 
             result[key] = sanitize_jsonld_iris(value)
@@ -60,10 +64,14 @@ def sanitize_jsonld_iris(obj: Any) -> Any:
     elif isinstance(obj, list):
         return [sanitize_jsonld_iris(item) for item in obj]
     elif isinstance(obj, str):
-        if (obj.startswith('http://') or obj.startswith('https://')) and re.search(r'[\^$\[\]{}|\\<>"]', obj):
-            if '#' in obj:
-                base, fragment = obj.rsplit('#', 1)
-                fragment_encoded = re.sub(r'([\^$\[\]{}|\\])', lambda m: quote(m.group(1)), fragment)
+        if (obj.startswith("http://") or obj.startswith("https://")) and re.search(
+            r'[\^$\[\]{}|\\<>"]', obj
+        ):
+            if "#" in obj:
+                base, fragment = obj.rsplit("#", 1)
+                fragment_encoded = re.sub(
+                    r"([\^$\[\]{}|\\])", lambda m: quote(m.group(1)), fragment
+                )
                 return f"{base}#{fragment_encoded}"
         return obj
     else:
@@ -79,7 +87,7 @@ def load_catalog_to_graph(jsonld_data: dict) -> None:
     try:
         sanitized_data = sanitize_jsonld_iris(jsonld_data)
         base_uri = os.getenv("CATALOG_BASE_URI", "urn:edc:catalog/")
-        jsonld_bytes = json.dumps(sanitized_data).encode('utf-8')
+        jsonld_bytes = json.dumps(sanitized_data).encode("utf-8")
         federated_graph.parse(data=jsonld_bytes, format="json-ld", publicID=base_uri)
         logger.info(f"Loaded catalog into graph {FEDERATED_CATALOG_GRAPH}")
     except Exception as e:
@@ -121,13 +129,27 @@ def start_background_refresh():
     try:
         if _background_task is None or _background_task.done():
             _background_task = asyncio.create_task(periodic_catalog_refresh())
-            logger.info(f"Started background catalog refresh task (interval: {_catalog_query_interval}s)")
+            logger.info(
+                f"Started background catalog refresh task (interval: {_catalog_query_interval}s)"
+            )
     except RuntimeError:
         logger.warning("Cannot start background refresh: no event loop running")
 
 
+_SPARQL_WRITE_PATTERN = re.compile(r"\b(INSERT|DELETE|DROP|CREATE|CLEAR|LOAD)\b", re.IGNORECASE)
+
+
 async def sparql_query(query: str, format: str = "json") -> str:
-    """Execute a SPARQL query against the federated catalog graph."""
+    """Execute a SPARQL query against the federated catalog graph.
+
+    Only read-only queries (SELECT, ASK, DESCRIBE, CONSTRUCT) are allowed.
+    """
+    if _SPARQL_WRITE_PATTERN.search(query):
+        raise ValueError(
+            "Only read-only SPARQL queries are allowed (SELECT, ASK, DESCRIBE, CONSTRUCT). "
+            "Write operations (INSERT, DELETE, DROP, CREATE, CLEAR, LOAD) are rejected."
+        )
+
     graph = get_graph()
     federated_graph = graph.get_context(FEDERATED_CATALOG_GRAPH)
 
@@ -156,7 +178,7 @@ def get_graph_stats() -> dict:
     return {
         "total_triples": len(graph),
         "federated_catalog_triples": len(federated_graph),
-        "named_graphs": len(list(graph.contexts()))
+        "named_graphs": len(list(graph.contexts())),
     }
 
 

@@ -1,3 +1,5 @@
+import json
+
 from edc_mcp.client import management_api_client
 from typing import List, Optional
 import httpx
@@ -6,12 +8,10 @@ import httpx
 async def list_transfer_processes() -> List[dict]:
     """Return all transfer processes according to a query from the EDC Management API"""
     query_spec = {
-        "@context": {
-            "@vocab": "https://w3id.org/edc/v0.0.1/ns/"
-        },
+        "@context": {"@vocab": "https://w3id.org/edc/v0.0.1/ns/"},
         "@type": "QuerySpec",
         "offset": 0,
-        "limit": 1000
+        "limit": 1000,
     }
 
     response = await management_api_client.post("/v3/transferprocesses/request", json=query_spec)
@@ -31,14 +31,12 @@ async def get_transfer_process(transfer_process_id: str) -> dict:
 async def create_transfer_process_http_pull(counter_party_address: str, contract_id: str) -> dict:
     """Create a new transfer process using the HTTP Pull transfer type according to the EDC Management API"""
     transfer_request = {
-        "@context": {
-            "@vocab": "https://w3id.org/edc/v0.0.1/ns/"
-        },
+        "@context": {"@vocab": "https://w3id.org/edc/v0.0.1/ns/"},
         "@type": "TransferRequestDto",
         "counterPartyAddress": counter_party_address,
         "contractId": contract_id,
         "protocol": "dataspace-protocol-http",
-        "transferType": "HttpData-PULL"
+        "transferType": "HttpData-PULL",
     }
 
     response = await management_api_client.post("/v3/transferprocesses", json=transfer_request)
@@ -54,19 +52,18 @@ async def get_data_address_for_http_pull_transfer_process(transfer_process_id: s
 
     return response.json()
 
+
 async def create_transfer_process_http_push(
-    counter_party_address: str, 
-    contract_id: str, 
+    counter_party_address: str,
+    contract_id: str,
     base_url: str,
     path: Optional[str] = None,
     method: Optional[str] = None,
-    content_type: Optional[str] = None
+    content_type: Optional[str] = None,
 ) -> dict:
     """Create a new transfer process using the HTTP Push transfer type according to the EDC Management API"""
     transfer_request = {
-        "@context": {
-            "@vocab": "https://w3id.org/edc/v0.0.1/ns/"
-        },
+        "@context": {"@vocab": "https://w3id.org/edc/v0.0.1/ns/"},
         "@type": "TransferRequestDto",
         "counterPartyAddress": counter_party_address,
         "contractId": contract_id,
@@ -92,7 +89,7 @@ async def perform_http_pull_request(
     path: Optional[str] = None,
     method: Optional[str] = "GET",
     content_type: Optional[str] = None,
-    body: Optional[str] = None
+    body: Optional[str] = None,
 ) -> dict:
     """Perform HTTP pull request using the data address from a transfer process.
 
@@ -133,15 +130,12 @@ async def perform_http_pull_request(
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:
             response = await client.request(
-                http_method,
-                url,
-                headers=headers,
-                content=body if body else None
+                http_method, url, headers=headers, content=body if body else None
             )
 
             try:
                 response_data = response.json()
-            except:
+            except (ValueError, json.JSONDecodeError):
                 response_data = response.text
 
             return {
@@ -149,7 +143,7 @@ async def perform_http_pull_request(
                 "headers": dict(response.headers),
                 "data": response_data,
                 "url": url,
-                "method": method
+                "method": method,
             }
         except httpx.RequestError as e:
             raise Exception(f"HTTP request failed: {str(e)}")

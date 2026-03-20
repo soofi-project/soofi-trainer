@@ -152,14 +152,15 @@ services:
     container_name: edc-consumer-mcp
     build:
       context: ./edc-mcp
-    ports: 
+    ports:
       - "${EDC_CONSUMER_MCP_PORT}:8081"
     environment:
       - PYTHONUNBUFFERED=1
       - EDC_MANAGEMENT_URL=http://edc-consumer:19193/management/
       - EDC_CATALOG_URL=http://edc-consumer:19199/catalog
-    volumes:
-      - ./edc-mcp/app:/app/app
+    depends_on:
+      edc-consumer:
+        condition: service_healthy
     networks:
       - soofi-edc-network
       - soofi-network
@@ -175,7 +176,7 @@ services:
       - source: postgres_init_sql
         target: /docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U user"]
       interval: 10s
       timeout: 10s
       retries: 5

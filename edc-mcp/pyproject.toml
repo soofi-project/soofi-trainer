@@ -9,9 +9,6 @@ description = "MCP server for Eclipse Dataspace Components (EDC)"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "Apache-2.0"}
-authors = [
-    {name = "Your Name", email = "your.email@example.com"}
-]
 keywords = ["edc", "mcp", "dataspace", "eclipse", "connector"]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -42,11 +39,6 @@ dev = [
     "ruff>=0.1.0",
     "mypy>=1.0.0",
 ]
-
-[project.urls]
-Homepage = "https://github.com/yourusername/edc-mcp"
-Repository = "https://github.com/yourusername/edc-mcp"
-Issues = "https://github.com/yourusername/edc-mcp/issues"
 
 [project.scripts]
 edc-mcp = "edc_mcp.main:main"
@@ -87,7 +79,7 @@ ignore = [
 python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
-disallow_untyped_defs = false
+disallow_untyped_defs = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

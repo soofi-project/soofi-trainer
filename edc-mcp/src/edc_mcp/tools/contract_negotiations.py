@@ -1,13 +1,17 @@
+import json
+import logging
+
 from fastmcp import FastMCP
 from typing import List
-import json
 from edc_mcp.api.contract_negotiations import (
     list_contract_negotiations as api_list_contract_negotiations,
     get_contract_negotiation as api_get_contract_negotiation,
     get_contract_negotiation_by_agreement as api_get_contract_agreement_by_negotiation,
-    create_contract_negotiation as api_create_contract_negotiation
+    create_contract_negotiation as api_create_contract_negotiation,
 )
 from edc_mcp.api.dataset import get_policy_for_dataset
+
+logger = logging.getLogger(__name__)
 
 
 def register_contract_negotiation_tools(mcp: FastMCP):
@@ -30,10 +34,7 @@ def register_contract_negotiation_tools(mcp: FastMCP):
 
     @mcp.tool()
     async def create_contract_negotiation(
-        counter_party_address: str,
-        dataset_id: str,
-        policy_id: str,
-        participant_id: str
+        counter_party_address: str, dataset_id: str, policy_id: str, participant_id: str
     ) -> dict:
         """Create a new contract negotiation according to the EDC Management API.
 
@@ -48,10 +49,10 @@ def register_contract_negotiation_tools(mcp: FastMCP):
         policy = await get_policy_for_dataset(counter_party_address, dataset_id, policy_id)
 
         # Add required fields to policy
-        policy['assigner'] = participant_id
-        policy['target'] = dataset_id
-        policy['@context'] = "http://www.w3.org/ns/odrl.jsonld"
+        policy["assigner"] = participant_id
+        policy["target"] = dataset_id
+        policy["@context"] = "http://www.w3.org/ns/odrl.jsonld"
 
-        print ("Creating contract negotiation with policy:", json.dumps(policy, indent=2))
+        logger.debug("Creating contract negotiation with policy: %s", json.dumps(policy, indent=2))
 
         return await api_create_contract_negotiation(counter_party_address, policy)
