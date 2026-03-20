@@ -4,6 +4,7 @@ MCP Server for Soofi Knowledge Base Search
 
 import logging
 import os
+import time
 from typing import Any
 
 import httpx
@@ -59,28 +60,36 @@ def get_embeddings():
 # -------------------------------------------------
 RERANKER_ENABLED = os.getenv("RERANKER_ENABLED", "false").lower() == "true"
 
-if RERANKER_ENABLED:
-    RERANKER_URL = os.getenv("RERANKER_URL")
-    if not RERANKER_URL:
-        raise RuntimeError("RERANKER_URL env var required when RERANKER_ENABLED=true")
-    _candidate_limit = os.getenv("RERANKER_CANDIDATE_LIMIT")
-    if not _candidate_limit:
-        raise RuntimeError("RERANKER_CANDIDATE_LIMIT env var required when RERANKER_ENABLED=true")
-    RERANKER_CANDIDATE_LIMIT = int(_candidate_limit)
-    logger.info(f"Reranker enabled: url={RERANKER_URL} candidate_limit={RERANKER_CANDIDATE_LIMIT}")
-else:
-    RERANKER_URL = ""
-    RERANKER_CANDIDATE_LIMIT = 0
-    logger.info("Reranker disabled")
-
 _reranker_client: httpx.Client | None = None
+_reranker_candidate_limit: int | None = None
 
 
 def get_reranker_client() -> httpx.Client:
-    global _reranker_client
+    """Lazy-init reranker client. Validates config on first call."""
+    global _reranker_client, _reranker_candidate_limit
     if _reranker_client is None:
-        _reranker_client = httpx.Client(base_url=RERANKER_URL, timeout=10.0)
+        url = os.getenv("RERANKER_URL")
+        if not url:
+            raise RuntimeError("RERANKER_URL env var required when RERANKER_ENABLED=true")
+        candidate_limit = os.getenv("RERANKER_CANDIDATE_LIMIT")
+        if not candidate_limit:
+            raise RuntimeError(
+                "RERANKER_CANDIDATE_LIMIT env var required when RERANKER_ENABLED=true"
+            )
+        _reranker_candidate_limit = int(candidate_limit)
+        _reranker_client = httpx.Client(base_url=url, timeout=5.0)
+        logger.info(
+            f"Reranker enabled: url={url} candidate_limit={_reranker_candidate_limit}"
+        )
     return _reranker_client
+
+
+def get_reranker_candidate_limit() -> int:
+    """Return candidate limit, initializing reranker client if needed."""
+    if _reranker_candidate_limit is None:
+        get_reranker_client()
+    assert _reranker_candidate_limit is not None
+    return _reranker_candidate_limit
 
 
 def rerank(query: str, texts: list[str]) -> list[dict[str, Any]] | None:
@@ -89,7 +98,6 @@ def rerank(query: str, texts: list[str]) -> list[dict[str, Any]] | None:
         return []
     logger.info(f"Reranking {len(texts)} candidates for query='{query[:80]}'")
     try:
-        import time
         t0 = time.perf_counter()
         resp = get_reranker_client().post(
             "/rerank",
@@ -106,6 +114,9 @@ def rerank(query: str, texts: list[str]) -> list[dict[str, Any]] | None:
             {"index": r["index"], "score": r["relevance_score"]}
             for r in results  # vLLM returns pre-sorted by relevance descending
         ]
+        if not ranked:
+            logger.warning("Reranker returned empty results")
+            return []
         logger.info(
             f"Reranking done in {elapsed_ms:.0f}ms: top score={ranked[0]['score']:.4f}, "
             f"bottom score={ranked[-1]['score']:.4f}"
@@ -206,7 +217,7 @@ def search_documents(
         query_vector = embeddings.embed_query(query)
 
         # Fetch more candidates when reranker is enabled
-        fetch_limit = RERANKER_CANDIDATE_LIMIT if RERANKER_ENABLED else limit
+        fetch_limit = get_reranker_candidate_limit() if RERANKER_ENABLED else limit
 
         search_kwargs = {
             "near_vector": query_vector,
@@ -240,6 +251,12 @@ def search_documents(
             if ranked is not None:
                 reranked = []
                 for i, item in enumerate(ranked[:limit]):
+                    if item["index"] >= len(results):
+                        logger.warning(
+                            f"Reranker returned out-of-bounds index {item['index']} "
+                            f"(results size={len(results)}), skipping"
+                        )
+                        continue
                     result = results[item["index"]]
                     result["reranker_score"] = round(float(item["score"]), 4)
                     reranked.append(result)

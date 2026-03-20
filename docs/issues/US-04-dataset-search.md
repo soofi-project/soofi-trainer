@@ -1,9 +1,9 @@
 # User story
 
 - tasks:
-  - #14
-  - #15
-  - #16
+  - [T-04-1](T-04-1-huggingface-mcp.md) #14
+  - [T-04-2](T-04-2-eclipse-dataspace-mcp.md) #15
+  - [T-04-3](T-04-3-agent-integration.md) #16
 
 # Story
 

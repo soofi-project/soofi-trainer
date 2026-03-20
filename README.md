@@ -6,8 +6,10 @@ An agentic system that guides users through the LLM specialization process — f
 
 | Service | URL | Description |
 |---------|-----|-------------|
+| Landing Page | http://localhost:80 | Reveal.js start page with service links |
 | Soofi UI | http://localhost:3001 | A2UI chat frontend (Lit Web Components) |
 | Open WebUI | http://localhost:3000 | Chat interface |
+| Portainer | http://localhost:9090 | Docker management UI |
 | Interaction Agent | docker-internal (interaction-agent:8000) | LangGraph ReAct agent, AG-UI SSE, A2A orchestrator |
 | Advisor | docker-internal (advisor:8000) | LangGraph LLM specialization advisor (A2A) |
 | Training Agent | docker-internal (training-agent:8000) | LangGraph training job manager (A2A) |
@@ -16,7 +18,7 @@ An agentic system that guides users through the LLM specialization process — f
 | Training Gateway | docker-internal (training-gateway:8000) | Training job management (MCP) |
 | Vector MCP | docker-internal (vector-mcp:8000) | Knowledge base search (MCP) |
 | MCP Inspector | http://localhost:6274 | MCP debugging tool |
-| Weaviate | http://localhost:8070 | Vector database |
+| Weaviate | docker-internal (weaviate:8080) | Vector database |
 | N8N | http://localhost:5678 | Workflow Automation Platform |
 | MinIO | http://localhost:9000 | S3-compatible object storage |
 | MinIO Console | http://localhost:9001 | MinIO admin UI |
@@ -47,6 +49,7 @@ EOF
 
 ### 3. Open the UI
 
+- **Landing Page**: http://localhost:80
 - **Soofi UI (A2UI)**: http://localhost:3001
 - **Chat (Open WebUI)**: http://localhost:3000
 - **MCP Inspector**: http://localhost:6274/?transport=streamable-http&serverUrl=http://vector-mcp:8000/mcp/&MCP_PROXY_AUTH_TOKEN=dev-stack-token-12345
@@ -102,6 +105,9 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 | `OPENWEBUI_VERSION` | `v0.7.2` | Open WebUI Image version|
 | `OPENWEBUI_PORT` | `3000` | Open WebUI port |
 | `POSTGRES_VERSION` | `18-alpine` | PostgreSQL Image version |
+| `LANDING_PAGE_PORT` | `80` | Landing page external port |
+| `LANDING_PAGE_HOSTNAME` | `localhost` | Hostname used in slide links |
+| `LANDING_PAGE_WATCH_SLIDES` | `true` | Poll slides templates for changes (dev) |
 | `N8N_VERSION` | `2.8.3` | N8N Image version |
 | `N8N_HOST` | `localhost` | Host name n8n runs on |
 | `N8N_PROTOCOL` | `http` | The protocol used to reach n8n |
@@ -223,15 +229,22 @@ soofi-trainer/
 ├── training-pipeline/         # Training job orchestration
 │   ├── training-container/    # Simulated training workload
 │   └── training-gateway/      # MCP server for training job management
-├── n8n/
-│   ├── initdb/
-│   ├── workflows/
-│   ├── import_workflows.sh
-│   └── init_script.sh
-├── openwebui/
-│   ├── functions/
-│   └── import_functions.sh
-├── docker-compose.yml      # Service orchestration
+├── landingpage/               # Reveal.js landing page (Docker image)
+│   ├── Dockerfile
+│   └── docker-entrypoint.sh   # envsubst templating + slide watcher
+├── compose/                   # Domain-scoped compose sub-files
+│   ├── admin.yml              # Portainer, Landing Page
+│   ├── knowledge.yml          # Weaviate, Vector MCP, MinIO, Ingestion
+│   ├── training.yml           # Training Agent, Gateway, Container
+│   ├── interaction.yml        # Interaction Agent, Soofi UI, STT, TTS
+│   ├── tools.yml              # Open WebUI, N8N, MCP Inspector, Weaviate UI
+│   └── admin/
+│       └── landingpage/
+│           └── content/
+│               ├── index.html
+│               ├── media/     # Logo etc.
+│               └── slides/    # slides.md (envsubst template)
+├── docker-compose.yml      # Service orchestration (includes compose/)
 ├── up.sh                   # Start stack
 ├── down.sh                 # Stop stack
 ├── .env                    # Configuration (no secrets)
@@ -260,10 +273,10 @@ docker compose up knowledge-ingestion
 ## N8N
 
 ### Import N8N workflows
-N8N starts without workflows. Execute the following to load all workflows from `n8n/workflows`
+N8N starts without workflows. Execute the following to load all workflows from `compose/tools/n8n/workflows`
 
 ```bash
-./n8n/import_workflows.sh
+./compose/tools/n8n/import_workflows.sh
 ```
 
 ### Set up credentials
@@ -282,10 +295,10 @@ docker exec -t postgres pg_dump -U n8n n8n > n8n-backup-$(date +%Y%m%d-%H%M).sql
 ## OpenWebUI
 
 ### Load OpenWebUI functions
-OpenWebUI starts without functions (e.g. to connect to N8N). Execute the following to load all functions from `openwebui/functions`
+OpenWebUI starts without functions (e.g. to connect to N8N). Execute the following to load all functions from `compose/tools/openwebui/functions`
 
 ```bash
-./openwebui/import_functions.sh
+./compose/tools/openwebui/import_functions.sh
 ```
 
 ## License
