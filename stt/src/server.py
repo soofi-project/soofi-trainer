@@ -10,6 +10,10 @@ STT_PROVIDER = os.getenv("STT_PROVIDER")
 if STT_PROVIDER != "openai":
     raise RuntimeError(f"STT_PROVIDER must be 'openai', got '{STT_PROVIDER}'")
 
+STT_MODEL = os.getenv("STT_MODEL")
+if not STT_MODEL:
+    raise RuntimeError("STT_MODEL is not set")
+
 STT_LANGUAGE = os.getenv("STT_LANGUAGE")
 if not STT_LANGUAGE:
     raise RuntimeError("STT_LANGUAGE is not set")
@@ -86,7 +90,7 @@ async def transcribe(
     filename = file.filename or "audio.webm"
     try:
         transcription = await _client.audio.transcriptions.create(
-            model="whisper-1",
+            model=STT_MODEL,
             file=(filename, audio_bytes, file.content_type or "audio/webm"),
             language=lang,
             prompt=prompt,

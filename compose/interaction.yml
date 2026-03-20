@@ -40,8 +40,15 @@ services:
         # variables below — no rebuild needed when changing these values.
         VITE_VOICE_CONTROLS_VISIBLE: ${VITE_VOICE_CONTROLS_VISIBLE}
         VITE_VOICE_ACTIVATION: ${VITE_VOICE_ACTIVATION}
+        VITE_TTS_VOICE_DE: ${VITE_TTS_VOICE_DE}
+        VITE_TTS_VOICE_EN: ${VITE_TTS_VOICE_EN}
     container_name: soofi-ui
     restart: unless-stopped
+    environment:
+      - VITE_VOICE_CONTROLS_VISIBLE=${VITE_VOICE_CONTROLS_VISIBLE}
+      - VITE_VOICE_ACTIVATION=${VITE_VOICE_ACTIVATION}
+      - VITE_TTS_VOICE_DE=${VITE_TTS_VOICE_DE}
+      - VITE_TTS_VOICE_EN=${VITE_TTS_VOICE_EN}
     ports:
       - "${SOOFI_UI_PORT}:80"
     networks:
