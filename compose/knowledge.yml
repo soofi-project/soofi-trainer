@@ -129,6 +129,54 @@ services:
       timeout: 5s
       retries: 5
 
+  # ===========================================
+  # HuggingFace MCP Server - Public Dataset Search
+  # ===========================================
+  huggingface-mcp:
+    image: dfkisoofi/huggingface-mcp:${HUGGINGFACE_MCP_VERSION}
+    build: ./huggingface-mcp
+    container_name: huggingface-mcp
+    restart: unless-stopped
+    env_file:
+      - .env
+      - ${ENV_SECRETS_FILE}
+    environment:
+      - MCP_SERVER_PORT=8000
+    networks:
+      - soofi-network
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket; s=socket.create_connection(('localhost',8000),2); s.close()\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===========================================
+  # Dataset Agent - Public Dataset Discovery (A2A)
+  # ===========================================
+  dataset-agent:
+    image: dfkisoofi/dataset-agent:${DATASETAGENT_VERSION}
+    build: ./dataset-agent
+    container_name: dataset-agent
+    restart: unless-stopped
+    env_file:
+      - .env
+      - ${ENV_SECRETS_FILE}
+    environment:
+      - EDC_MCP_URL=http://edc-consumer-mcp:8081/mcp
+      - HUGGINGFACE_MCP_URL=http://huggingface-mcp:8000/mcp
+    networks:
+      - soofi-network
+    depends_on:
+      huggingface-mcp:
+        condition: service_healthy
+      edc-consumer-mcp:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket; s=socket.create_connection(('localhost',8000),2); s.close()\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   weaviate_data:
   minio_data:

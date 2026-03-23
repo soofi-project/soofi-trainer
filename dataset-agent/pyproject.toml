@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=75.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "soofi-dataset-agent"
+version = "0.1.0"
+description = "Soofi Dataset Agent — LangGraph agent for searching public datasets"
+requires-python = ">=3.11"
+dependencies = [
+    "langgraph>=1.0.9",
+    "langchain-openai>=1.1.10",
+    "langchain-mcp-adapters>=0.2.1",
+    "fastapi>=0.129.0",
+    "uvicorn[standard]>=0.41.0",
+    "a2a-sdk>=0.3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-cov>=7.0.0",
+    "black>=26.1.0",
+    "ruff>=0.15.0",
+    "mypy>=1.19.1",
+]
+
+[project.urls]
+Homepage = "https://mrk40.dfki.de/soofi/soofi-trainer"
+Repository = "https://mrk40.dfki.de/soofi/soofi-trainer"
+
+[tool.black]
+line-length = 100
+target-version = ['py311']
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true

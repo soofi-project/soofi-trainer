@@ -10,6 +10,10 @@ TRAINING_AGENT_KEY_CHUNK = "training_agent_chunk"
 TRAINING_AGENT_KEY_STATUS = "training_agent_status"
 TRAINING_AGENT_KEY_JOB_STARTED = "training_agent_job_started"
 
+# Keys for dataset-agent stream events
+DATASET_AGENT_KEY_CHUNK = "dataset_agent_chunk"
+DATASET_AGENT_KEY_STATUS = "dataset_agent_status"
+
 # Keys for doc viewer control events
 DOC_VIEWER_KEY = "doc_viewer"
 CONTROL_DOC_VIEWER_TOOL = "control_doc_viewer"
@@ -17,6 +21,7 @@ CONTROL_DOC_VIEWER_TOOL = "control_doc_viewer"
 # Custom event names for adispatch_custom_event (must match graph.py → sse_stream.py)
 ADVISOR_EVENT = "advisor_event"
 TRAINING_EVENT = "training_event"
+DATASET_EVENT = "dataset_event"
 
 # Keys for agent card viewer events
 AGENT_CARD_KEY = "agent_card"
