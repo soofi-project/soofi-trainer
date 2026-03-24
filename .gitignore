@@ -40,3 +40,4 @@ Thumbs.db
 training-pipeline/training-gateway/training.db
 training-pipeline/training-gateway/training.db-shm
 training-pipeline/training-gateway/training.db-wal
+#compose/admin/caddy/caddy-root.key

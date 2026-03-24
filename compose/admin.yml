@@ -1,4 +1,33 @@
-services:      
+services:
+  # ===========================================
+  # Caddy - HTTPS Reverse Proxy
+  # Terminates TLS for landingpage and soofi-ui so mobile browsers
+  # grant getUserMedia (mic access). Uses self-signed cert (tls internal)
+  # — accept the browser warning once per device.
+  # ===========================================
+  caddy:
+    image: caddy:2-alpine
+    container_name: soofi-caddy
+    restart: unless-stopped
+    environment:
+      - LANDING_PAGE_HOSTNAME=${LANDING_PAGE_HOSTNAME}
+      - LANDING_PAGE_HTTPS_PORT=${LANDING_PAGE_HTTPS_PORT}
+      - CADDY_HTTPS_PORT=${SOOFI_UI_HTTPS_PORT}
+    ports:
+      - "${LANDING_PAGE_HTTPS_PORT}:${LANDING_PAGE_HTTPS_PORT}"
+      - "${SOOFI_UI_HTTPS_PORT}:${SOOFI_UI_HTTPS_PORT}"
+    volumes:
+      - ./compose/admin/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+      - ./compose/admin/caddy/caddy-root.crt:/data/caddy/pki/authorities/local/root.crt:ro
+      - ./compose/admin/caddy/caddy-root.key:/data/caddy/pki/authorities/local/root.key:ro
+    networks:
+      - soofi-network
+    depends_on:
+      - landingpage
+      - soofi-ui
+
   # ===========================================
   # Portainer - Docker Management UI
   # ===========================================
@@ -27,7 +56,14 @@ services:
     volumes:
       - ./compose/admin/landingpage/content/index.html:/usr/share/nginx/html/index.html
       - ./compose/admin/landingpage/content/favicon.ico:/usr/share/nginx/html/favicon.ico
+      - ./compose/admin/landingpage/content/manifest.json:/usr/share/nginx/html/manifest.json:ro
+      - ./compose/admin/landingpage/content/icons/Soofi-Dark-192.png:/usr/share/nginx/html/icons/icon-192.png:ro
+      - ./compose/admin/landingpage/content/icons/Soofi-Dark-512.png:/usr/share/nginx/html/icons/icon-512.png:ro
       - ./compose/admin/landingpage/content/media:/usr/share/nginx/html/media
       - ./compose/admin/landingpage/content/slides:/slides-templates:ro
     networks:
       - soofi-network
+
+volumes:
+  caddy_data:
+  caddy_config:

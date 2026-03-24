@@ -7,7 +7,7 @@ Sovereign Open Source Foundational Models
 
 ## Tools and more
 
-- [Soofi UI](http://${LANDING_PAGE_HOSTNAME}:${SOOFI_UI_PORT})
+- [Soofi UI](https://${LANDING_PAGE_HOSTNAME}:${SOOFI_UI_HTTPS_PORT})
 - [Portainer](http://${LANDING_PAGE_HOSTNAME}:${PORTAINER_PORT})
 - [Open-WebUI](http://${LANDING_PAGE_HOSTNAME}:${OPENWEBUI_PORT})
 - [n8n](http://${LANDING_PAGE_HOSTNAME}:${N8N_EXTERNAL_PORT}) (${N8N_BASIC_AUTH_USER} | ${N8N_BASIC_AUTH_PASSWORD})
@@ -21,8 +21,8 @@ Sovereign Open Source Foundational Models
 ---
 
 <iframe
-  src="http://${LANDING_PAGE_HOSTNAME}:${SOOFI_UI_PORT}"
-  style="width:95vw; height:95vh; border:none;"
+  src="https://${LANDING_PAGE_HOSTNAME}:${SOOFI_UI_HTTPS_PORT}"
+  style="width:100%; height:95vh; border:none;"
   allow="microphone">
 </iframe>
 
