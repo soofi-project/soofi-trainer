@@ -1,27 +1,15 @@
-# Caddy-Konfiguration für registrierte Domain mit Let's Encrypt (Cloudflare DNS-Challenge)
-#
-# Voraussetzungen:
-#   - Registrierte Domain, die in Cloudflare verwaltet wird
-#   - CLOUDFLARE_API_TOKEN mit Berechtigung Zone:DNS:Edit
-#   - SOOFI_DOMAIN gesetzt (z.B. soofi.example.com)
-#
-# Profile: domain  →  ./up.sh --profile domain
-# Für selbstsigniertes Zertifikat (LAN-Betrieb) → Caddyfile + profile=local verwenden
-
-{
-	auto_https off
-}
-
-{$SOOFI_DOMAIN} {
-	tls {
-		dns cloudflare {$CLOUDFLARE_API_TOKEN}
-	}
+{env.LANDING_PAGE_HOSTNAME} {
 	reverse_proxy landingpage:80
+	tls {
+		dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+		resolvers 1.1.1.1
+	}
 }
 
-{$SOOFI_DOMAIN}:3443 {
-	tls {
-		dns cloudflare {$CLOUDFLARE_API_TOKEN}
-	}
+{env.LANDING_PAGE_HOSTNAME}:3443 {
 	reverse_proxy soofi-ui:80
+	tls {
+		dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+		resolvers 1.1.1.1
+	}
 }

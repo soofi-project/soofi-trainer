@@ -5,7 +5,7 @@ services:
   # grant getUserMedia (mic access). Uses self-signed cert (tls internal)
   # — accept the browser warning once per device.
   # ===========================================
-  # Profile: local (Standard — selbstsigniertes Zertifikat für LAN-Betrieb / iPad-Demo)
+  # Profile: local (Default — self-signed certificate for testing purposes): ./up.sh --profile local
   caddy:
     profiles: ["local"]
     image: caddy:2-alpine
@@ -32,26 +32,25 @@ services:
 
   # ===========================================
   # Caddy (Cloudflare) - Let's Encrypt via DNS-Challenge
-  # Für registrierte Domain mit öffentlich vertrauenswürdigem Zertifikat.
-  # Kein manuelles Trust-Profil auf dem iPad nötig.
-  # Voraussetzung: SOOFI_DOMAIN + CLOUDFLARE_API_TOKEN in ~/.env.secrets
+  # Uses a registered domain with public trusted certificate.
+  # Requires: LANDING_PAGE_HOSTNAME + CLOUDFLARE_API_TOKEN in ~/.env.secrets
   # ===========================================
   # Profile: domain  →  ./up.sh --profile domain
   caddy-cloudflare:
     profiles: ["domain"]
-    image: ghcr.io/caddybuilds/caddy-cloudflare:v2.11.2
+    image: caddybuilds/caddy-cloudflare:2.11.2
     container_name: soofi-caddy-cloudflare
     restart: unless-stopped
-    environment:
-      - SOOFI_DOMAIN=${SOOFI_DOMAIN}
-      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
+    env_file:
+      - .env
+      - ${ENV_SECRETS_FILE}
     ports:
-      - "443:443"
-      - "3443:3443"
+      - "${LANDING_PAGE_HTTPS_PORT}:${LANDING_PAGE_HTTPS_PORT}"
+      - "${SOOFI_UI_HTTPS_PORT}:${SOOFI_UI_HTTPS_PORT}"
     volumes:
       - ./compose/admin/caddy/Caddyfile.cloudflare:/etc/caddy/Caddyfile:ro
       - caddy_cloudflare_data:/data
-      - caddy_cloudflare_config:/config
+      - caddy_cloudflare_config:/config 
     networks:
       - soofi-network
     depends_on:
