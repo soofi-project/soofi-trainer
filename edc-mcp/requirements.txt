@@ -1,0 +1,7 @@
+fastmcp
+httpx
+watchfiles
+PyLD
+rdflib
+oxrdflib
+pyoxigraph

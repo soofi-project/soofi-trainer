@@ -1,0 +1,28 @@
+basyx:
+  backend: InMemory
+  cors:
+    allowed-origins: "*"
+    allowed-methods: "GET,POST,PATCH,DELETE,PUT,OPTIONS,HEAD"
+  aasrepository:
+    feature:
+      aasxupload:
+        enabled: true
+      mqtt:
+        enabled: false
+  submodelrepository:
+    feature:
+      mqtt:
+        enabled: false
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: "500MB"
+      max-request-size: "500MB"
+
+mqtt:
+  clientId: "AAS-Env-8080"
+  hostname: emqx
+  port: 1883
+
+debug: true
