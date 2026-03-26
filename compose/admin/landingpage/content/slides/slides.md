@@ -5,7 +5,7 @@ Sovereign Open Source Foundational Models
 
 --
 
-## Tools and more
+## Tools & more
 
 - [Soofi UI](http://${LANDING_PAGE_HOSTNAME}:${SOOFI_UI_PORT})
 - [Portainer](http://${LANDING_PAGE_HOSTNAME}:${PORTAINER_PORT})
@@ -18,13 +18,19 @@ Sovereign Open Source Foundational Models
   - [EDC](http://${LANDING_PAGE_HOSTNAME}:${MCPINSPECTOR_CLIENT_PORT}/?transport=streamable-http&serverUrl=http://training-gateway:8000/mcp/&MCP_PROXY_AUTH_TOKEN=dev-stack-token-12345)
   - [Huggingface](http://${LANDING_PAGE_HOSTNAME}:${MCPINSPECTOR_CLIENT_PORT}/?transport=streamable-http&serverUrl=http://training-gateway:8000/mcp/&MCP_PROXY_AUTH_TOKEN=dev-stack-token-12345)
 
+--
+
+## AAS & EDC
+
+- [EDC Portal - Provider](http://${LANDING_PAGE_HOSTNAME}:${EDC_PORTAL_PROVIDER_PORT})
+- [EDC Portal - Consumer](http://${LANDING_PAGE_HOSTNAME}:${EDC_PORTAL_CONSUMER_PORT})
+- [AAS Web UI](http://${LANDING_PAGE_HOSTNAME}:${AAS_WEBUI_PORT})
+- [Mnestix](http://${LANDING_PAGE_HOSTNAME}:${MNESTIX_BROWSER_PORT})
+
+
 ---
 
-<iframe
-  src="http://${LANDING_PAGE_HOSTNAME}:${SOOFI_UI_PORT}"
-  style="width:95vw; height:95vh; border:none;"
-  allow="microphone">
-</iframe>
+<!-- .slide: data-background-color="#0f1115" data-background-iframe="http://${LANDING_PAGE_HOSTNAME}:${SOOFI_UI_PORT}" data-background-interactive -->
 
 ---
 

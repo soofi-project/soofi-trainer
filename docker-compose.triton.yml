@@ -22,9 +22,9 @@ services:
 
   training-agent:
     environment:
-      TRAINING_MODEL: qwen3.5-122b
-      #TRAINING_MODEL: qwen3.5-122b-gptq-int4
-      # TRAINING_MODEL: qwen3.5-35b
+      TRAINING_AGENT_MODEL: qwen3.5-122b
+      #TRAINING_AGENT_MODEL: qwen3.5-122b-gptq-int4
+      # TRAINING_AGENT_MODEL: qwen3.5-35b
       OPENAI_BASE_URL: http://10.2.10.33:9000/v1
 
   # knowledge-ingestion:
@@ -37,3 +37,12 @@ services:
   #   environment:
   #     EMBEDDING_MODEL: openai:qwen3-embed-8b
   #     OPENAI_BASE_URL: http://10.2.10.33:9000/v1
+
+  # STT/TTS immer über LiteLLM (Port 4000) — Triton hat kein Whisper/TTS
+  stt:
+    environment:
+      STT_BASE_URL: http://10.2.10.33:4000/v1
+
+  tts:
+    environment:
+      TTS_BASE_URL: http://10.2.10.33:4000/v1
