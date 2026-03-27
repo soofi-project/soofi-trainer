@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # ===========================================
 # Soofi Trainer - Start Stack
 # ===========================================
@@ -76,6 +76,7 @@ echo "  Portainer:        http://localhost:${PORTAINER_PORT}"
 echo "  N8N:              http://localhost:${N8N_EXTERNAL_PORT}"
 echo "  MinIO Console:    http://localhost:${MINIO_CONSOLE_PORT}/browser/${MINIO_BUCKET} (${MINIO_ACCESS_KEY} | ${MINIO_SECRET_KEY})"
 echo "  Training Gateway: http://localhost:${TRAINING_GATEWAY_PORT}"
+echo "  Grafana:          http://localhost:${GRAFANA_PORT}"
 echo ""
 echo "  --- AAS Stack ---"
 echo "  AAS WebUI:        http://localhost:${AAS_WEBUI_PORT}"

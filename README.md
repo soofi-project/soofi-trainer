@@ -25,6 +25,7 @@ An agentic system that guides users through the LLM specialization process — f
 | N8N | http://localhost:5678 | Workflow Automation Platform |
 | MinIO | http://localhost:9000 | S3-compatible object storage |
 | MinIO Console | http://localhost:9001 | MinIO admin UI |
+| Grafana | http://localhost:3002 | Grafana monitoring dashboard |
 
 ### AAS Stack (82xx)
 
@@ -77,6 +78,7 @@ EOF
 - **Soofi UI (A2UI)**: http://localhost:3001
 - **Chat (Open WebUI)**: http://localhost:3000
 - **MCP Inspector**: http://localhost:6274/?transport=streamable-http&serverUrl=http://vector-mcp:8000/mcp/&MCP_PROXY_AUTH_TOKEN=dev-stack-token-12345
+- **Grafana**: http://localhost:3002
 
 ### 4. Try the Soofi UI
 
@@ -100,6 +102,8 @@ The stack uses named Docker volumes (prefixed with `soofi-trainer_`):
 | `soofi-trainer_minio_data` | MinIO object storage |
 | `soofi-trainer_postgres_data` | N8N PostgreSQL database |
 | `soofi-trainer_n8n_data` | N8N encryption keys & config |
+| `soofi-trainer_prometheus_data` | Prometheus database |
+| `soofi-trainer_grafana_data` | Grafana config |
 | `soofi-trainer_training_gateway_data` | Training Gateway job state |
 | `soofi-trainer_mnestix-database` | Mnestix database |
 
@@ -167,6 +171,13 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 | `TRAINING_DOCKER_HOST` | _(unset)_ | Remote Docker API URL — leave unset for local socket |
 | `TRAINING_GPU_DEVICE` | _(unset)_ | GPU device ID (`all` or e.g. `0`) — empty for no GPU |
 | `TRAINING_DEFAULT_DURATION` | `120` | Default simulation duration in seconds |
+| `OPENAI_BASE_URL` | _(unset)_ | LLM endpoint override — set in backend profile files (`docker-compose.ollama.yml` etc.), not in `.env` |
+|`GRAFANA_VERSION`|`12.3`| Grafana image version |
+|`GRAFANA_PORT`|`3002`| Grafana external port |
+|`GRAFANA_ADMIN_PASSWORD`|`admin`| Grafana admin password |
+|`PROMETHEUS_VERSION`|`v3.10.0`| Prometheus image version |
+
+> ¹ These are Vite build args, not runtime environment variables. Changing them requires a rebuild (`./up.sh --build`).
 
 ### MCP Inspector
 
@@ -274,6 +285,7 @@ soofi-trainer/
 │   ├── tools.yml           # Open WebUI, N8N, MCP Inspector, Flowise
 │   ├── aas.yml             # BaSyx AAS stack (82xx ports)
 │   ├── edc.yml             # Eclipse Dataspace Connector stack (83xx ports)
+│   ├── monitoring.yml      # Grafana, Prometheus
 │   ├── admin/
 │   │   └── landingpage/content/   # index.html, media/, slides/slides.md
 │   └── aas/

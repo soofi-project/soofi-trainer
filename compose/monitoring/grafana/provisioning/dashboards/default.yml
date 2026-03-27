@@ -1,0 +1,13 @@
+apiVersion: 1
+
+providers:
+  - name: "My Dashboard provider"
+    orgId: 1
+    type: file
+    folder: all
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: true
