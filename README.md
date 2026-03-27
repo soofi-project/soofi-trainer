@@ -277,19 +277,6 @@ soofi-trainer/
 ├── landingpage/            # Reveal.js landing page (Docker image)
 │   ├── Dockerfile
 │   └── docker-entrypoint.sh   # envsubst templating + slide watcher
-├── compose/                   # Domain-scoped compose sub-files
-│   ├── admin.yml              # Portainer, Landing Page
-│   ├── knowledge.yml          # Weaviate, Vector MCP, MinIO, Ingestion
-│   ├── training.yml           # Training Agent, Gateway, Container
-│   ├── interaction.yml        # Interaction Agent, Soofi UI, STT, TTS
-│   ├── tools.yml              # Open WebUI, N8N, MCP Inspector, Weaviate UI
-│   ├── monitoring.yml         # Grafana, Prometheus
-│   └── admin/
-│       └── landingpage/
-│           └── content/
-│               ├── index.html
-│               ├── media/     # Logo etc.
-│               └── slides/    # slides.md (envsubst template)
 ├── compose/                # Domain-scoped compose sub-files
 │   ├── admin.yml           # Portainer, Landing Page
 │   ├── knowledge.yml       # Weaviate, Vector MCP, MinIO, Ingestion, Advisor
@@ -298,6 +285,7 @@ soofi-trainer/
 │   ├── tools.yml           # Open WebUI, N8N, MCP Inspector, Flowise
 │   ├── aas.yml             # BaSyx AAS stack (82xx ports)
 │   ├── edc.yml             # Eclipse Dataspace Connector stack (83xx ports)
+│   ├── monitoring.yml      # Grafana, Prometheus
 │   ├── admin/
 │   │   └── landingpage/content/   # index.html, media/, slides/slides.md
 │   └── aas/
