@@ -31,4 +31,9 @@ body {
 body {
   display: flex;
   justify-content: center;
+  /* Prevent content from being obscured by notch / home indicator on iOS */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }

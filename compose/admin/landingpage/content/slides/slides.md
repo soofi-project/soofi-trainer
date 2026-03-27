@@ -7,7 +7,7 @@ Sovereign Open Source Foundational Models
 
 ## Tools & more
 
-- [Soofi UI](http://${LANDING_PAGE_HOSTNAME}:${SOOFI_UI_PORT})
+- [Soofi UI](https://${LANDING_PAGE_HOSTNAME}:${SOOFI_UI_HTTPS_PORT})
 - [Portainer](http://${LANDING_PAGE_HOSTNAME}:${PORTAINER_PORT})
 - [Open-WebUI](http://${LANDING_PAGE_HOSTNAME}:${OPENWEBUI_PORT})
 - [n8n](http://${LANDING_PAGE_HOSTNAME}:${N8N_EXTERNAL_PORT}) (${N8N_BASIC_AUTH_USER} | ${N8N_BASIC_AUTH_PASSWORD})
