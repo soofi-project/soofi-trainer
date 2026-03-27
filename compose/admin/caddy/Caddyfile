@@ -2,12 +2,12 @@
 	auto_https disable_redirects
 }
 
-{$LANDING_PAGE_HOSTNAME}:{$LANDING_PAGE_HTTPS_PORT:443} {
+{$LANDING_PAGE_HOSTNAME}:{$LANDING_PAGE_HTTPS_PORT} {
 	tls internal
 	reverse_proxy landingpage:80
 }
 
-{$LANDING_PAGE_HOSTNAME}:{$CADDY_HTTPS_PORT:3443} {
+{$LANDING_PAGE_HOSTNAME}:{$SOOFI_UI_HTTPS_PORT} {
 	tls internal
 	reverse_proxy soofi-ui:80
 }

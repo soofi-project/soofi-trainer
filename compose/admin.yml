@@ -6,7 +6,7 @@ services:
   # — accept the browser warning once per device.
   # ===========================================
   caddy:
-    image: caddy:2-alpine
+    image: caddy:2.11.2-alpine
     container_name: soofi-caddy
     restart: unless-stopped
     environment:

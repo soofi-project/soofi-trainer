@@ -15,17 +15,7 @@ import "./components/agent-flow.js";
 import type { FlowState } from "./components/agent-flow.js";
 import "./components/training-progress.js";
 import { tr, type Language } from "./i18n.js";
-
-// UUID helper — falls back to Math.random for non-secure contexts (plain HTTP)
-function generateUUID(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
-  });
-}
+import { v4 as uuidv4 } from "uuid";
 
 // Slugify helper — must match _slugify() in knowledge ingestion
 function slugify(text: string): string {
@@ -864,7 +854,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
   private docLinksCurrentIdx = -1;
 
   // Stable session ID for advisor conversation memory (persists across messages)
-  private sessionId = generateUUID();
+  private sessionId = uuidv4();
 
   // Current assistant message being streamed
   private currentMsgId: string | null = null;
@@ -1923,7 +1913,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
     this.trainingProgressVisible = false;
     this.docLinks = [];
     this.docLinksCurrentIdx = -1;
-    this.sessionId = generateUUID();
+    this.sessionId = uuidv4();
     this.currentMsgId = null;
     // Stop active recording
     this.stopVAD();
