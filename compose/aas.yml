@@ -1,0 +1,200 @@
+services:
+  aas-discovery:
+    image: eclipsebasyx/aas-discovery:${BASYX_VERSION}
+    container_name: aas-discovery
+    ports:
+      - "${AAS_DISCOVERY_PORT}:8081"
+    volumes:
+      - ./compose/aas/config/aas-discovery.yml:/application/application.yml
+    restart: always
+    healthcheck: # check the endpoint for a valid response (service ready)
+      test: curl -f http://localhost:8081/actuator/health
+      interval: 30s
+      timeout: 10s
+      retries: 6
+    logging:
+      driver: 'json-file'
+      options:
+        max-file: '5'
+        max-size: '100m'
+    networks:
+      - soofi-aas-network
+
+  aas-registry:
+    image: eclipsebasyx/aas-registry-log-mem:${BASYX_VERSION}
+    container_name: aas-registry
+    ports:
+      - "${AAS_REGISTRY_PORT}:8080"
+    #environment:
+      #KAFKA_BOOTSTRAP_SERVERS: PLAINTEXT://kafka:29092  
+    volumes:
+      - ./compose/aas/config/aas-registry.yml:/workspace/config/application.yml
+    restart: always
+    labels:
+      logging: "promtail"
+      logging_jobname: "containerlogs"
+    networks:
+      - soofi-aas-network
+
+  sm-registry:
+    image: eclipsebasyx/submodel-registry-log-mem:${BASYX_VERSION}
+    container_name: sm-registry
+    ports:
+      - "${SM_REGISTRY_PORT}:8080"
+    #environment:
+      #KAFKA_BOOTSTRAP_SERVERS: PLAINTEXT://kafka:29092
+    volumes:
+      - ./compose/aas/config/sm-registry.yml:/workspace/config/application.yml
+    restart: always
+    labels:
+      logging: "promtail"
+      logging_jobname: "containerlogs"
+    networks:
+      - soofi-aas-network
+
+  aas-environment:
+    image: eclipsebasyx/aas-environment:${BASYX_VERSION}
+    container_name: aas-environment
+    environment:
+      BASYX_AASREPOSITORY_FEATURE_REGISTRYINTEGRATION: http://aas-registry:8080
+      BASYX_SUBMODELREPOSITORY_FEATURE_REGISTRYINTEGRATION: http://sm-registry:8080
+      BASYX_AASREPOSITORY_FEATURE_DISCOVERYINTEGRATION: http://aas-discovery:8081
+      BASYX_EXTERNALURL: http://${AAS_HOSTNAME}:${AAS_ENVIRONMENT_PORT}
+      BASYX_ENVIRONMENT: file:/application/files/aasx/
+    volumes:
+      - ./compose/aas/aasx:/application/files/aasx
+      - ./compose/aas/config/aas-env.yml:/application/application.yml
+    ports:
+      - "${AAS_ENVIRONMENT_PORT}:8081"
+    restart: always
+    depends_on:
+      aas-registry:
+        condition: service_healthy
+      sm-registry:
+        condition: service_healthy
+    labels:
+      logging: "promtail"
+      logging_jobname: "containerlogs"
+    networks:
+      - soofi-aas-network
+
+  aas-webui:
+    image: eclipsebasyx/aas-gui:${AAS_WEBUI_V3_VERSION}
+    container_name: aas-webui
+    ports:
+      - "${AAS_WEBUI_PORT}:3000"
+    environment:
+      CHOKIDAR_USEPOLLING: "true"
+      AAS_REGISTRY_PATH: http://${AAS_HOSTNAME}:${AAS_REGISTRY_PORT}/shell-descriptors
+      SUBMODEL_REGISTRY_PATH: http://${AAS_HOSTNAME}:${SM_REGISTRY_PORT}/submodel-descriptors
+      AAS_REPO_PATH: http://${AAS_HOSTNAME}:${AAS_ENVIRONMENT_PORT}/shells
+      SUBMODEL_REPO_PATH: http://${AAS_HOSTNAME}:${AAS_ENVIRONMENT_PORT}/submodels
+      CD_REPO_PATH: http://${AAS_HOSTNAME}:${AAS_ENVIRONMENT_PORT}/concept-descriptions
+      AAS_DISCOVERY_PATH: http://${AAS_HOSTNAME}:${AAS_DISCOVERY_PORT}/lookup/shells
+      PRIMARY_COLOR: '#7C3131'
+      LOGO_PATH: dfki_Logo_digital_black.png
+    restart: always
+    depends_on:
+      aas-environment:
+        condition: service_healthy
+    volumes:
+      - ./compose/aas/data:/usr/src/app/dist/Logo
+    networks:
+      - soofi-aas-network
+
+  mnestix-browser:
+    image: mnestix/mnestix-browser:2.0.1
+    container_name: mnestix-browser
+    ports:
+      - "${MNESTIX_BROWSER_PORT}:3000"
+    environment:
+      REGISTRY_API_URL: 'http://aas-registry:8080/'
+      SUBMODEL_REGISTRY_API_URL: 'http://sm-registry:8080'
+      DISCOVERY_API_URL: 'http://mnestix-proxy:5065/discovery'
+      AAS_REPO_API_URL: 'http://mnestix-proxy:5065/repo'
+      SUBMODEL_REPO_API_URL: 'http://mnestix-proxy:5065/repo'
+      CONCEPT_DESCRIPTION_REPO_API_URL: 'http://mnestix-proxy:5065/repo'
+      SERIALIZATION_API_URL: 'http://mnestix-proxy:5065/repo'
+      MNESTIX_AAS_GENERATOR_API_URL: 'http://mnestix-proxy:5065'
+      MNESTIX_BACKEND_API_KEY: ${MNESTIX_BACKEND_API_KEY}
+      AAS_LIST_FEATURE_FLAG: "true"
+      TRANSFER_FEATURE_FLAG: "false"
+      COMPARISON_FEATURE_FLAG: "true"
+      PRODUCT_VIEW_FEATURE_FLAG: 'false'
+      AUTHENTICATION_FEATURE_FLAG: "false"
+      LOCK_TIMESERIES_PERIOD_FEATURE_FLAG: "true"
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      SECRET_ENC_KEY: ${SECRET_ENC_KEY}
+      IMPRINT_URL: ''
+      DATA_PRIVACY_URL: ''
+      BASYX_RBAC_ENABLED: 'false'      
+      THEME_PRIMARY_COLOR: "#6ABFA3"
+      THEME_SECONDARY_COLOR: "#D7DBDD"
+      THEME_LOGO_MIME_TYPE: "image/svg+xml"
+    restart: always
+    depends_on:
+      aas-environment:
+        condition: service_healthy # only after the healthcheck in aas is successful, the mnestix container is being created
+    logging:
+       driver: "json-file"
+       options:
+         max-file: "5"
+         max-size: "100m"
+    networks:
+      - soofi-aas-network
+    volumes:
+      - mnestix-database:/app/prisma/database
+      - ./data/mnestix/logo.svg:/app/public/logo
+
+  mnestix-proxy:
+    image: mnestix/mnestix-proxy:1.0.0
+    container_name: mnestix-proxy
+    profiles: ['', 'proxy', 'backend', 'tests']
+    ports:
+      - "${MNESTIX_PROXY_PORT}:5065"
+    environment:
+      # API key authorization
+      CustomerEndpointsSecurity__ApiKey: ${MNESTIX_BACKEND_API_KEY}
+      # Connection to Repository Service:
+      ReverseProxy__Clusters__mnestixApiCluster__Destinations__destination1__Address: 'http://mnestix-aas-generator:5064/'
+      ReverseProxy__Clusters__aasRepoCluster__Destinations__destination1__Address: 'http://aas-environment:8081/'
+      ReverseProxy__Clusters__submodelRepoCluster__Destinations__destination1__Address: 'http://aas-environment:8081/'
+      ReverseProxy__Clusters__discoveryCluster__Destinations__destination1__Address: 'http://aas-discovery:8081/'
+      # InfluxDB Configuration
+      # URL to specify the host and port where InfluxDB is running:
+      ReverseProxy__Clusters__influxCluster__Destinations__destination1__Address: 'http://example/'
+      # Token:
+      ReverseProxy__Routes__InfluxRoute__Transforms__1__Set: 'Token '
+      # ASP.NET Core URLs
+      ASPNETCORE_URLS: 'http://+:5065'
+    networks:
+      - soofi-aas-network
+
+  mnestix-aas-generator:
+    image: mnestix/mnestix-aas-generator:1.0.0
+    container_name: mnestix-aas-generator
+    profiles: ['', 'backend', 'tests']
+    environment:
+      # API key authorization
+      CustomerEndpointsSecurity__ApiKey: ${MNESTIX_BACKEND_API_KEY}
+      # Features Configuration
+      Features__UseAuthentication: 'false'
+      # ASP.NET Core URLs
+      ASPNETCORE_URLS: 'http://+:5064'
+      # ServerUrls
+      ServerUrls: 'http://mnestix-proxy:5065/repo/'
+    depends_on:
+      aas-environment:
+        condition: service_healthy # only after the healthcheck in aas is successful, the mnestix container is being created
+    logging:
+      driver: 'json-file'
+      options:
+        max-file: '5'
+        max-size: '100m'
+    networks:
+      - soofi-aas-network
+
+
+
+volumes:
+  mnestix-database:
