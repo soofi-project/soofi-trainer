@@ -62,6 +62,11 @@ function env(key: string, fallback: string): string {
 const voiceControlsVisible: boolean = env("VITE_VOICE_CONTROLS_VISIBLE", "true") !== "false";
 const voiceActivation: "push-to-talk" | "toggle" =
   env("VITE_VOICE_ACTIVATION", "push-to-talk") === "toggle" ? "toggle" : "push-to-talk";
+// Map plain key name (e.g. "space") to KeyboardEvent.code (e.g. "Space")
+const voiceActivationKeyCode: string = (() => {
+  const raw = env("VITE_VOICE_ACTIVATION_KEY", "space").trim();
+  return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
+})();
 const ttsVoiceDe: string = env("VITE_TTS_VOICE_DE", "alloy");
 const ttsVoiceEn: string = env("VITE_TTS_VOICE_EN", "onyx");
 
@@ -876,6 +881,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
   private vadContext: AudioContext | null = null;
   private vadAnimationFrame: number | null = null;
   private vadSilenceStart: number | null = null;
+  private stopRequestedDuringStart = false;
 
   // True while streaming a response that was triggered by voice input (no input focus after)
   private _voiceSession = false;
@@ -1223,24 +1229,28 @@ class SoofiChat extends SignalWatcher(LitElement) {
   }
 
   // -----------------------------------------------------------------------
-  // Global keyboard listeners for push-to-talk (Space key)
+  // Global keyboard listeners for voice activation key
   // -----------------------------------------------------------------------
 
   private onGlobalKeydown = (e: KeyboardEvent): void => {
-    if (voiceActivation !== "push-to-talk") return;
-    if (e.code !== "Space" || e.repeat) return;
+    if (e.code !== voiceActivationKeyCode || e.repeat) return;
     // Only trigger when focus is outside the text input (shadow DOM: check shadowRoot.activeElement)
     const inputEl = this.shadowRoot?.querySelector<HTMLInputElement>(".input-bar input");
     if (this.shadowRoot?.activeElement === inputEl) return;
-    if (!this.isRecording) {
+    if (voiceActivation === "push-to-talk") {
+      if (!this.isRecording) {
+        e.preventDefault();
+        this.startRecording();
+      }
+    } else {
       e.preventDefault();
-      this.startRecording();
+      this.toggleRecording();
     }
   };
 
   private onGlobalKeyup = (e: KeyboardEvent): void => {
     if (voiceActivation !== "push-to-talk") return;
-    if (e.code !== "Space") return;
+    if (e.code !== voiceActivationKeyCode) return;
     if (this.isRecording) {
       this.stopRecording();
     }
@@ -1252,12 +1262,17 @@ class SoofiChat extends SignalWatcher(LitElement) {
 
   private async startRecording(event?: PointerEvent): Promise<void> {
     if (this.isRecording) return;
+    this.stopRequestedDuringStart = false;
     if (event) {
       (event.currentTarget as Element).setPointerCapture(event.pointerId);
     }
     this.unlockAudioContext();
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (this.stopRequestedDuringStart) {
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
       this.audioChunks = [];
       this.mediaRecorder = new MediaRecorder(stream);
       this.mediaRecorder.ondataavailable = (e) => {
@@ -1266,7 +1281,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
       this.mediaRecorder.onstop = () => this.onRecordingStop(stream);
       this.mediaRecorder.start();
       this.isRecording = true;
-      this.startVAD(stream);
+      if (voiceActivation === "toggle") this.startVAD(stream);
     } catch {
       this.inputValue = "⚠ Mikrofon nicht verfügbar";
     }
@@ -1314,7 +1329,10 @@ class SoofiChat extends SignalWatcher(LitElement) {
   }
 
   private stopRecording(): void {
-    if (!this.isRecording || !this.mediaRecorder) return;
+    if (!this.isRecording || !this.mediaRecorder) {
+      this.stopRequestedDuringStart = true;
+      return;
+    }
     this.stopVAD();
     this.mediaRecorder.stop();
     this.isRecording = false;
