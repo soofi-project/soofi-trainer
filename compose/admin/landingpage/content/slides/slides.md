@@ -34,10 +34,7 @@ Sovereign Open Source Foundational Models
 
 ---
 
-<iframe
-  src="http://${LANDING_PAGE_HOSTNAME}:${GRAFANA_PORT}/d/vllm-master-v2-mod/vllm-monitoring-modified?orgId=1&from=now-15m&to=now&timezone=browser&refresh=5s&theme=light"
-  style="width:95vw; height:95vh; border:none;">
-</iframe>
+<!-- .slide: data-background-color="#0f1115" data-background-iframe="http://${LANDING_PAGE_HOSTNAME}:${GRAFANA_PORT}/d/vllm-master-v2-mod/vllm-monitoring-modified?orgId=1&from=now-15m&to=now&timezone=browser&refresh=5s&theme=light" data-background-interactive -->
 
 ---
 
