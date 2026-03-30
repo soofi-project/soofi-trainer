@@ -216,6 +216,18 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 
 > **Voice config**: `VITE_*` variables are injected at **runtime** via `docker-entrypoint.sh` → `env.js` → `window.__ENV`. Changing them in `.env` only requires a restart (`./up.sh`), not a rebuild. A one-time `./up.sh --build` is needed after upgrading to the entrypoint-based image.
 
+### Agent LLM controls
+
+Each agent reads its own sampling controls from `.env`:
+
+- Advisor: `ADVISOR_TEMPERATURE`, `ADVISOR_TOP_P`, `ADVISOR_TOP_K`, `ADVISOR_MIN_P`, `ADVISOR_PRESENCE_PENALTY`, `ADVISOR_REPEAT_PENALTY`, `ADVISOR_ENABLE_THINKING`
+- Interaction: `INTERACTION_TEMPERATURE`, `INTERACTION_TOP_P`, `INTERACTION_TOP_K`, `INTERACTION_MIN_P`, `INTERACTION_PRESENCE_PENALTY`, `INTERACTION_REPEAT_PENALTY`, `INTERACTION_ENABLE_THINKING`
+- Training: `TRAINING_AGENT_TEMPERATURE`, `TRAINING_AGENT_TOP_P`, `TRAINING_AGENT_TOP_K`, `TRAINING_AGENT_MIN_P`, `TRAINING_AGENT_PRESENCE_PENALTY`, `TRAINING_AGENT_REPEAT_PENALTY`, `TRAINING_AGENT_ENABLE_THINKING`
+
+`temperature`, `top_p`, and `presence_penalty` are always sent to the chat backend. `top_k`, `min_p`, `repeat_penalty`, and `enable_thinking` are only forwarded when `OPENAI_BASE_URL` points to a custom OpenAI-compatible backend such as vLLM/LiteLLM, Triton, LM Studio, or Ollama.
+
+The `./up.sh --vllm` profile keeps its own explicit overrides in `docker-compose.vllm.yml`.
+
 ### Voice mapping (H200 / Piper)
 
 | Voice | Model | Language |

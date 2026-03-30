@@ -1,7 +1,6 @@
 """LangGraph ReAct agent for the Soofi Advisor."""
 
 import logging
-import os
 
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool
@@ -11,23 +10,17 @@ from langgraph.graph import MessagesState, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import ToolNode
 
+from .llm_config import build_llm_kwargs
 from .prompts import SYSTEM_PROMPT_DE
 
 logger = logging.getLogger(__name__)
 
-model = os.getenv("ADVISOR_MODEL")
-if not model:
-    raise RuntimeError("ADVISOR_MODEL env var required.")
-
-base_url = os.getenv("OPENAI_BASE_URL") or None
-
 
 def build_graph(tools: list[BaseTool]) -> CompiledStateGraph:
     """Build the LangGraph ReAct agent with the given tools."""
-    llm = ChatOpenAI(
-        model=model,
-        **({"openai_api_base": base_url} if base_url else {}),
-    ).bind_tools(tools, parallel_tool_calls=False)
+    llm = ChatOpenAI(**build_llm_kwargs("ADVISOR_MODEL", "ADVISOR")).bind_tools(
+        tools, parallel_tool_calls=False
+    )
     tool_node = ToolNode(tools)
 
     async def agent(state: MessagesState, config: RunnableConfig) -> MessagesState:
