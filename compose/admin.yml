@@ -8,13 +8,13 @@ services:
   # Profile: local (Default — self-signed certificate for testing purposes): ./up.sh --profile local
   caddy:
     profiles: ["local"]
-    image: caddy:2-alpine
+    image: caddy:2.11.2-alpine
     container_name: soofi-caddy
     restart: unless-stopped
     environment:
       - LANDING_PAGE_HOSTNAME=${LANDING_PAGE_HOSTNAME}
       - LANDING_PAGE_HTTPS_PORT=${LANDING_PAGE_HTTPS_PORT}
-      - CADDY_HTTPS_PORT=${SOOFI_UI_HTTPS_PORT}
+      - SOOFI_UI_HTTPS_PORT=${SOOFI_UI_HTTPS_PORT}
     ports:
       - "${LANDING_PAGE_HTTPS_PORT}:${LANDING_PAGE_HTTPS_PORT}"
       - "${SOOFI_UI_HTTPS_PORT}:${SOOFI_UI_HTTPS_PORT}"

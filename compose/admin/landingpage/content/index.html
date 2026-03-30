@@ -40,6 +40,25 @@
 				hash: true,
 				plugins: [ RevealMarkdown, RevealHighlight, RevealNotes ]
 			});
+
+			const applyBackgroundIframePermissions = () => {
+				document.querySelectorAll('.slide-background iframe').forEach(iframe => {
+					const current = iframe.getAttribute('allow') || '';
+					if (!current.includes('microphone')) {
+						iframe.setAttribute('allow', current ? `${current}; microphone` : 'microphone');
+					}
+				});
+			};
+
+			Reveal.on('ready', () => {
+				applyBackgroundIframePermissions();
+				document.querySelectorAll('.reveal a[href^="http"]').forEach(a => {
+					a.target = '_blank';
+					a.rel = 'noopener';
+				});
+			});
+			
+			Reveal.on('slidechanged', applyBackgroundIframePermissions);
 		</script>
 	</body>
 </html>

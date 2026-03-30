@@ -11,6 +11,12 @@ include:
     project_directory: .
   - path: compose/tools.yml
     project_directory: .
+  - path: compose/aas.yml
+    project_directory: .
+  - path: compose/edc.yml
+    project_directory: .
+  - path: compose/monitoring.yml
+    project_directory: .
 
 # ===========================================
 # Networks
@@ -25,3 +31,9 @@ networks:
   soofi-admin-network:
     driver: bridge
     name: soofi-admin-network
+  soofi-edc-network:
+    driver: bridge
+    name: soofi-edc-network
+  soofi-aas-network:
+    driver: bridge
+    name: soofi-aas-network

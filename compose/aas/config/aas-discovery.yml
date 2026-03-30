@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: "AAS Discovery Service"
+
+basyx:
+  aasdiscoveryservice:
+    name: "aas-discovery-service"
+  backend: "InMemory"
+  cors:
+    allowed-origins: "*"
+    allowed-methods: "GET,POST,PATCH,DELETE,PUT,OPTIONS,HEAD"
