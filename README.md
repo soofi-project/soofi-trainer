@@ -226,7 +226,7 @@ Each agent reads its own sampling controls from `.env`:
 
 `temperature`, `top_p`, and `presence_penalty` are always sent to the chat backend. `top_k`, `min_p`, `repeat_penalty`, and `enable_thinking` are only forwarded when `OPENAI_BASE_URL` points to a custom OpenAI-compatible backend such as vLLM/LiteLLM, Triton, LM Studio, or Ollama.
 
-The `./up.sh --vllm` profile keeps its own explicit overrides in `docker-compose.vllm.yml`.
+The `./up.sh --vllm` flow layers `docker-compose.vllm.yml` with a model preset from `compose/presets/`.
 
 ### Voice mapping (H200 / Piper)
 
@@ -251,6 +251,7 @@ The UI sends the voice from `VITE_TTS_VOICE_DE` (German) or `VITE_TTS_VOICE_EN` 
 ./up.sh --lmstudio     # LM Studio (local)
 ./up.sh --triton       # NVIDIA Triton (H200)
 ./up.sh --vllm         # vLLM via LiteLLM (H200) — STT/TTS local
+./up.sh --vllm --preset nvidia-nemotron-3-super-120b-a12b-fp8
 ```
 
 | Profile | Chat endpoint | Embeddings | STT/TTS | Requires |
@@ -261,7 +262,31 @@ The UI sends the voice from `VITE_TTS_VOICE_DE` (German) or `VITE_TTS_VOICE_EN` 
 | `--triton` | Triton (`10.2.10.33:9000`) | OpenAI | OpenAI cloud | Triton running + model loaded, `OPENAI_API_KEY` for embeddings |
 | `--vllm` | vLLM via LiteLLM (`10.2.10.33:4000`) | Qwen3-Embedding-8B | H200 local (Piper + Whisper) | H200 inference stack deployed |
 
-To change the model, edit the override file and restart with `./up.sh --ollama` (no `--build` needed).
+Model names and all other backend settings are configured in the respective override file:
+
+- `docker-compose.ollama.yml` — Ollama models, endpoint, embedding model
+- `docker-compose.lmstudio.yml` — LM Studio models, endpoint, embedding model
+- `docker-compose.triton.yml` — Triton endpoint and model
+- `docker-compose.vllm.yml` — Shared vLLM/LiteLLM wiring
+
+vLLM model selection uses preset overlays:
+
+- `compose/presets/vllm-qwen35-122b-fp8.yml`
+- `compose/presets/vllm-nvidia-nemotron-3-super-120b-a12b-fp8.yml`
+- `compose/presets/vllm-nvidia-nemotron-3-super-120b-a12b-nvfp4.yml`
+- `compose/presets/vllm-nemotron-cascade-2-30b-a3b.yml`
+
+To change the vLLM model, select a preset:
+
+```bash
+./up.sh --vllm
+./up.sh --vllm --preset qwen35-122b-fp8
+./up.sh --vllm --preset nvidia-nemotron-3-super-120b-a12b-fp8
+./up.sh --vllm --preset nvidia-nemotron-3-super-120b-a12b-nvfp4
+./up.sh --vllm --preset nemotron-cascade-2-30b-a3b
+```
+
+Other backends still use their single override file directly.
 
 > **Note:** When switching the embedding model (e.g. from OpenAI to Ollama), the vector dimensions change and existing Weaviate data becomes incompatible. Wipe the volume before restarting:
 > ```bash
