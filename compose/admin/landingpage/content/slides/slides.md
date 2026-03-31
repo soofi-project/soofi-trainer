@@ -5,9 +5,9 @@ Sovereign Open Source Foundational Models
 
 --
 
-## Tools and more
+## Tools & more
 
-- [Soofi UI](http://${LANDING_PAGE_HOSTNAME}:${SOOFI_UI_PORT})
+- [Soofi UI](https://${LANDING_PAGE_HOSTNAME}:${SOOFI_UI_HTTPS_PORT})
 - [Portainer](http://${LANDING_PAGE_HOSTNAME}:${PORTAINER_PORT})
 - [Open-WebUI](http://${LANDING_PAGE_HOSTNAME}:${OPENWEBUI_PORT})
 - [n8n](http://${LANDING_PAGE_HOSTNAME}:${N8N_EXTERNAL_PORT}) (${N8N_BASIC_AUTH_USER} | ${N8N_BASIC_AUTH_PASSWORD})
@@ -18,13 +18,23 @@ Sovereign Open Source Foundational Models
   - [EDC](http://${LANDING_PAGE_HOSTNAME}:${MCPINSPECTOR_CLIENT_PORT}/?transport=streamable-http&serverUrl=http://training-gateway:8000/mcp/&MCP_PROXY_AUTH_TOKEN=dev-stack-token-12345)
   - [Huggingface](http://${LANDING_PAGE_HOSTNAME}:${MCPINSPECTOR_CLIENT_PORT}/?transport=streamable-http&serverUrl=http://training-gateway:8000/mcp/&MCP_PROXY_AUTH_TOKEN=dev-stack-token-12345)
 
+--
+
+## AAS & EDC
+
+- [EDC Portal - Provider](http://${LANDING_PAGE_HOSTNAME}:${EDC_PORTAL_PROVIDER_PORT})
+- [EDC Portal - Consumer](http://${LANDING_PAGE_HOSTNAME}:${EDC_PORTAL_CONSUMER_PORT})
+- [AAS Web UI](http://${LANDING_PAGE_HOSTNAME}:${AAS_WEBUI_PORT})
+- [Mnestix](http://${LANDING_PAGE_HOSTNAME}:${MNESTIX_BROWSER_PORT})
+
+
 ---
 
-<iframe
-  src="http://${LANDING_PAGE_HOSTNAME}:${SOOFI_UI_PORT}"
-  style="width:95vw; height:95vh; border:none;"
-  allow="microphone">
-</iframe>
+<!-- .slide: data-background-color="#0f1115" data-background-iframe="http://${LANDING_PAGE_HOSTNAME}:${SOOFI_UI_PORT}" data-background-interactive -->
+
+---
+
+<!-- .slide: data-background-color="#0f1115" data-background-iframe="http://${LANDING_PAGE_HOSTNAME}:${GRAFANA_PORT}/d/vllm-master-v2-mod/vllm-monitoring-modified?orgId=1&from=now-15m&to=now&timezone=browser&refresh=5s&theme=light" data-background-interactive -->
 
 ---
 

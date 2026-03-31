@@ -1,0 +1,190 @@
+services: 
+  edc-provider:
+    image: ghcr.io/connected-intelligent-systems/connector:aas
+    container_name: edc-provider
+    ports:
+      - "${EDC_PROVIDER_PORT}:19291"
+    volumes:
+      - ./compose/edc/vault.properties:/resources/vault.properties
+      - ./compose/edc/nodes.properties:/resources/nodes.properties
+    environment:
+      EDC_VAULT_FILE_PATH: /resources/vault.properties
+      EDC_DSP_CALLBACK_ADDRESS: http://edc-provider:19194/protocol
+      EDC_DATAPLANE_API_PUBLIC_BASEURL: http://edc-provider:19291/public
+      EDC_WEB_REST_CORS_ENABLED: true
+      EDC_WEB_REST_CORS_ORIGINS: "*"
+      EDC_WEB_REST_CORS_HEADERS: Content-Type,Authorization
+      EDC_WEB_REST_CORS_METHODS: GET,POST,OPTIONS
+      WEB_HTTP_PORT: 19191
+      WEB_HTTP_PATH: /api
+      WEB_HTTP_MANAGEMENT_PORT: 19193
+      WEB_HTTP_MANAGEMENT_PATH: /management
+      WEB_HTTP_PROTOCOL_PORT: 19194
+      WEB_HTTP_PROTOCOL_PATH: /protocol
+      WEB_HTTP_CATALOG_PORT: 19199
+      WEB_HTTP_CATALOG_PATH: /catalog
+      EDC_PUBLIC_KEY_ALIAS: public-key
+      EDC_TRANSFER_PROXY_TOKEN_SIGNER_PRIVATEKEY_ALIAS: private-key
+      EDC_TRANSFER_PROXY_TOKEN_VERIFIER_PUBLICKEY_ALIAS: public-key
+      WEB_HTTP_PUBLIC_PORT: 19291
+      WEB_HTTP_PUBLIC_PATH: /public
+      WEB_HTTP_CONTROL_PORT: 19192
+      WEB_HTTP_CONTROL_PATH: /control
+      EDC_DATASOURCE_DEFAULT_URL: jdbc:postgresql://postgres:5432/dataspace?currentSchema=provider
+      EDC_DATASOURCE_DEFAULT_USER: user
+      EDC_DATASOURCE_DEFAULT_PASSWORD: postgres
+      EDC_SQL_SCHEMA_AUTOCREATE: true
+      EDC_PARTICIPANT_ID: provider
+      EDC_NODES_FILE_PATH: /resources/nodes.properties
+      EDC_CONTROLPLANE_MANAGEMENT_URL: http://localhost:19193/management
+      EDC_CONTROLPLANE_AUTH_KEY: password
+      EDC_AAS_REMOTEAASLOCATION: http://aas-environment:8081
+      EDC_AAS_ALLOWSELFSIGNEDCERTIFICATES: "True"
+      EDC_AAS_USEAASDATAPLANE: "False"
+      EDC_AAS_ONLYSUBMODELS: "True"
+      EDC_AAS_EXPOSESELFDESCRIPTION: "True"
+      EDC_JSONLD_HTTP_ENABLED: "True"
+      EDC_JSONLD_HTTPS_ENABLED: "True"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:19191/api/check/health"]
+      interval: 20s
+      timeout: 20s
+      retries: 5
+    depends_on:
+      postgres:
+        condition: service_healthy
+        restart: true
+    networks:
+      - soofi-edc-network
+      - soofi-aas-network
+
+  portal-provider:
+    image: ghcr.io/connected-intelligent-systems/portal:develop
+    container_name: portal-provider
+    ports:
+      - "${EDC_PORTAL_PROVIDER_PORT}:80"
+    environment:
+      EDC_MANAGEMENT_API_URL: http://edc-provider:19193/management/
+      EDC_PROTOCOL_API_URL: http://edc-provider:19194/protocol/
+    volumes:
+      - ./compose/edc/portal/provider/config.js:/usr/share/nginx/html/config.js
+      - ./compose/edc/portal/provider/logo.svg:/usr/share/nginx/html/logo.svg
+    depends_on:
+      edc-provider:
+        condition: service_healthy
+        restart: true
+    networks:
+      - soofi-edc-network
+
+  edc-consumer:
+    image: ghcr.io/connected-intelligent-systems/connector:aas
+    container_name: edc-consumer
+    ports:
+      - "${EDC_CONSUMER_PORT}:19291"
+    volumes:
+      - ./compose/edc/vault.properties:/resources/vault.properties
+      - ./compose/edc/nodes.properties:/resources/nodes.properties
+    environment:
+      EDC_VAULT_FILE_PATH: /resources/vault.properties
+      EDC_DSP_CALLBACK_ADDRESS: http://edc-consumer:19194/protocol
+      EDC_DATAPLANE_API_PUBLIC_BASEURL: http://edc-consumer:19291/public
+      EDC_WEB_REST_CORS_ENABLED: true
+      EDC_WEB_REST_CORS_ORIGINS: "*"
+      EDC_WEB_REST_CORS_HEADERS: Content-Type,Authorization
+      EDC_WEB_REST_CORS_METHODS: GET,POST,OPTIONS
+      WEB_HTTP_PORT: 19191
+      WEB_HTTP_PATH: /api
+      WEB_HTTP_MANAGEMENT_PORT: 19193
+      WEB_HTTP_MANAGEMENT_PATH: /management
+      WEB_HTTP_PROTOCOL_PORT: 19194
+      WEB_HTTP_PROTOCOL_PATH: /protocol
+      WEB_HTTP_CATALOG_PORT: 19199
+      WEB_HTTP_CATALOG_PATH: /catalog
+      EDC_PUBLIC_KEY_ALIAS: public-key
+      EDC_TRANSFER_PROXY_TOKEN_SIGNER_PRIVATEKEY_ALIAS: private-key
+      EDC_TRANSFER_PROXY_TOKEN_VERIFIER_PUBLICKEY_ALIAS: public-key
+      WEB_HTTP_PUBLIC_PORT: 19291
+      WEB_HTTP_PUBLIC_PATH: /public
+      WEB_HTTP_CONTROL_PORT: 19192
+      WEB_HTTP_CONTROL_PATH: /control
+      EDC_DATASOURCE_DEFAULT_URL: jdbc:postgresql://postgres:5432/dataspace?currentSchema=consumer
+      EDC_DATASOURCE_DEFAULT_USER: user
+      EDC_DATASOURCE_DEFAULT_PASSWORD: postgres
+      EDC_SQL_SCHEMA_AUTOCREATE: true
+      EDC_PARTICIPANT_ID: consumer
+      EDC_NODES_FILE_PATH: /resources/nodes.properties
+      EDC_CONTROLPLANE_MANAGEMENT_URL: http://localhost:19193/management
+      EDC_CONTROLPLANE_AUTH_KEY: password
+      EDC_JSONLD_HTTP_ENABLED: "True"
+      EDC_JSONLD_HTTPS_ENABLED: "True"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:19191/api/check/health"]
+      interval: 20s
+      timeout: 20s
+      retries: 5
+    depends_on:
+      postgres:
+        condition: service_healthy
+        restart: true
+    networks:
+      - soofi-edc-network
+
+  portal-consumer:
+    image: ghcr.io/connected-intelligent-systems/portal:develop
+    container_name: portal-consumer
+    ports:
+      - "${EDC_PORTAL_CONSUMER_PORT}:80"
+    environment:
+      EDC_MANAGEMENT_API_URL: http://edc-consumer:19193/management/
+      EDC_PROTOCOL_API_URL: http://edc-consumer:19194/protocol/
+    volumes:
+      - ./compose/edc/portal/consumer/config.js:/usr/share/nginx/html/config.js
+      - ./compose/edc/portal/consumer/logo.svg:/usr/share/nginx/html/logo.svg
+    depends_on:
+      edc-consumer:
+        condition: service_healthy
+        restart: true
+    networks:
+      - soofi-edc-network
+
+  edc-consumer-mcp:
+    image: dfkisoofi/edc-consumer-mcp:${SOOFI_TRAINER_VERSION}
+    container_name: edc-consumer-mcp
+    build:
+      context: ./edc-mcp
+    ports:
+      - "${EDC_CONSUMER_MCP_PORT}:8081"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - EDC_MANAGEMENT_URL=http://edc-consumer:19193/management/
+      - EDC_CATALOG_URL=http://edc-consumer:19199/catalog
+    depends_on:
+      edc-consumer:
+        condition: service_healthy
+    networks:
+      - soofi-edc-network
+      - soofi-network
+
+  postgres:
+    image: bitnamilegacy/postgresql:17.2.0
+    container_name: postgres
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: dataspace
+    configs:
+      - source: postgres_init_sql
+        target: /docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    networks:
+      - soofi-edc-network
+
+configs:
+  postgres_init_sql:
+    content: |
+      CREATE SCHEMA IF NOT EXISTS consumer;
+      CREATE SCHEMA IF NOT EXISTS provider;
