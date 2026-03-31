@@ -70,6 +70,8 @@ services:
       - ./compose/admin/caddy/caddy-root.key:/data/caddy/pki/authorities/local/root.key:ro
     networks:
       - soofi-network
+      - soofi-aas-network
+      - soofi-admin-network
     depends_on:
       - landingpage
 
@@ -99,6 +101,8 @@ services:
       - caddy_cloudflare_config:/config 
     networks:
       - soofi-network
+      - soofi-aas-network
+      - soofi-admin-network
     depends_on:
       - landingpage
 
@@ -115,7 +119,6 @@ services:
       - ./compose/admin/portainer/admin-password:/secrets/admin-password
     networks:
       - soofi-admin-network
-      - soofi-network
 
   landingpage:
     image: dfkisoofi/landingpage:${LANDING_PAGE_VERSION}

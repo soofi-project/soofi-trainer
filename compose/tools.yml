@@ -61,31 +61,31 @@ services:
   # ===========================================
   # Open WebUI - Chat Interface
   # ===========================================
-  # open-webui:
-  #   image: ghcr.io/open-webui/open-webui:${OPENWEBUI_VERSION}
-  #   container_name: open-webui
-  #   restart: unless-stopped
-  #   environment:
-  #     - WEBUI_AUTH=false
-  #     - ENABLE_SIGNUP=false
-  #     - OFFLINE_MODE=true
-  #     - RAG_EMBEDDING_MODEL_AUTO_UPDATE=false
-  #     - RAG_RERANKING_MODEL_AUTO_UPDATE=false
-  #     - OPENAI_API_BASE_URL=http://advisor:8000/v1
-  #     - OPENAI_API_KEY=dummy
-  #   volumes:
-  #     - open_webui_data:/app/backend/data
-  #   networks:
-  #     - soofi-network
-  #   depends_on:
-  #     advisor:
-  #       condition: service_healthy
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "curl --silent --fail http://localhost:8080/health | jq -ne 'input.status == true' || exit 1"]
-  #     interval: 15s
-  #     timeout: 5s
-  #     retries: 5
-  #     start_period: 120s
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:${OPENWEBUI_VERSION}
+    container_name: open-webui
+    restart: unless-stopped
+    environment:
+      - WEBUI_AUTH=false
+      - ENABLE_SIGNUP=false
+      - OFFLINE_MODE=true
+      - RAG_EMBEDDING_MODEL_AUTO_UPDATE=false
+      - RAG_RERANKING_MODEL_AUTO_UPDATE=false
+      - OPENAI_API_BASE_URL=http://advisor:8000/v1
+      - OPENAI_API_KEY=dummy
+    volumes:
+      - open_webui_data:/app/backend/data
+    networks:
+      - soofi-network
+    depends_on:
+      advisor:
+        condition: service_healthy
+ #   healthcheck:
+ #     test: ["CMD-SHELL", "curl --silent --fail http://localhost:8080/health | jq -ne 'input.status == true' || exit 1"]
+ #     interval: 15s
+ #     timeout: 5s
+ #     retries: 5
+ #     start_period: 120s
 
   # ===========================================
   # MCP Inspector - Debugging Tool

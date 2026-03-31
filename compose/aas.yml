@@ -11,7 +11,6 @@ services:
         max-file: '5'
         max-size: '100m'
     networks:
-      - soofi-aas-network
       - soofi-network
 
   aas-registry:
@@ -26,7 +25,6 @@ services:
       logging: "promtail"
       logging_jobname: "containerlogs"
     networks:
-      - soofi-aas-network
       - soofi-network
 
   sm-registry:
@@ -42,7 +40,6 @@ services:
       logging_jobname: "containerlogs"
     networks:
       - soofi-aas-network
-      - soofi-network
 
   aas-environment:
     image: eclipsebasyx/aas-environment:${BASYX_VERSION}
@@ -51,7 +48,7 @@ services:
       BASYX_AASREPOSITORY_FEATURE_REGISTRYINTEGRATION: http://aas-registry:8080
       BASYX_SUBMODELREPOSITORY_FEATURE_REGISTRYINTEGRATION: http://sm-registry:8080
       BASYX_AASREPOSITORY_FEATURE_DISCOVERYINTEGRATION: http://aas-discovery:8081
-      BASYX_EXTERNALURL: http://${AAS_HOSTNAME}:${AAS_ENVIRONMENT_PORT}
+      BASYX_EXTERNALURL: https://${AAS_HOSTNAME}:${AAS_ENVIRONMENT_PORT}
       BASYX_ENVIRONMENT: file:/application/files/aasx/
     volumes:
       - ./compose/aas/aasx:/application/files/aasx
@@ -67,19 +64,18 @@ services:
       logging_jobname: "containerlogs"
     networks:
       - soofi-aas-network
-      - soofi-network
 
   aas-webui:
     image: eclipsebasyx/aas-gui:${AAS_WEBUI_V3_VERSION}
     container_name: aas-webui
     environment:
       CHOKIDAR_USEPOLLING: "true"
-      AAS_REGISTRY_PATH: http://${AAS_HOSTNAME}:${AAS_REGISTRY_PORT}/shell-descriptors
-      SUBMODEL_REGISTRY_PATH: http://${AAS_HOSTNAME}:${SM_REGISTRY_PORT}/submodel-descriptors
-      AAS_REPO_PATH: http://${AAS_HOSTNAME}:${AAS_ENVIRONMENT_PORT}/shells
-      SUBMODEL_REPO_PATH: http://${AAS_HOSTNAME}:${AAS_ENVIRONMENT_PORT}/submodels
-      CD_REPO_PATH: http://${AAS_HOSTNAME}:${AAS_ENVIRONMENT_PORT}/concept-descriptions
-      AAS_DISCOVERY_PATH: http://${AAS_HOSTNAME}:${AAS_DISCOVERY_PORT}/lookup/shells
+      AAS_REGISTRY_PATH: https://${AAS_HOSTNAME}:${AAS_REGISTRY_PORT}/shell-descriptors
+      SUBMODEL_REGISTRY_PATH: https://${AAS_HOSTNAME}:${SM_REGISTRY_PORT}/submodel-descriptors
+      AAS_REPO_PATH: https://${AAS_HOSTNAME}:${AAS_ENVIRONMENT_PORT}/shells
+      SUBMODEL_REPO_PATH: https://${AAS_HOSTNAME}:${AAS_ENVIRONMENT_PORT}/submodels
+      CD_REPO_PATH: https://${AAS_HOSTNAME}:${AAS_ENVIRONMENT_PORT}/concept-descriptions
+      AAS_DISCOVERY_PATH: https://${AAS_HOSTNAME}:${AAS_DISCOVERY_PORT}/lookup/shells
       PRIMARY_COLOR: '#7C3131'
       LOGO_PATH: dfki_Logo_digital_black.png
     restart: always
@@ -90,7 +86,6 @@ services:
       - ./compose/aas/data:/usr/src/app/dist/Logo
     networks:
       - soofi-aas-network
-      - soofi-network
 
   mnestix-browser:
     image: mnestix/mnestix-browser:2.0.1
@@ -130,7 +125,6 @@ services:
          max-size: "100m"
     networks:
       - soofi-aas-network
-      - soofi-network
     volumes:
       - mnestix-database:/app/prisma/database
       - ./data/mnestix/logo.svg:/app/public/logo
@@ -138,7 +132,6 @@ services:
   mnestix-proxy:
     image: mnestix/mnestix-proxy:1.0.0
     container_name: mnestix-proxy
-    profiles: ['', 'proxy', 'backend', 'tests']
     environment:
       # API key authorization
       CustomerEndpointsSecurity__ApiKey: ${MNESTIX_BACKEND_API_KEY}
@@ -156,12 +149,10 @@ services:
       ASPNETCORE_URLS: 'http://+:5065'
     networks:
       - soofi-aas-network
-      - soofi-network
 
   mnestix-aas-generator:
     image: mnestix/mnestix-aas-generator:1.0.0
     container_name: mnestix-aas-generator
-    profiles: ['', 'backend', 'tests']
     environment:
       # API key authorization
       CustomerEndpointsSecurity__ApiKey: ${MNESTIX_BACKEND_API_KEY}

@@ -359,33 +359,6 @@ OpenWebUI starts without functions (e.g. to connect to N8N). Execute the followi
 ./compose/tools/openwebui/import_functions.sh
 ```
 
-## Running on Apple Silicon (macOS ARM64)
-The `ghcr.io/connected-intelligent-systems/connector:aas` image is built for `linux/amd64`. On Apple Silicon Macs (M1/M2/M3), you need to explicitly declare the platform so Docker uses Rosetta 2 emulation.
-
-This is handled via a local `docker-compose.override.yml` file that is not committed to the repository and only needs to be created on Apple Silicon machines.
-
-Setup (Apple Silicon only)
-Create a `docker-compose.override.yml` file in the same directory as your `docker-compose.yml`:
-
-```text
-# docker-compose.override.yml
-# Required on Apple Silicon (M1/M2/M3) Macs only.
-# Do NOT commit this file — it is listed in .gitignore.
-services:
-  edc-consumer:
-    platform: linux/amd64
-
-  edc-provider:
-    platform: linux/amd64
-```
-
-Docker Compose automatically merges this file at runtime — no extra flags or commands needed:
-
-```bash
-docker compose up
-```
-
-
 ## License
 
 MIT License — see [LICENSE](LICENSE)

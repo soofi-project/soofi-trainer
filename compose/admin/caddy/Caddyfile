@@ -28,8 +28,9 @@
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$OPENWEBUI_PORT} {
-	tls internal
-	reverse_proxy open-webui:8080
+	reverse_proxy open-webui:8080 {
+        header_down Location "http://" "https://"
+    }
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$FLOWISE_PORT} {
@@ -69,23 +70,27 @@
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$EDC_PROVIDER_PORT} {
-	tls internal
-	reverse_proxy edc-provider:19291
+	reverse_proxy edc-provider:19291 {
+        header_down Location "http://" "https://"
+    }
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$EDC_PORTAL_PROVIDER_PORT} {
-	tls internal
-	reverse_proxy portal-provider:80
+	reverse_proxy portal-provider:80 {
+        header_down Location "http://" "https://"
+    }
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$EDC_CONSUMER_PORT} {
-	tls internal
-	reverse_proxy edc-consumer:19291
+	reverse_proxy edc-consumer:19291 {
+        header_down Location "http://" "https://"
+    }
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$EDC_PORTAL_CONSUMER_PORT} {
-	tls internal
-	reverse_proxy portal-consumer:80
+	reverse_proxy portal-consumer:80 {
+        header_down Location "http://" "https://"
+    }
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$AAS_DISCOVERY_PORT} {

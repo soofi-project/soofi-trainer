@@ -55,7 +55,6 @@ services:
     networks:
       - soofi-edc-network
       - soofi-aas-network
-      - soofi-network
 
   portal-provider:
     image: ghcr.io/connected-intelligent-systems/portal:develop
@@ -72,7 +71,6 @@ services:
         restart: true
     networks:
       - soofi-edc-network
-      - soofi-network
 
   edc-consumer:
     image: ghcr.io/connected-intelligent-systems/connector:aas
@@ -124,7 +122,6 @@ services:
         restart: true
     networks:
       - soofi-edc-network
-      - soofi-network
 
   portal-consumer:
     image: ghcr.io/connected-intelligent-systems/portal:develop
@@ -141,7 +138,6 @@ services:
         restart: true
     networks:
       - soofi-edc-network
-      - soofi-network
 
   edc-consumer-mcp:
     image: dfkisoofi/edc-consumer-mcp:${EDC_MCP_VERSION}
