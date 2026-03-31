@@ -37,6 +37,9 @@ services:
     environment:
       EMBEDDING_MODEL: openai:qwen3-embedding-8b
       OPENAI_BASE_URL: http://10.2.10.33:4000/v1
+      RERANKER_ENABLED: "true"
+      RERANKER_URL: http://10.2.10.33:8003
+      RERANKER_CANDIDATE_LIMIT: "20"
 
   stt:
     environment:

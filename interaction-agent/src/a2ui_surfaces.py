@@ -22,7 +22,7 @@ if not _n8n_port:
 MCP_INSPECTOR_URL = (
     f"http://localhost:{_mcp_port}"
     f"/?transport=streamable-http"
-    f"&serverUrl=http://vector-mcp:8000/mcp/"
+    f"&serverUrl=http://vector-mcp:8000/mcp"
     f"&MCP_PROXY_AUTH_TOKEN={_mcp_token}"
 )
 N8N_URL = f"http://localhost:{_n8n_port}"

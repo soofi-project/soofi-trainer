@@ -29,7 +29,7 @@ services:
   # Vector MCP Server - Semantic Search
   # ===========================================
   vector-mcp:
-    image: dfkisoofi/vector-mcp:${VECTOR_MCP_VERSION}
+    image: dfkisoofi/vector-mcp:${SOOFI_TRAINER_VERSION}
     build: ./vector-mcp
     container_name: vector-mcp
     restart: unless-stopped
@@ -81,7 +81,7 @@ services:
   # Knowledge Ingestion - One-Shot Loader
   # ===========================================
   knowledge-ingestion:
-    image: dfkisoofi/knowledge-ingestion:${KNOWLEDGE_INGESTION_VERSION}
+    image: dfkisoofi/knowledge-ingestion:${SOOFI_TRAINER_VERSION}
     build: ./knowledge-ingestion
     container_name: knowledge-ingestion
     restart: "no"
@@ -106,7 +106,7 @@ services:
   # Advisor - LangGraph LLM Specialization Advisor
   # ===========================================
   advisor:
-    image: dfkisoofi/advisor-agent:${ADVISOR_VERSION}
+    image: dfkisoofi/advisor-agent:${SOOFI_TRAINER_VERSION}
     build: ./advisor
     container_name: advisor
     restart: unless-stopped

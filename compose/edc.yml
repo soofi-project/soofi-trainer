@@ -148,7 +148,7 @@ services:
       - soofi-edc-network
 
   edc-consumer-mcp:
-    image: dfkisoofi/edc-consumer-mcp:${EDC_MCP_VERSION}
+    image: dfkisoofi/edc-consumer-mcp:${SOOFI_TRAINER_VERSION}
     container_name: edc-consumer-mcp
     build:
       context: ./edc-mcp
