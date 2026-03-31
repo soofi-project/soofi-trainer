@@ -6,7 +6,7 @@ services:
       ADVISOR_TEMPERATURE: 0.6
       ADVISOR_TOP_P: 0.95
       ADVISOR_MIN_P: 0.01
-      ADVISOR_ENABLE_THINKING: false
+      ADVISOR_ENABLE_THINKING: true
 
   interaction-agent:
     environment:
@@ -15,7 +15,7 @@ services:
       INTERACTION_TEMPERATURE: 0.6
       INTERACTION_TOP_P: 0.95
       INTERACTION_MIN_P: 0.01
-      INTERACTION_ENABLE_THINKING: false
+      INTERACTION_ENABLE_THINKING: true
   training-agent:
     environment:
       TRAINING_AGENT_MODEL: NVIDIA-Nemotron-3-Super-120B-A12B-FP8
@@ -23,4 +23,4 @@ services:
       TRAINING_AGENT_TEMPERATURE: 0.6
       TRAINING_AGENT_TOP_P: 0.95
       TRAINING_AGENT_MIN_P: 0.01
-      TRAINING_AGENT_ENABLE_THINKING: false
+      TRAINING_AGENT_ENABLE_THINKING: true
