@@ -1,29 +1,25 @@
 {
 	auto_https disable_redirects
+	local_certs
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$LANDING_PAGE_HTTPS_PORT} {
-	tls internal
 	reverse_proxy landingpage:80
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$SOOFI_UI_PORT} {
-	tls internal
 	reverse_proxy soofi-ui:80
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$GRAFANA_PORT} {
-	tls internal
 	reverse_proxy grafana:3000
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$PORTAINER_PORT} {
-	tls internal
 	reverse_proxy portainer:9000
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$N8N_EXTERNAL_PORT} {
-	tls internal
 	reverse_proxy n8n:5678
 }
 
@@ -34,22 +30,18 @@
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$FLOWISE_PORT} {
-	tls internal
 	reverse_proxy flowise:3000
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$MCPINSPECTOR_CLIENT_PORT} {
-	tls internal
 	reverse_proxy mcp-inspector:6274
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$MCPINSPECTOR_PROXY_PORT} {
-	tls internal
 	reverse_proxy mcp-inspector:6277
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$MINIO_PORT} {
-	tls internal
 	reverse_proxy minio:9000
 }
 
@@ -60,12 +52,10 @@
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$STT_PORT} {
-	tls internal
 	reverse_proxy stt:8000
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$TTS_PORT} {
-	tls internal
 	reverse_proxy tts:8000
 }
 
@@ -118,16 +108,13 @@
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$AAS_WEBUI_PORT} {
-	tls internal
 	reverse_proxy aas-webui:3000
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$MNESTIX_BROWSER_PORT} {
-	tls internal
 	reverse_proxy mnestix-browser:3000
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$MNESTIX_PROXY_PORT} {
-	tls internal
 	reverse_proxy mnestix-proxy:5065
 }
