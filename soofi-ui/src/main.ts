@@ -15,6 +15,7 @@ import "./components/agent-flow.js";
 import type { FlowState } from "./components/agent-flow.js";
 import "./components/training-progress.js";
 import { tr, type Language } from "./i18n.js";
+import { v4 as uuidv4 } from "uuid";
 
 // Slugify helper — must match _slugify() in knowledge ingestion
 function slugify(text: string): string {
@@ -61,6 +62,11 @@ function env(key: string, fallback: string): string {
 const voiceControlsVisible: boolean = env("VITE_VOICE_CONTROLS_VISIBLE", "true") !== "false";
 const voiceActivation: "push-to-talk" | "toggle" =
   env("VITE_VOICE_ACTIVATION", "push-to-talk") === "toggle" ? "toggle" : "push-to-talk";
+// Map plain key name (e.g. "space") to KeyboardEvent.code (e.g. "Space")
+const voiceActivationKeyCode: string = (() => {
+  const raw = env("VITE_VOICE_ACTIVATION_KEY", "space").trim();
+  return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
+})();
 const ttsVoiceDe: string = env("VITE_TTS_VOICE_DE", "alloy");
 const ttsVoiceEn: string = env("VITE_TTS_VOICE_EN", "onyx");
 
@@ -285,6 +291,13 @@ class SoofiChat extends SignalWatcher(LitElement) {
     .reset-btn svg {
       width: 18px;
       height: 18px;
+    }
+
+    .fullscreen-btn {
+      display: none;
+    }
+    @media (hover: none) and (pointer: coarse) {
+      .fullscreen-btn { display: flex; }
     }
 
     /* Reset confirmation dialog */
@@ -936,7 +949,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
   private docLinksCurrentIdx = -1;
 
   // Stable session ID for advisor conversation memory (persists across messages)
-  private sessionId = crypto.randomUUID();
+  private sessionId = uuidv4();
 
   // Current assistant message being streamed
   private currentMsgId: string | null = null;
@@ -950,9 +963,23 @@ class SoofiChat extends SignalWatcher(LitElement) {
   private ttsGeneration = 0;
   private sttGeneration = 0;
   private currentAudio: HTMLAudioElement | null = null;
+  // AudioContext unlocked via user gesture — stays unlocked, bypasses mobile autoplay block
+  private audioContext: AudioContext | null = null;
+  private currentAudioSource: AudioBufferSourceNode | null = null;
+
+  // Voice Activity Detection — auto-stops recording after sustained silence
+  private vadContext: AudioContext | null = null;
+  private vadAnimationFrame: number | null = null;
+  private vadSilenceStart: number | null = null;
+  private stopRequestedDuringStart = false;
 
   // True while streaming a response that was triggered by voice input (no input focus after)
   private _voiceSession = false;
+
+  @state() private isFullscreen = false;
+  private onFullscreenChange = () => {
+    this.isFullscreen = !!(document.fullscreenElement ?? (document as any).webkitFullscreenElement);
+  };
 
   // -----------------------------------------------------------------------
   // Lifecycle
@@ -962,12 +989,16 @@ class SoofiChat extends SignalWatcher(LitElement) {
     super.connectedCallback();
     window.addEventListener("keydown", this.onGlobalKeydown);
     window.addEventListener("keyup", this.onGlobalKeyup);
+    document.addEventListener("fullscreenchange", this.onFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", this.onFullscreenChange);
   }
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
     window.removeEventListener("keydown", this.onGlobalKeydown);
     window.removeEventListener("keyup", this.onGlobalKeyup);
+    document.removeEventListener("fullscreenchange", this.onFullscreenChange);
+    document.removeEventListener("webkitfullscreenchange", this.onFullscreenChange);
   }
 
   // -----------------------------------------------------------------------
@@ -992,6 +1023,11 @@ class SoofiChat extends SignalWatcher(LitElement) {
             <path d="M3 12a9 9 0 1 1 3 6.36"/>
             <polyline points="3 16 3 12 7 12"/>
           </svg>
+        </button>
+        <button class="reset-btn fullscreen-btn" title=${this.isFullscreen ? "Vollbild beenden" : "Vollbild"} @click=${this.toggleFullscreen}>
+          ${this.isFullscreen
+            ? html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg>`
+            : html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V3h4"/><path d="M21 7V3h-4"/><path d="M3 17v4h4"/><path d="M21 17v4h-4"/></svg>`}
         </button>
       </header>
 
@@ -1301,24 +1337,28 @@ class SoofiChat extends SignalWatcher(LitElement) {
   }
 
   // -----------------------------------------------------------------------
-  // Global keyboard listeners for push-to-talk (Space key)
+  // Global keyboard listeners for voice activation key
   // -----------------------------------------------------------------------
 
   private onGlobalKeydown = (e: KeyboardEvent): void => {
-    if (voiceActivation !== "push-to-talk") return;
-    if (e.code !== "Space" || e.repeat) return;
+    if (e.code !== voiceActivationKeyCode || e.repeat) return;
     // Only trigger when focus is outside the text input (shadow DOM: check shadowRoot.activeElement)
     const inputEl = this.shadowRoot?.querySelector<HTMLInputElement>(".input-bar input");
     if (this.shadowRoot?.activeElement === inputEl) return;
-    if (!this.isRecording) {
+    if (voiceActivation === "push-to-talk") {
+      if (!this.isRecording) {
+        e.preventDefault();
+        this.startRecording();
+      }
+    } else {
       e.preventDefault();
-      this.startRecording();
+      this.toggleRecording();
     }
   };
 
   private onGlobalKeyup = (e: KeyboardEvent): void => {
     if (voiceActivation !== "push-to-talk") return;
-    if (e.code !== "Space") return;
+    if (e.code !== voiceActivationKeyCode) return;
     if (this.isRecording) {
       this.stopRecording();
     }
@@ -1330,11 +1370,17 @@ class SoofiChat extends SignalWatcher(LitElement) {
 
   private async startRecording(event?: PointerEvent): Promise<void> {
     if (this.isRecording) return;
+    this.stopRequestedDuringStart = false;
     if (event) {
       (event.currentTarget as Element).setPointerCapture(event.pointerId);
     }
+    this.unlockAudioContext();
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (this.stopRequestedDuringStart) {
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
       this.audioChunks = [];
       this.mediaRecorder = new MediaRecorder(stream);
       this.mediaRecorder.ondataavailable = (e) => {
@@ -1343,13 +1389,59 @@ class SoofiChat extends SignalWatcher(LitElement) {
       this.mediaRecorder.onstop = () => this.onRecordingStop(stream);
       this.mediaRecorder.start();
       this.isRecording = true;
+      if (voiceActivation === "toggle") this.startVAD(stream);
     } catch {
       this.inputValue = "⚠ Mikrofon nicht verfügbar";
     }
   }
 
+  private startVAD(stream: MediaStream): void {
+    this.vadContext = new AudioContext();
+    const source = this.vadContext.createMediaStreamSource(stream);
+    const analyser = this.vadContext.createAnalyser();
+    analyser.fftSize = 512;
+    source.connect(analyser);
+    const data = new Float32Array(analyser.fftSize);
+    const startTime = Date.now();
+    const GRACE_MS = 800;
+    const SILENCE_MS = 1500;
+    const SILENCE_THRESHOLD = 0.015;
+    const poll = () => {
+      if (!this.isRecording) { this.stopVAD(); return; }
+      analyser.getFloatTimeDomainData(data);
+      const rms = Math.sqrt(data.reduce((s, v) => s + v * v, 0) / data.length);
+      if (Date.now() - startTime > GRACE_MS) {
+        if (rms < SILENCE_THRESHOLD) {
+          if (this.vadSilenceStart === null) this.vadSilenceStart = Date.now();
+          else if (Date.now() - this.vadSilenceStart > SILENCE_MS) {
+            this.stopRecording();
+            return;
+          }
+        } else {
+          this.vadSilenceStart = null;
+        }
+      }
+      this.vadAnimationFrame = requestAnimationFrame(poll);
+    };
+    this.vadAnimationFrame = requestAnimationFrame(poll);
+  }
+
+  private stopVAD(): void {
+    if (this.vadAnimationFrame !== null) {
+      cancelAnimationFrame(this.vadAnimationFrame);
+      this.vadAnimationFrame = null;
+    }
+    this.vadContext?.close();
+    this.vadContext = null;
+    this.vadSilenceStart = null;
+  }
+
   private stopRecording(): void {
-    if (!this.isRecording || !this.mediaRecorder) return;
+    if (!this.isRecording || !this.mediaRecorder) {
+      this.stopRequestedDuringStart = true;
+      return;
+    }
+    this.stopVAD();
     this.mediaRecorder.stop();
     this.isRecording = false;
   }
@@ -1399,6 +1491,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
   private sendMessage(): void {
     const text = this.inputValue.trim();
     if (!text || this.streaming) return;
+    this.unlockAudioContext();
     this.inputValue = "";
     this.sendMessageText(text);
   }
@@ -1421,6 +1514,8 @@ class SoofiChat extends SignalWatcher(LitElement) {
     this.ttsGeneration++;
     this.currentAudio?.pause();
     this.currentAudio = null;
+    this.currentAudioSource?.stop();
+    this.currentAudioSource = null;
     this.audioQueue = Promise.resolve();
 
     // Add placeholder assistant message
@@ -1655,6 +1750,15 @@ class SoofiChat extends SignalWatcher(LitElement) {
   // TTS audio queue
   // -----------------------------------------------------------------------
 
+  private unlockAudioContext(): void {
+    if (!this.audioContext) {
+      this.audioContext = new AudioContext();
+    }
+    if (this.audioContext.state === "suspended") {
+      this.audioContext.resume();
+    }
+  }
+
   private enqueueTTS(text: string): void {
     if (!text.trim()) return;
     const gen = this.ttsGeneration;
@@ -1679,15 +1783,35 @@ class SoofiChat extends SignalWatcher(LitElement) {
   private async playBlob(blobPromise: Promise<Blob | null>, generation: number): Promise<void> {
     const blob = await blobPromise;
     if (!blob || generation !== this.ttsGeneration) return;
-    const url = URL.createObjectURL(blob);
-    const audio = new Audio(url);
-    this.currentAudio = audio;
-    await new Promise<void>((resolve) => {
-      audio.onended = () => { URL.revokeObjectURL(url); resolve(); };
-      audio.onerror = () => { URL.revokeObjectURL(url); resolve(); };
-      audio.play().catch(() => resolve());
-    });
-    if (this.currentAudio === audio) this.currentAudio = null;
+
+    if (this.audioContext) await this.audioContext.resume();
+    if (generation !== this.ttsGeneration) return;
+
+    if (this.audioContext && this.audioContext.state === "running") {
+      const arrayBuffer = await blob.arrayBuffer();
+      if (generation !== this.ttsGeneration) return;
+      const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+      if (generation !== this.ttsGeneration) return;
+      await new Promise<void>((resolve) => {
+        const source = this.audioContext!.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(this.audioContext!.destination);
+        source.onended = () => resolve();
+        source.start();
+        this.currentAudioSource = source;
+      });
+      if (this.currentAudioSource?.buffer === audioBuffer) this.currentAudioSource = null;
+    } else {
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      this.currentAudio = audio;
+      await new Promise<void>((resolve) => {
+        audio.onended = () => { URL.revokeObjectURL(url); resolve(); };
+        audio.onerror = () => { URL.revokeObjectURL(url); resolve(); };
+        audio.play().catch(() => resolve());
+      });
+      if (this.currentAudio === audio) this.currentAudio = null;
+    }
   }
 
   // -----------------------------------------------------------------------
@@ -1912,6 +2036,15 @@ class SoofiChat extends SignalWatcher(LitElement) {
     this.agentCards = null;
   }
 
+  private toggleFullscreen(): void {
+    const el = document.documentElement;
+    if (this.isFullscreen) {
+      (document.exitFullscreen ?? (document as any).webkitExitFullscreen)?.call(document);
+    } else {
+      (el.requestFullscreen ?? (el as any).webkitRequestFullscreen)?.call(el);
+    }
+  }
+
   private toggleLanguage(): void {
     this.language = this.language === "de" ? "en" : "de";
   }
@@ -1942,9 +2075,10 @@ class SoofiChat extends SignalWatcher(LitElement) {
     this.trainingProgressVisible = false;
     this.docLinks = [];
     this.docLinksCurrentIdx = -1;
-    this.sessionId = crypto.randomUUID();
+    this.sessionId = uuidv4();
     this.currentMsgId = null;
     // Stop active recording
+    this.stopVAD();
     if (this.mediaRecorder && this.mediaRecorder.state !== "inactive") {
       this.mediaRecorder.stop();
     }
@@ -1964,6 +2098,8 @@ class SoofiChat extends SignalWatcher(LitElement) {
       this.currentAudio.pause();
       this.currentAudio = null;
     }
+    this.currentAudioSource?.stop();
+    this.currentAudioSource = null;
   }
 
   private collectDocAnchors(basePath: string): string[] {

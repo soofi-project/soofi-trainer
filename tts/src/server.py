@@ -48,12 +48,18 @@ if _phon_keys and _phon_vals:
         _DE_PHONETIC = dict(zip(_keys, _vals))
         log.info("Loaded %d phonetic replacements", len(_DE_PHONETIC))
 
+# Sort by key length descending so longer matches are replaced first,
+# preventing partial matches from corrupting longer keys (e.g. "Fine" vs "Fine-Tuning").
+_de_phonetic_sorted: list[tuple[str, str]] = sorted(
+    _DE_PHONETIC.items(), key=lambda item: len(item[0]), reverse=True
+)
+
 
 def _apply_phonetic(text: str, language: str) -> str:
     """Replace english loanwords with phonetic German spelling for Piper voices."""
     if language != "de":
         return text
-    for word, replacement in _DE_PHONETIC.items():
+    for word, replacement in _de_phonetic_sorted:
         text = text.replace(word, replacement)
     return text
 

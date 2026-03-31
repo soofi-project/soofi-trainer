@@ -5,6 +5,7 @@ MCP Server for Soofi Knowledge Base Search
 import json
 import logging
 import os
+import time
 from typing import Any
 
 import httpx
@@ -83,9 +84,10 @@ _reranker_client: httpx.Client | None = None
 
 
 def get_reranker_client() -> httpx.Client:
+    """Lazy-init reranker HTTP client."""
     global _reranker_client
     if _reranker_client is None:
-        _reranker_client = httpx.Client(base_url=RERANKER_URL, timeout=10.0)
+        _reranker_client = httpx.Client(base_url=RERANKER_URL, timeout=5.0)
     return _reranker_client
 
 
@@ -95,7 +97,6 @@ def rerank(query: str, texts: list[str]) -> list[dict[str, Any]] | None:
         return []
     logger.info(f"Reranking {len(texts)} candidates for query='{query[:80]}'")
     try:
-        import time
         t0 = time.perf_counter()
         resp = get_reranker_client().post(
             "/rerank",
@@ -112,6 +113,9 @@ def rerank(query: str, texts: list[str]) -> list[dict[str, Any]] | None:
             {"index": r["index"], "score": r["relevance_score"]}
             for r in results  # vLLM returns pre-sorted by relevance descending
         ]
+        if not ranked:
+            logger.warning("Reranker returned empty results")
+            return []
         logger.info(
             f"Reranking done in {elapsed_ms:.0f}ms: top score={ranked[0]['score']:.4f}, "
             f"bottom score={ranked[-1]['score']:.4f}"
@@ -258,6 +262,12 @@ def search_documents(
             if ranked is not None:
                 reranked = []
                 for i, item in enumerate(ranked[:limit]):
+                    if item["index"] >= len(results):
+                        logger.warning(
+                            f"Reranker returned out-of-bounds index {item['index']} "
+                            f"(results size={len(results)}), skipping"
+                        )
+                        continue
                     result = results[item["index"]]
                     result["reranker_score"] = round(float(item["score"]), 4)
                     reranked.append(result)
