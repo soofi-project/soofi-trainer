@@ -2,8 +2,6 @@ services:
   edc-provider:
     image: ghcr.io/connected-intelligent-systems/connector:aas
     container_name: edc-provider
-    ports:
-      - "${EDC_PROVIDER_PORT}:19291"
     volumes:
       - ./compose/edc/vault.properties:/resources/vault.properties
       - ./compose/edc/nodes.properties:/resources/nodes.properties
@@ -57,12 +55,11 @@ services:
     networks:
       - soofi-edc-network
       - soofi-aas-network
+      - soofi-network
 
   portal-provider:
     image: ghcr.io/connected-intelligent-systems/portal:develop
     container_name: portal-provider
-    ports:
-      - "${EDC_PORTAL_PROVIDER_PORT}:80"
     environment:
       EDC_MANAGEMENT_API_URL: http://edc-provider:19193/management/
       EDC_PROTOCOL_API_URL: http://edc-provider:19194/protocol/
@@ -75,12 +72,11 @@ services:
         restart: true
     networks:
       - soofi-edc-network
+      - soofi-network
 
   edc-consumer:
     image: ghcr.io/connected-intelligent-systems/connector:aas
     container_name: edc-consumer
-    ports:
-      - "${EDC_CONSUMER_PORT}:19291"
     volumes:
       - ./compose/edc/vault.properties:/resources/vault.properties
       - ./compose/edc/nodes.properties:/resources/nodes.properties
@@ -128,12 +124,11 @@ services:
         restart: true
     networks:
       - soofi-edc-network
+      - soofi-network
 
   portal-consumer:
     image: ghcr.io/connected-intelligent-systems/portal:develop
     container_name: portal-consumer
-    ports:
-      - "${EDC_PORTAL_CONSUMER_PORT}:80"
     environment:
       EDC_MANAGEMENT_API_URL: http://edc-consumer:19193/management/
       EDC_PROTOCOL_API_URL: http://edc-consumer:19194/protocol/
@@ -146,6 +141,7 @@ services:
         restart: true
     networks:
       - soofi-edc-network
+      - soofi-network
 
   edc-consumer-mcp:
     image: dfkisoofi/edc-consumer-mcp:${EDC_MCP_VERSION}

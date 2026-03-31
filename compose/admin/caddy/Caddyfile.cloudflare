@@ -6,8 +6,16 @@
 	}
 }
 
-{env.LANDING_PAGE_HOSTNAME}:3443 {
+{env.LANDING_PAGE_HOSTNAME}:{$SOOFI_UI_PORT} {
 	reverse_proxy soofi-ui:80
+	tls {
+		dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+		resolvers 1.1.1.1
+	}
+}
+
+{env.LANDING_PAGE_HOSTNAME}:{$GRAFANA_PORT} {
+	reverse_proxy grafana:3000
 	tls {
 		dns cloudflare {env.CLOUDFLARE_API_TOKEN}
 		resolvers 1.1.1.1

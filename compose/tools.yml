@@ -27,8 +27,6 @@ services:
   n8n:
     image: n8nio/n8n:${N8N_VERSION}
     container_name: n8n
-    ports:
-      - "${N8N_EXTERNAL_PORT}:5678"
     environment:
       # Database Configuration
       - DB_TYPE=postgresdb
@@ -51,7 +49,7 @@ services:
       - .env
       - ${ENV_SECRETS_FILE}
     depends_on:
-      postgres:
+      postgres_n8n:
         condition: service_healthy
     volumes:
       - n8n_data:/home/node/.n8n
@@ -63,33 +61,31 @@ services:
   # ===========================================
   # Open WebUI - Chat Interface
   # ===========================================
-  open-webui:
-    image: ghcr.io/open-webui/open-webui:${OPENWEBUI_VERSION}
-    container_name: open-webui
-    restart: unless-stopped
-    ports:
-      - "${OPENWEBUI_PORT}:8080"
-    environment:
-      - WEBUI_AUTH=false
-      - ENABLE_SIGNUP=false
-      - OFFLINE_MODE=true
-      - RAG_EMBEDDING_MODEL_AUTO_UPDATE=false
-      - RAG_RERANKING_MODEL_AUTO_UPDATE=false
-      - OPENAI_API_BASE_URL=http://advisor:8000/v1
-      - OPENAI_API_KEY=dummy
-    volumes:
-      - open_webui_data:/app/backend/data
-    networks:
-      - soofi-network
-    depends_on:
-      advisor:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "curl --silent --fail http://localhost:8080/health | jq -ne 'input.status == true' || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 120s
+  # open-webui:
+  #   image: ghcr.io/open-webui/open-webui:${OPENWEBUI_VERSION}
+  #   container_name: open-webui
+  #   restart: unless-stopped
+  #   environment:
+  #     - WEBUI_AUTH=false
+  #     - ENABLE_SIGNUP=false
+  #     - OFFLINE_MODE=true
+  #     - RAG_EMBEDDING_MODEL_AUTO_UPDATE=false
+  #     - RAG_RERANKING_MODEL_AUTO_UPDATE=false
+  #     - OPENAI_API_BASE_URL=http://advisor:8000/v1
+  #     - OPENAI_API_KEY=dummy
+  #   volumes:
+  #     - open_webui_data:/app/backend/data
+  #   networks:
+  #     - soofi-network
+  #   depends_on:
+  #     advisor:
+  #       condition: service_healthy
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "curl --silent --fail http://localhost:8080/health | jq -ne 'input.status == true' || exit 1"]
+  #     interval: 15s
+  #     timeout: 5s
+  #     retries: 5
+  #     start_period: 120s
 
   # ===========================================
   # MCP Inspector - Debugging Tool
@@ -98,9 +94,6 @@ services:
     image: ghcr.io/modelcontextprotocol/inspector:${MCPINSPECTOR_VERSION}
     container_name: mcp-inspector
     restart: unless-stopped
-    ports:
-      - "${MCPINSPECTOR_CLIENT_PORT}:6274"
-      - "${MCPINSPECTOR_PROXY_PORT}:6277"
     environment:
       - HOST=0.0.0.0
       - MCP_PROXY_AUTH_TOKEN=${MCP_AUTH_TOKEN}
@@ -111,8 +104,6 @@ services:
   flowise:
     container_name: flowise
     image: flowiseai/flowise:3.0.11
-    ports:
-      - "${FLOWISE_PORT}:3000"
     volumes:
       - flowise-data:/root/.flowise
     environment:
@@ -124,6 +115,8 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    networks:
+      - soofi-network
 
   flowise-init:
     container_name: flowise-init

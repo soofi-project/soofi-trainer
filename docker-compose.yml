@@ -3,20 +3,20 @@ name: soofi-trainer
 include:
   - path: compose/admin.yml
     project_directory: .
-  - path: compose/knowledge.yml
-    project_directory: .
-  - path: compose/training.yml
-    project_directory: .
-  - path: compose/interaction.yml
-    project_directory: .
-  - path: compose/tools.yml
-    project_directory: .
+#  - path: compose/knowledge.yml
+#    project_directory: .
+#  - path: compose/training.yml
+#    project_directory: .
+#  - path: compose/interaction.yml
+#    project_directory: .
+#  - path: compose/tools.yml
+#    project_directory: .
   - path: compose/aas.yml
     project_directory: .
-  - path: compose/edc.yml
-    project_directory: .
-  - path: compose/monitoring.yml
-    project_directory: .
+#  - path: compose/edc.yml
+#    project_directory: .
+#  - path: compose/monitoring.yml
+#    project_directory: .
 
 # ===========================================
 # Networks

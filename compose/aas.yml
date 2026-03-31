@@ -2,16 +2,9 @@ services:
   aas-discovery:
     image: eclipsebasyx/aas-discovery:${BASYX_VERSION}
     container_name: aas-discovery
-    ports:
-      - "${AAS_DISCOVERY_PORT}:8081"
     volumes:
       - ./compose/aas/config/aas-discovery.yml:/application/application.yml
     restart: always
-    healthcheck: # check the endpoint for a valid response (service ready)
-      test: curl -f http://localhost:8081/actuator/health
-      interval: 30s
-      timeout: 10s
-      retries: 6
     logging:
       driver: 'json-file'
       options:
@@ -19,12 +12,11 @@ services:
         max-size: '100m'
     networks:
       - soofi-aas-network
+      - soofi-network
 
   aas-registry:
     image: eclipsebasyx/aas-registry-log-mem:${BASYX_VERSION}
     container_name: aas-registry
-    ports:
-      - "${AAS_REGISTRY_PORT}:8080"
     #environment:
       #KAFKA_BOOTSTRAP_SERVERS: PLAINTEXT://kafka:29092  
     volumes:
@@ -35,12 +27,11 @@ services:
       logging_jobname: "containerlogs"
     networks:
       - soofi-aas-network
+      - soofi-network
 
   sm-registry:
     image: eclipsebasyx/submodel-registry-log-mem:${BASYX_VERSION}
     container_name: sm-registry
-    ports:
-      - "${SM_REGISTRY_PORT}:8080"
     #environment:
       #KAFKA_BOOTSTRAP_SERVERS: PLAINTEXT://kafka:29092
     volumes:
@@ -51,6 +42,7 @@ services:
       logging_jobname: "containerlogs"
     networks:
       - soofi-aas-network
+      - soofi-network
 
   aas-environment:
     image: eclipsebasyx/aas-environment:${BASYX_VERSION}
@@ -64,8 +56,6 @@ services:
     volumes:
       - ./compose/aas/aasx:/application/files/aasx
       - ./compose/aas/config/aas-env.yml:/application/application.yml
-    ports:
-      - "${AAS_ENVIRONMENT_PORT}:8081"
     restart: always
     depends_on:
       aas-registry:
@@ -77,12 +67,11 @@ services:
       logging_jobname: "containerlogs"
     networks:
       - soofi-aas-network
+      - soofi-network
 
   aas-webui:
     image: eclipsebasyx/aas-gui:${AAS_WEBUI_V3_VERSION}
     container_name: aas-webui
-    ports:
-      - "${AAS_WEBUI_PORT}:3000"
     environment:
       CHOKIDAR_USEPOLLING: "true"
       AAS_REGISTRY_PATH: http://${AAS_HOSTNAME}:${AAS_REGISTRY_PORT}/shell-descriptors
@@ -101,12 +90,11 @@ services:
       - ./compose/aas/data:/usr/src/app/dist/Logo
     networks:
       - soofi-aas-network
+      - soofi-network
 
   mnestix-browser:
     image: mnestix/mnestix-browser:2.0.1
     container_name: mnestix-browser
-    ports:
-      - "${MNESTIX_BROWSER_PORT}:3000"
     environment:
       REGISTRY_API_URL: 'http://aas-registry:8080/'
       SUBMODEL_REGISTRY_API_URL: 'http://sm-registry:8080'
@@ -142,6 +130,7 @@ services:
          max-size: "100m"
     networks:
       - soofi-aas-network
+      - soofi-network
     volumes:
       - mnestix-database:/app/prisma/database
       - ./data/mnestix/logo.svg:/app/public/logo
@@ -150,8 +139,6 @@ services:
     image: mnestix/mnestix-proxy:1.0.0
     container_name: mnestix-proxy
     profiles: ['', 'proxy', 'backend', 'tests']
-    ports:
-      - "${MNESTIX_PROXY_PORT}:5065"
     environment:
       # API key authorization
       CustomerEndpointsSecurity__ApiKey: ${MNESTIX_BACKEND_API_KEY}
@@ -169,6 +156,7 @@ services:
       ASPNETCORE_URLS: 'http://+:5065'
     networks:
       - soofi-aas-network
+      - soofi-network
 
   mnestix-aas-generator:
     image: mnestix/mnestix-aas-generator:1.0.0
