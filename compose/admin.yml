@@ -72,6 +72,7 @@ services:
       - soofi-network
       - soofi-aas-network
       - soofi-admin-network
+      - soofi-edc-network
     depends_on:
       - landingpage
 
@@ -86,23 +87,68 @@ services:
     image: caddybuilds/caddy-cloudflare:2.11.2
     container_name: soofi-caddy-cloudflare
     restart: unless-stopped
+    env_file:
+      - ${ENV_SECRETS_FILE}
     environment:
       - LANDING_PAGE_HOSTNAME=${LANDING_PAGE_HOSTNAME}
       - LANDING_PAGE_HTTPS_PORT=${LANDING_PAGE_HTTPS_PORT}
       - SOOFI_UI_PORT=${SOOFI_UI_PORT}
       - GRAFANA_PORT=${GRAFANA_PORT}
+      - PORTAINER_PORT=${PORTAINER_PORT}
+      - N8N_EXTERNAL_PORT=${N8N_EXTERNAL_PORT}
+      - OPENWEBUI_PORT=${OPENWEBUI_PORT}
+      - FLOWISE_PORT=${FLOWISE_PORT}
+      - MCPINSPECTOR_CLIENT_PORT=${MCPINSPECTOR_CLIENT_PORT}
+      - MCPINSPECTOR_PROXY_PORT=${MCPINSPECTOR_PROXY_PORT}
+      - MINIO_PORT=${MINIO_PORT}
+      - MINIO_CONSOLE_PORT=${MINIO_CONSOLE_PORT}
+      - STT_PORT=${STT_PORT}
+      - TTS_PORT=${TTS_PORT}
+      - EDC_PROVIDER_PORT=${EDC_PROVIDER_PORT}
+      - EDC_PORTAL_PROVIDER_PORT=${EDC_PORTAL_PROVIDER_PORT}
+      - EDC_CONSUMER_PORT=${EDC_CONSUMER_PORT}
+      - EDC_PORTAL_CONSUMER_PORT=${EDC_PORTAL_CONSUMER_PORT}
+      - AAS_DISCOVERY_PORT=${AAS_DISCOVERY_PORT}
+      - AAS_REGISTRY_PORT=${AAS_REGISTRY_PORT}
+      - SM_REGISTRY_PORT=${SM_REGISTRY_PORT}
+      - AAS_ENVIRONMENT_PORT=${AAS_ENVIRONMENT_PORT}
+      - AAS_WEBUI_PORT=${AAS_WEBUI_PORT}
+      - MNESTIX_BROWSER_PORT=${MNESTIX_BROWSER_PORT}
+      - MNESTIX_PROXY_PORT=${MNESTIX_PROXY_PORT}
     ports:
       - "${LANDING_PAGE_HTTPS_PORT}:${LANDING_PAGE_HTTPS_PORT}"
       - "${SOOFI_UI_PORT}:${SOOFI_UI_PORT}"
       - "${GRAFANA_PORT}:${GRAFANA_PORT}"
+      - "${PORTAINER_PORT}:${PORTAINER_PORT}"
+      - "${N8N_EXTERNAL_PORT}:${N8N_EXTERNAL_PORT}"
+      - "${OPENWEBUI_PORT}:${OPENWEBUI_PORT}"
+      - "${FLOWISE_PORT}:${FLOWISE_PORT}"
+      - "${MCPINSPECTOR_CLIENT_PORT}:${MCPINSPECTOR_CLIENT_PORT}"
+      - "${MCPINSPECTOR_PROXY_PORT}:${MCPINSPECTOR_PROXY_PORT}"
+      - "${MINIO_PORT}:${MINIO_PORT}"
+      - "${MINIO_CONSOLE_PORT}:${MINIO_CONSOLE_PORT}"
+      - "${STT_PORT}:${STT_PORT}"
+      - "${TTS_PORT}:${TTS_PORT}"
+      - "${EDC_PROVIDER_PORT}:${EDC_PROVIDER_PORT}"
+      - "${EDC_PORTAL_PROVIDER_PORT}:${EDC_PORTAL_PROVIDER_PORT}"
+      - "${EDC_CONSUMER_PORT}:${EDC_CONSUMER_PORT}"
+      - "${EDC_PORTAL_CONSUMER_PORT}:${EDC_PORTAL_CONSUMER_PORT}"
+      - "${AAS_DISCOVERY_PORT}:${AAS_DISCOVERY_PORT}"
+      - "${AAS_REGISTRY_PORT}:${AAS_REGISTRY_PORT}"
+      - "${SM_REGISTRY_PORT}:${SM_REGISTRY_PORT}"
+      - "${AAS_ENVIRONMENT_PORT}:${AAS_ENVIRONMENT_PORT}"
+      - "${AAS_WEBUI_PORT}:${AAS_WEBUI_PORT}"
+      - "${MNESTIX_BROWSER_PORT}:${MNESTIX_BROWSER_PORT}"
+      - "${MNESTIX_PROXY_PORT}:${MNESTIX_PROXY_PORT}"
     volumes:
       - ./compose/admin/caddy/Caddyfile.cloudflare:/etc/caddy/Caddyfile:ro
-      - caddy_cloudflare_data:/data
+      - ~/caddy_data:/data
       - caddy_cloudflare_config:/config 
     networks:
       - soofi-network
       - soofi-aas-network
       - soofi-admin-network
+      - soofi-edc-network
     depends_on:
       - landingpage
 
@@ -143,5 +189,4 @@ services:
 volumes:
   caddy_data:
   caddy_config:
-  caddy_cloudflare_data:
   caddy_cloudflare_config:
