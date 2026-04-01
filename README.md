@@ -8,7 +8,7 @@ An agentic system that guides users through the LLM specialization process — f
 
 | Service | URL | Description |
 |---------|-----|-------------|
-| Landing Page | https://localhost:80 | Reveal.js start page with service links |
+| Landing Page | https://localhost | Reveal.js start page with service links |
 | Soofi UI | https://localhost:3001 | A2UI chat frontend (Lit Web Components) |
 | Open WebUI | https://localhost:3000 | Chat interface |
 | Portainer | https://localhost:9090 | Docker management UI |
