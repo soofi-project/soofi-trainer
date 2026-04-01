@@ -283,7 +283,7 @@ def search_documents(
                 results = results[:limit]
         else:
             results = results[:limit]
-            # Dummy mode: derive relevance score from cosine distance (score = 1 - distance)
+            # Distance mode: derive relevance score from cosine distance (score = 1 - distance)
             for result in results:
                 if result["distance"] is not None:
                     result["reranker_score"] = round(max(0.0, 1.0 - result["distance"]), 4)
