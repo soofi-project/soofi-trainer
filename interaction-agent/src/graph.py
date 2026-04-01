@@ -99,6 +99,13 @@ _TRAINING_TERMS = (
     "job",
 )
 
+_DATASET_COMPOUND_TERMS = (
+    "trainingsdaten",
+    "trainingsdatensatz",
+    "trainingsdatensaetze",
+    "trainingsdatensätze",
+)
+
 
 def _latest_user_text(state: MessagesState) -> str:
     for message in reversed(state["messages"]):
@@ -114,11 +121,26 @@ def _latest_message_is_user(state: MessagesState) -> bool:
     return isinstance(last_message, HumanMessage) and isinstance(last_message.content, str)
 
 
+def _has_prior_assistant_context(state: MessagesState) -> bool:
+    """Return True when at least one prior assistant message exists."""
+    # Keep direct-routing as a first-turn shortcut only; follow-ups should use LLM context.
+    return any(isinstance(message, AIMessage) for message in state["messages"][:-1])
+
+
+def _contains_term_as_word(text: str, term: str) -> bool:
+    """Match a term as a standalone word/phrase to avoid substring false positives."""
+    pattern = r"\\b" + re.escape(term) + r"\\b"
+    return re.search(pattern, text) is not None
+
+
 def _should_route_to_dataset_agent(text: str) -> bool:
     normalized = text.casefold()
     has_dataset_topic = any(term in normalized for term in _DATASET_SEARCH_TERMS)
     has_search_intent = any(term in normalized for term in _DATASET_SEARCH_INTENT_TERMS)
-    has_training_topic = any(term in normalized for term in _TRAINING_TERMS)
+    has_dataset_compound = any(term in normalized for term in _DATASET_COMPOUND_TERMS)
+    has_training_topic = any(
+        _contains_term_as_word(normalized, term) for term in _TRAINING_TERMS
+    ) and not has_dataset_compound
     return has_dataset_topic and has_search_intent and not has_training_topic
 
 
@@ -463,6 +485,7 @@ def build_graph() -> CompiledStateGraph:
         if (
             _latest_message_is_user(state)
             and latest_user_text
+            and not _has_prior_assistant_context(state)
             and _should_route_to_dataset_agent(latest_user_text)
         ):
             logger.info("Direct dataset routing for message: %s", latest_user_text[:200])
