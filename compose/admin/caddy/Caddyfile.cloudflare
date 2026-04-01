@@ -3,7 +3,7 @@
 	auto_https disable_redirects
 }
 
-{$LANDING_PAGE_HOSTNAME}:{$LANDING_PAGE_HTTPS_PORT} {
+{$LANDING_PAGE_HOSTNAME}:{$LANDING_PAGE_PORT} {
 	reverse_proxy landingpage:80
 }
 

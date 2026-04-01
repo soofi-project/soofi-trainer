@@ -13,7 +13,7 @@ services:
     restart: unless-stopped
     environment:
       - LANDING_PAGE_HOSTNAME=${LANDING_PAGE_HOSTNAME}
-      - LANDING_PAGE_HTTPS_PORT=${LANDING_PAGE_HTTPS_PORT}
+      - LANDING_PAGE_PORT=${LANDING_PAGE_PORT}
       - SOOFI_UI_PORT=${SOOFI_UI_PORT}
       - GRAFANA_PORT=${GRAFANA_PORT}
       - PORTAINER_PORT=${PORTAINER_PORT}
@@ -38,7 +38,7 @@ services:
       - MNESTIX_BROWSER_PORT=${MNESTIX_BROWSER_PORT}
       - MNESTIX_PROXY_PORT=${MNESTIX_PROXY_PORT}
     ports:
-      - "${LANDING_PAGE_HTTPS_PORT}:${LANDING_PAGE_HTTPS_PORT}"
+      - "${LANDING_PAGE_PORT}:${LANDING_PAGE_PORT}"
       - "${SOOFI_UI_PORT}:${SOOFI_UI_PORT}"
       - "${GRAFANA_PORT}:${GRAFANA_PORT}"
       - "${PORTAINER_PORT}:${PORTAINER_PORT}"
@@ -91,7 +91,7 @@ services:
       - ${ENV_SECRETS_FILE}
     environment:
       - LANDING_PAGE_HOSTNAME=${LANDING_PAGE_HOSTNAME}
-      - LANDING_PAGE_HTTPS_PORT=${LANDING_PAGE_HTTPS_PORT}
+      - LANDING_PAGE_PORT=${LANDING_PAGE_PORT}
       - SOOFI_UI_PORT=${SOOFI_UI_PORT}
       - GRAFANA_PORT=${GRAFANA_PORT}
       - PORTAINER_PORT=${PORTAINER_PORT}
@@ -116,7 +116,7 @@ services:
       - MNESTIX_BROWSER_PORT=${MNESTIX_BROWSER_PORT}
       - MNESTIX_PROXY_PORT=${MNESTIX_PROXY_PORT}
     ports:
-      - "${LANDING_PAGE_HTTPS_PORT}:${LANDING_PAGE_HTTPS_PORT}"
+      - "${LANDING_PAGE_PORT}:${LANDING_PAGE_PORT}"
       - "${SOOFI_UI_PORT}:${SOOFI_UI_PORT}"
       - "${GRAFANA_PORT}:${GRAFANA_PORT}"
       - "${PORTAINER_PORT}:${PORTAINER_PORT}"
@@ -171,8 +171,6 @@ services:
     container_name: landingpage
     restart: always
     build: ./landingpage
-    ports:
-      - "${LANDING_PAGE_PORT}:80"
     env_file:
       - .env
     volumes:

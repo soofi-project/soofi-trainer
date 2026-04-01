@@ -3,7 +3,7 @@
 	local_certs
 }
 
-{$LANDING_PAGE_HOSTNAME}:{$LANDING_PAGE_HTTPS_PORT} {
+{$LANDING_PAGE_HOSTNAME}:{$LANDING_PAGE_PORT} {
 	reverse_proxy landingpage:80
 }
 
