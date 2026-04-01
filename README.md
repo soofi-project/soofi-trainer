@@ -122,7 +122,7 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `ENV_SECRETS_FILE` | `~/.env.secrets` | Path to secrets file |
-| `LANDING_PAGE_PORT` | `80` | Landing page external port |
+| `LANDING_PAGE_PORT` | `443` | Landing page external port |
 | `LANDING_PAGE_HOSTNAME` | `localhost` | Hostname used in slide links |
 | `LANDING_PAGE_WATCH_SLIDES` | `true` | Poll slides templates for changes (dev) |
 | `EMBEDDING_MODEL` | `openai:text-embedding-3-large` | Embedding model (`provider:model`, e.g. `ollama:bge-m3`) |

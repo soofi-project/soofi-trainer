@@ -16,14 +16,14 @@ echo ""
 # Stop containers (optionally remove volumes)
 if [ "$1" == "--clean" ]; then
     echo "[INFO] Stopping containers and removing volumes..."
-    docker compose down -v
+    docker compose --profile "*" down -v
 elif [ -n "$1" ]; then
     echo "[ERROR] Unknown option: $1"
     echo "Usage: ./down.sh [--clean]"
     exit 1
 else
     echo "[INFO] Stopping containers..."
-    docker compose down
+    docker compose --profile "*" down
 fi
 
 echo ""
