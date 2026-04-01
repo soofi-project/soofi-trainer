@@ -14,6 +14,8 @@ const strings: Record<string, Record<Language, string>> = {
 
   // Status / search bar
   thinking: { de: "Überlege", en: "Thinking" },
+  rag_sources_title: { de: "Gefundene Quellen", en: "Sources found" },
+  rag_relevance: { de: "Quellen-Relevanz", en: "Source Relevance" },
   recording: { de: "Aufnahme läuft\u2026", en: "Recording\u2026" },
 
   // Dashboard card

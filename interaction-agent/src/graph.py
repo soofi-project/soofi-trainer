@@ -1,6 +1,7 @@
 """LangGraph ReAct agent for the Soofi Interaction Agent."""
 
 import asyncio
+import collections
 import contextvars
 import json
 import logging
@@ -14,8 +15,7 @@ from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
 from langgraph.graph import MessagesState, StateGraph
 from langgraph.graph.state import CompiledStateGraph
-from langgraph.prebuilt import InjectedState, ToolNode
-from typing_extensions import Annotated
+from langgraph.prebuilt import ToolNode
 
 from .a2a_client import ask_advisor as _ask_advisor
 from .a2a_client import ask_training_agent as _ask_training_agent
@@ -28,8 +28,10 @@ from .constants import (
     AGENT_CARD_EVENT,
     AGENT_CARD_KEY,
     DOC_VIEWER_KEY,
+    ADVISOR_KEY_RAG_SOURCES,
     SOOFI_EVENT_JOB_STARTED,
     SOOFI_EVENT_KEY,
+    SOOFI_EVENT_RAG_SOURCES,
     SOOFI_EVENT_SEARCH_STATUS,
     TRAINING_AGENT_KEY_CHUNK,
     TRAINING_AGENT_KEY_JOB_STARTED,
@@ -51,6 +53,10 @@ _training_context_id: contextvars.ContextVar[str | None] = contextvars.ContextVa
     "_training_context_id", default=None
 )
 _language: contextvars.ContextVar[Language] = contextvars.ContextVar("_language", default="de")
+# RAG source URLs per conversation — persisted across requests via advisor context_id.
+# LRU-bounded to prevent unbounded memory growth from long-running processes.
+_RAG_URLS_MAX = 256
+_rag_urls_store: collections.OrderedDict[str, list[str]] = collections.OrderedDict()
 
 base_url = os.getenv("OPENAI_BASE_URL") or None
 model_name = os.getenv("INTERACTION_MODEL")
@@ -95,10 +101,11 @@ async def show_agent_card(
         "all", "interaction-agent", "advisor", "training-agent", "dataset-agent", "close"
     ],  # Keep enum values in sync with AGENT_REGISTRY in .env
 ) -> str:
-    """Show or close the A2A agent card panel.
+    """Show or close the A2A agent card panel. YOU MUST call this tool — never respond with text only.
 
-    Use this tool when the user asks about available agents, their capabilities,
-    or agent cards, or when the user wants to close the agent card panel.
+    REQUIRED for: agent cards, agent details, "welche Agenten", "Agenten zeigen/schließen",
+    "mach zu", "schließen", "close". Use "close" to close the panel.
+    Never confirm open/close actions without calling this tool first.
 
     Args:
         agent: Which agent card to show, "all" for all agents, or "close" to close.
@@ -151,11 +158,10 @@ async def ask_advisor_tool(question: str) -> str:
     ctx_id = _advisor_context_id.get()
     lang = _language.get()
     full_text = ""
-    cite_suffix = "\n\n" + tr("cite_sources", lang)
     lang_tag = f" [LANG:{lang}]"
 
     try:
-        async for chunk in _stream_advisor(question + cite_suffix + lang_tag, context_id=ctx_id):
+        async for chunk in _stream_advisor(question + lang_tag, context_id=ctx_id):
             # Detect special event envelopes from the advisor
             try:
                 parsed = json.loads(chunk)
@@ -167,6 +173,20 @@ async def ask_advisor_tool(question: str) -> str:
                 await adispatch_custom_event(
                     ADVISOR_EVENT, {ADVISOR_KEY_SEARCH_STATUS: parsed["text"]}
                 )
+            elif event_type == SOOFI_EVENT_RAG_SOURCES:
+                await adispatch_custom_event(
+                    ADVISOR_EVENT, {ADVISOR_KEY_RAG_SOURCES: parsed["sources"]}
+                )
+                # Store source URLs so control_doc_viewer can reference them
+                urls = [
+                    s.get("url", "") for s in parsed.get("sources", [])
+                    if s.get("url")
+                ]
+                ctx_key = _advisor_context_id.get() or ""
+                _rag_urls_store[ctx_key] = urls
+                _rag_urls_store.move_to_end(ctx_key)
+                while len(_rag_urls_store) > _RAG_URLS_MAX:
+                    _rag_urls_store.popitem(last=False)
             else:
                 full_text += chunk
                 await adispatch_custom_event(
@@ -239,10 +259,10 @@ async def ask_training_agent_tool(question: str) -> str:
 
 @tool
 async def control_training_view(action: Literal["open", "close"]) -> str:
-    """Open or close the training jobs panel in the UI.
+    """Open or close the training jobs panel. YOU MUST call this tool — never respond with text only.
 
-    Use this tool when the user asks to see the training jobs overview,
-    the job list, or wants to close the training panel.
+    REQUIRED for: "Jobs zeigen", "Trainingsübersicht", "Job-Ansicht schließen",
+    "show jobs", "close training view". Never confirm open/close without calling this tool first.
 
     Args:
         action: "open" to show the training jobs panel, "close" to hide it.
@@ -258,15 +278,16 @@ async def control_training_view(action: Literal["open", "close"]) -> str:
 
 
 @tool
-def control_doc_viewer(action: str, state: Annotated[dict, InjectedState], index: int = 1) -> str:
-    """Control the document viewer panel in the UI.
+def control_doc_viewer(action: str, index: int = 1) -> str:
+    """Control the document/sources viewer. YOU MUST call this tool — never respond with text only.
+
+    REQUIRED for: "öffne Quelle X", "Quelle schließen", "nächste Quelle", "mach zu",
+    "close sources", "open source X". Never confirm open/close without calling this tool first.
 
     Args:
         action: One of "open", "close", "next", "previous".
-                "open" opens the document at the given index (1-based).
-        index: 1-based index of the document link to open (only for action "open").
-               The links are numbered in the order they appeared in the conversation.
-        state: Injected conversation state (not visible to the LLM).
+                "open" opens the source at the given index (1-based).
+        index: 1-based index matching the numbered sources shown below the answer.
     """
     lang = _language.get()
     if action == "close":
@@ -276,7 +297,9 @@ def control_doc_viewer(action: str, state: Annotated[dict, InjectedState], index
     elif action == "previous":
         label = tr("doc_previous", lang)
     else:
-        total = _count_doc_links(state)
+        ctx_key = _advisor_context_id.get() or ""
+        urls = _rag_urls_store.get(ctx_key, [])
+        total = len(urls)
         if total == 0:
             return tr("doc_none", lang)
         if index < 1 or index > total:
@@ -286,20 +309,6 @@ def control_doc_viewer(action: str, state: Annotated[dict, InjectedState], index
         {DOC_VIEWER_KEY: {"action": action, "index": index}, "label": label},
         ensure_ascii=False,
     )
-
-
-# Match both relative /docs/ links and full URLs with /docs/ path
-_RE_DOC_LINK = re.compile(r"\[([^\]]+)\]\((?:https?://[^/\s)]+)?/docs/[^)]+\)")
-
-
-def _count_doc_links(state: dict) -> int:
-    """Count markdown links matching /docs/ across all conversation messages."""
-    count = 0
-    for msg in state.get("messages", []):
-        content = msg.content if hasattr(msg, "content") else ""
-        if isinstance(content, str):
-            count += len(_RE_DOC_LINK.findall(content))
-    return count
 
 
 def build_graph() -> CompiledStateGraph:
@@ -331,6 +340,9 @@ def build_graph() -> CompiledStateGraph:
             logger.info("Tool result (%s): %s", msg.name, str(msg.content)[:500])
         return result
 
+    # Tools whose responses are already streamed to the user — no second LLM call needed
+    _STREAMING_TOOLS = {"ask_advisor_tool", "ask_training_agent_tool"}
+
     def should_continue(state: MessagesState) -> str:
         if not state["messages"]:
             return "__end__"
@@ -339,6 +351,16 @@ def build_graph() -> CompiledStateGraph:
             return "tools"
         return "__end__"
 
+    def after_tools(state: MessagesState) -> str:
+        """Skip the second LLM call if a streaming tool already delivered the response."""
+        for msg in reversed(state["messages"]):
+            # Stop at the last AI message — don't look further back
+            if hasattr(msg, "tool_calls"):
+                break
+            if hasattr(msg, "name") and msg.name in _STREAMING_TOOLS:
+                return "__end__"
+        return "agent"
+
     graph_builder = StateGraph(MessagesState)
     graph_builder.add_node("agent", agent)
     graph_builder.add_node("tools", run_tools)
@@ -346,7 +368,9 @@ def build_graph() -> CompiledStateGraph:
     graph_builder.add_conditional_edges(
         "agent", should_continue, {"tools": "tools", "__end__": "__end__"}
     )
-    graph_builder.add_edge("tools", "agent")
+    graph_builder.add_conditional_edges(
+        "tools", after_tools, {"agent": "agent", "__end__": "__end__"}
+    )
 
     return graph_builder.compile()
 
