@@ -14,11 +14,19 @@ from langgraph.graph.state import CompiledStateGraph
 from .constants import (
     ADVISOR_KEY_CHUNK,
     ADVISOR_KEY_SEARCH_STATUS,
+    DATASET_AGENT_KEY_CHUNK,
+    DATASET_AGENT_KEY_STATUS,
     TRAINING_AGENT_KEY_CHUNK,
     TRAINING_AGENT_KEY_JOB_STARTED,
     TRAINING_AGENT_KEY_STATUS,
 )
-from .graph import build_graph, set_advisor_context_id, set_language, set_training_context_id
+from .graph import (
+    build_graph,
+    set_advisor_context_id,
+    set_dataset_context_id,
+    set_language,
+    set_training_context_id,
+)
 from .i18n import Language
 from .sse_stream import SSEStream, ToolStreamTracker
 
@@ -45,6 +53,12 @@ TRACKERS = [
         capture_keys={TRAINING_AGENT_KEY_JOB_STARTED: "job_id"},
         component_name="soofi-training-progress",
         on_start_label="processing_training",
+    ),
+    ToolStreamTracker(
+        tool_name="ask_dataset_agent_tool",
+        chunk_key=DATASET_AGENT_KEY_CHUNK,
+        status_keys=[DATASET_AGENT_KEY_STATUS],
+        on_start_label="search_datasets",
     ),
     ToolStreamTracker(
         tool_name="show_agent_card",
@@ -115,6 +129,7 @@ async def agent_endpoint(request: Request) -> StreamingResponse:
         lang = "de"
     set_advisor_context_id(session_id)
     set_training_context_id(session_id)
+    set_dataset_context_id(session_id)
     set_language(lang)
 
     lc_messages = _build_lc_messages(messages)
@@ -147,11 +162,11 @@ _AGENT_CARD_I18N: dict[str, dict[Language, str]] = {
     "description": {
         "de": (
             "Zentraler Gesprächsagent — nimmt Nutzereingaben entgegen, "
-            "koordiniert Advisor und Training Agent, steuert die UI"
+            "koordiniert Advisor, Training Agent und Dataset Agent, steuert die UI"
         ),
         "en": (
             "Central conversation agent — receives user input, "
-            "coordinates Advisor and Training Agent, controls the UI"
+            "coordinates Advisor, Training Agent, and Dataset Agent, controls the UI"
         ),
     },
     "skill_conversation_name": {"de": "Gesprächsführung", "en": "Conversation"},

@@ -7,10 +7,12 @@ import json
 import logging
 import os
 import re
+import uuid
 from typing import Any, Literal
 
 import httpx
 from langchain_core.callbacks import adispatch_custom_event
+from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
 from langgraph.graph import MessagesState, StateGraph
@@ -18,8 +20,10 @@ from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import ToolNode
 
 from .a2a_client import ask_advisor as _ask_advisor
+from .a2a_client import ask_dataset_agent as _ask_dataset_agent
 from .a2a_client import ask_training_agent as _ask_training_agent
 from .a2a_client import stream_advisor as _stream_advisor
+from .a2a_client import stream_dataset_agent as _stream_dataset_agent
 from .a2a_client import stream_training_agent as _stream_training_agent
 from .constants import (
     ADVISOR_EVENT,
@@ -27,6 +31,9 @@ from .constants import (
     ADVISOR_KEY_SEARCH_STATUS,
     AGENT_CARD_EVENT,
     AGENT_CARD_KEY,
+    DATASET_AGENT_KEY_CHUNK,
+    DATASET_AGENT_KEY_STATUS,
+    DATASET_EVENT,
     DOC_VIEWER_KEY,
     ADVISOR_KEY_RAG_SOURCES,
     SOOFI_EVENT_JOB_STARTED,
@@ -45,12 +52,122 @@ from .prompts import get_system_prompt
 
 logger = logging.getLogger(__name__)
 
+_DATASET_SEARCH_TERMS = (
+    "datensatz",
+    "datensaetze",
+    "datensätze",
+    "datenangebot",
+    "datenangebote",
+    "dataset",
+    "datasets",
+    "huggingface",
+    "datenraum",
+    "dataspace",
+    "edc",
+    "katalog",
+    "catalog",
+    "asset",
+    "assets",
+)
+
+_DATASET_SEARCH_INTENT_TERMS = (
+    "finde",
+    "such",
+    "suche",
+    "zeige",
+    "welche",
+    "was gibt es",
+    "gibt es",
+    "liste",
+    "list",
+    "verfugbar",
+    "verfügbar",
+    "angebot",
+    "angebote",
+    "discover",
+    "search",
+    "find",
+    "show",
+    "available",
+)
+
+_TRAINING_TERMS = (
+    "training",
+    "fine-tuning",
+    "finetuning",
+    "finetune",
+    "lora",
+    "qlora",
+    "job",
+)
+
+_DATASET_COMPOUND_TERMS = (
+    "trainingsdaten",
+    "trainingsdatensatz",
+    "trainingsdatensaetze",
+    "trainingsdatensätze",
+)
+
+
+def _latest_user_text(state: MessagesState) -> str:
+    for message in reversed(state["messages"]):
+        if isinstance(message, HumanMessage) and isinstance(message.content, str):
+            return message.content
+    return ""
+
+
+def _latest_message_is_user(state: MessagesState) -> bool:
+    if not state["messages"]:
+        return False
+    last_message = state["messages"][-1]
+    return isinstance(last_message, HumanMessage) and isinstance(last_message.content, str)
+
+
+def _has_prior_assistant_context(state: MessagesState) -> bool:
+    """Return True when at least one prior assistant message exists."""
+    # Keep direct-routing as a first-turn shortcut only; follow-ups should use LLM context.
+    return any(isinstance(message, AIMessage) for message in state["messages"][:-1])
+
+
+def _contains_term_as_word(text: str, term: str) -> bool:
+    """Match a term as a standalone word/phrase to avoid substring false positives."""
+    pattern = r"\\b" + re.escape(term) + r"\\b"
+    return re.search(pattern, text) is not None
+
+
+def _should_route_to_dataset_agent(text: str) -> bool:
+    normalized = text.casefold()
+    has_dataset_topic = any(term in normalized for term in _DATASET_SEARCH_TERMS)
+    has_search_intent = any(term in normalized for term in _DATASET_SEARCH_INTENT_TERMS)
+    has_dataset_compound = any(term in normalized for term in _DATASET_COMPOUND_TERMS)
+    has_training_topic = any(
+        _contains_term_as_word(normalized, term) for term in _TRAINING_TERMS
+    ) and not has_dataset_compound
+    return has_dataset_topic and has_search_intent and not has_training_topic
+
+
+def _build_direct_tool_call(tool_name: str, question: str) -> AIMessage:
+    return AIMessage(
+        content="",
+        tool_calls=[
+            {
+                "name": tool_name,
+                "args": {"question": question},
+                "id": f"call_{uuid.uuid4().hex}",
+                "type": "tool_call",
+            }
+        ],
+    )
+
 # Context variables to pass the A2A context_id into tools per-request
 _advisor_context_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "_advisor_context_id", default=None
 )
 _training_context_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "_training_context_id", default=None
+)
+_dataset_context_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "_dataset_context_id", default=None
 )
 _language: contextvars.ContextVar[Language] = contextvars.ContextVar("_language", default="de")
 # RAG source URLs per conversation — persisted across requests via advisor context_id.
@@ -258,6 +375,51 @@ async def ask_training_agent_tool(question: str) -> str:
 
 
 @tool
+async def ask_dataset_agent_tool(question: str) -> str:
+    """Ask the Dataset Agent to search for suitable public datasets via A2A.
+
+    Use this tool for dataset discovery requests, especially searches on
+    HuggingFace and Eclipse Dataspace (EDC).
+
+    Args:
+        question: The dataset search request to send to the Dataset Agent.
+    """
+    ctx_id = _dataset_context_id.get()
+    lang = _language.get()
+    full_text = ""
+    lang_tag = f" [LANG:{lang}]"
+
+    try:
+        async for chunk in _stream_dataset_agent(question + lang_tag, context_id=ctx_id):
+            try:
+                parsed = json.loads(chunk)
+                event_type = parsed.get(SOOFI_EVENT_KEY) if isinstance(parsed, dict) else None
+            except (json.JSONDecodeError, ValueError):
+                event_type = None
+
+            if event_type == SOOFI_EVENT_SEARCH_STATUS:
+                await adispatch_custom_event(
+                    DATASET_EVENT, {DATASET_AGENT_KEY_STATUS: parsed.get("text", "")}
+                )
+            else:
+                full_text += chunk
+                await adispatch_custom_event(
+                    DATASET_EVENT, {DATASET_AGENT_KEY_CHUNK: chunk}
+                )
+    except Exception:
+        logger.exception("Dataset agent streaming failed after %d chars", len(full_text))
+        if not full_text:
+            logger.warning("Falling back to blocking ask_dataset_agent call")
+            full_text = await _ask_dataset_agent(question, context_id=ctx_id)
+
+    if not full_text:
+        logger.warning("Dataset agent streaming yielded no content, falling back to blocking call")
+        full_text = await _ask_dataset_agent(question, context_id=ctx_id)
+
+    return full_text
+
+
+@tool
 async def control_training_view(action: Literal["open", "close"]) -> str:
     """Open or close the training jobs panel. YOU MUST call this tool — never respond with text only.
 
@@ -316,6 +478,7 @@ def build_graph() -> CompiledStateGraph:
     tools = [
         ask_advisor_tool,
         ask_training_agent_tool,
+        ask_dataset_agent_tool,
         show_agent_card,
         control_doc_viewer,
         control_training_view,
@@ -327,6 +490,18 @@ def build_graph() -> CompiledStateGraph:
     tool_node = ToolNode(tools)
 
     async def agent(state: MessagesState) -> MessagesState:
+        latest_user_text = _latest_user_text(state)
+        if (
+            _latest_message_is_user(state)
+            and latest_user_text
+            and not _has_prior_assistant_context(state)
+            and _should_route_to_dataset_agent(latest_user_text)
+        ):
+            logger.info("Direct dataset routing for message: %s", latest_user_text[:200])
+            return {
+                "messages": [_build_direct_tool_call("ask_dataset_agent_tool", latest_user_text)]
+            }
+
         system = {"role": "system", "content": get_system_prompt(_language.get())}
         response = await llm.ainvoke([system] + state["messages"])
         if hasattr(response, "tool_calls") and response.tool_calls:
@@ -383,6 +558,11 @@ def set_advisor_context_id(context_id: str | None) -> None:
 def set_training_context_id(context_id: str | None) -> None:
     """Set the A2A context_id for the current request (used by ask_training_agent_tool)."""
     _training_context_id.set(context_id)
+
+
+def set_dataset_context_id(context_id: str | None) -> None:
+    """Set the A2A context_id for the current request (used by ask_dataset_agent_tool)."""
+    _dataset_context_id.set(context_id)
 
 
 def set_language(lang: Language) -> None:

@@ -161,6 +161,7 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 | `ADVISOR_MODEL` | `gpt-4o-mini` | LLM model for the advisor agent |
 | `INTERACTION_MODEL` | `gpt-4o-mini` | LLM model for the interaction agent |
 | `TRAINING_AGENT_MODEL` | `gpt-4o-mini` | LLM model for the training agent |
+| `DATASET_AGENT_MODEL` | `gpt-4o-mini` | LLM model for the dataset agent |
 
 ### Training
 
@@ -208,6 +209,7 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `EDC_MCP_VERSION` | `0.1.0` | EDC Consumer MCP image version |
+| `HUGGINGFACE_MCP_VERSION` | `0.1.0` | HuggingFace MCP image version |
 | `EDC_PORTAL_PROVIDER_PORT` | `8380` | EDC Provider Portal port |
 | `EDC_PORTAL_CONSUMER_PORT` | `8381` | EDC Consumer Portal port |
 | `EDC_PROVIDER_PORT` | `8390` | EDC Provider public endpoint port |
@@ -264,6 +266,8 @@ soofi-trainer/
 ├── knowledge/              # Markdown knowledge documents + YAML metadata
 ├── knowledge-ingestion/    # One-shot ingestion container (local build)
 ├── advisor/                # LangGraph advisor agent (local build)
+├── dataset-agent/          # LangGraph dataset search agent (local build)
+├── huggingface-mcp/        # HuggingFace MCP server (local build)
 ├── vector-mcp/             # Vector MCP server (local build)
 ├── soofi-ui/               # A2UI Lit frontend (local build)
 ├── interaction-agent/      # LangGraph ReAct agent, AG-UI SSE, A2A orchestrator (local build)

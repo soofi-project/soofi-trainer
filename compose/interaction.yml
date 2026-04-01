@@ -13,6 +13,7 @@ services:
     environment:
       - ADVISOR_A2A_URL=http://advisor:8000
       - TRAINING_AGENT_A2A_URL=http://training-agent:8000
+      - DATASET_AGENT_A2A_URL=http://dataset-agent:8000
       - AGENT_REGISTRY=interaction-agent=http://interaction-agent:8000,advisor=http://advisor:8000,training-agent=http://training-agent:8000,dataset-agent=http://dataset-agent:8000
     networks:
       - soofi-network
@@ -20,6 +21,8 @@ services:
       advisor:
         condition: service_healthy
       training-agent:
+        condition: service_healthy
+      dataset-agent:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import socket; s=socket.create_connection(('localhost',8000),2); s.close()\""]
