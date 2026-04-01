@@ -3,148 +3,110 @@
 	auto_https disable_redirects
 }
 
-(cloudflare_tls) {
-    tls {
-        dns cloudflare {env.CLOUDFLARE_API_TOKEN}
-    }
-}
-
 {$LANDING_PAGE_HOSTNAME}:{$LANDING_PAGE_HTTPS_PORT} {
-	import cloudflare_tls
 	reverse_proxy landingpage:80
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$SOOFI_UI_PORT} {
-	import cloudflare_tls
 	reverse_proxy soofi-ui:80
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$GRAFANA_PORT} {
-	import cloudflare_tls
 	reverse_proxy grafana:3000
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$PORTAINER_PORT} {
-	import cloudflare_tls
 	reverse_proxy portainer:9000
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$N8N_EXTERNAL_PORT} {
-	import cloudflare_tls
 	reverse_proxy n8n:5678
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$OPENWEBUI_PORT} {
-	import cloudflare_tls
 	reverse_proxy open-webui:8080 {
         header_down Location "http://" "https://"
     }
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$FLOWISE_PORT} {
-	import cloudflare_tls
 	reverse_proxy flowise:3000
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$MCPINSPECTOR_CLIENT_PORT} {
-	import cloudflare_tls
 	reverse_proxy mcp-inspector:6274
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$MCPINSPECTOR_PROXY_PORT} {
-	import cloudflare_tls
 	reverse_proxy mcp-inspector:6277
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$MINIO_PORT} {
-	import cloudflare_tls
 	reverse_proxy minio:9000
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$MINIO_CONSOLE_PORT} {
-	import cloudflare_tls
 	reverse_proxy minio:9001 {
         header_down Location "http://" "https://"
     }
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$STT_PORT} {
-	import cloudflare_tls
 	reverse_proxy stt:8000
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$TTS_PORT} {
-	import cloudflare_tls
 	reverse_proxy tts:8000
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$EDC_PROVIDER_PORT} {
-	import cloudflare_tls
 	reverse_proxy edc-provider:19291 {
         header_down Location "http://" "https://"
     }
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$EDC_PORTAL_PROVIDER_PORT} {
-	import cloudflare_tls
 	reverse_proxy portal-provider:80 {
         header_down Location "http://" "https://"
     }
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$EDC_CONSUMER_PORT} {
-	import cloudflare_tls
 	reverse_proxy edc-consumer:19291 {
         header_down Location "http://" "https://"
     }
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$EDC_PORTAL_CONSUMER_PORT} {
-	import cloudflare_tls
 	reverse_proxy portal-consumer:80 {
         header_down Location "http://" "https://"
     }
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$AAS_DISCOVERY_PORT} {
-	import cloudflare_tls
-	reverse_proxy aas-discovery:8081 {
-        header_down Location "http://" "https://"
-    }
+	reverse_proxy aas-discovery:8081
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$AAS_REGISTRY_PORT} {
-	import cloudflare_tls
-	reverse_proxy aas-registry:8080 {
-        header_down Location "http://" "https://"
-    }
+	reverse_proxy aas-registry:8080
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$SM_REGISTRY_PORT} {
-	import cloudflare_tls
-	reverse_proxy sm-registry:8080 {
-        header_down Location "http://" "https://"
-    }
+	reverse_proxy sm-registry:8080
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$AAS_ENVIRONMENT_PORT} {
-	import cloudflare_tls
-	reverse_proxy aas-environment:8081 {
-        header_down Location "http://" "https://"
-    }
+	reverse_proxy aas-environment:8081
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$AAS_WEBUI_PORT} {
-	import cloudflare_tls
 	reverse_proxy aas-webui:3000
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$MNESTIX_BROWSER_PORT} {
-	import cloudflare_tls
 	reverse_proxy mnestix-browser:3000
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$MNESTIX_PROXY_PORT} {
-	import cloudflare_tls
 	reverse_proxy mnestix-proxy:5065
 }
