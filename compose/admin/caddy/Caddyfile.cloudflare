@@ -59,6 +59,10 @@
 	reverse_proxy tts:8000
 }
 
+{$LANDING_PAGE_HOSTNAME}:{$TRAINING_GATEWAY_PORT} {
+	reverse_proxy training-gateway:8000
+}
+
 {$LANDING_PAGE_HOSTNAME}:{$EDC_PROVIDER_PORT} {
 	reverse_proxy edc-provider:19291 {
         header_down Location "http://" "https://"
@@ -79,6 +83,12 @@
 
 {$LANDING_PAGE_HOSTNAME}:{$EDC_PORTAL_CONSUMER_PORT} {
 	reverse_proxy portal-consumer:80 {
+        header_down Location "http://" "https://"
+    }
+}
+
+{$LANDING_PAGE_HOSTNAME}:{$EDC_CONSUMER_MCP_PORT} {
+	reverse_proxy edc-consumer-mcp:8081 {
         header_down Location "http://" "https://"
     }
 }

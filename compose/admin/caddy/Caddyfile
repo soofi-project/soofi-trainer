@@ -59,6 +59,10 @@
 	reverse_proxy tts:8000
 }
 
+{$LANDING_PAGE_HOSTNAME}:{$TRAINING_GATEWAY_PORT} {
+	reverse_proxy training-gateway:8000
+}
+
 {$LANDING_PAGE_HOSTNAME}:{$EDC_PROVIDER_PORT} {
 	reverse_proxy edc-provider:19291 {
         header_down Location "http://" "https://"
@@ -83,28 +87,26 @@
     }
 }
 
-{$LANDING_PAGE_HOSTNAME}:{$AAS_DISCOVERY_PORT} {
-	reverse_proxy aas-discovery:8081 {
+{$LANDING_PAGE_HOSTNAME}:{$EDC_CONSUMER_MCP_PORT} {
+	reverse_proxy edc-consumer-mcp:8081 {
         header_down Location "http://" "https://"
     }
+}
+
+{$LANDING_PAGE_HOSTNAME}:{$AAS_DISCOVERY_PORT} {
+	reverse_proxy aas-discovery:8081
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$AAS_REGISTRY_PORT} {
-	reverse_proxy aas-registry:8080 {
-        header_down Location "http://" "https://"
-    }
+	reverse_proxy aas-registry:8080
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$SM_REGISTRY_PORT} {
-	reverse_proxy sm-registry:8080 {
-        header_down Location "http://" "https://"
-    }
+	reverse_proxy sm-registry:8080
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$AAS_ENVIRONMENT_PORT} {
-	reverse_proxy aas-environment:8081 {
-        header_down Location "http://" "https://"
-    }
+	reverse_proxy aas-environment:8081
 }
 
 {$LANDING_PAGE_HOSTNAME}:{$AAS_WEBUI_PORT} {

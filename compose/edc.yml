@@ -144,8 +144,6 @@ services:
     container_name: edc-consumer-mcp
     build:
       context: ./edc-mcp
-    ports:
-      - "${EDC_CONSUMER_MCP_PORT}:8081"
     environment:
       - PYTHONUNBUFFERED=1
       - EDC_MANAGEMENT_URL=http://edc-consumer:19193/management/

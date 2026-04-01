@@ -31,8 +31,6 @@ services:
     build: ./training-pipeline/training-gateway
     container_name: training-gateway
     restart: unless-stopped
-    ports:
-      - "${TRAINING_GATEWAY_PORT}:8000"
     env_file:
       - .env
     environment:

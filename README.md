@@ -74,7 +74,7 @@ EOF
 
 ### 3. Open the UI
 
-- **Landing Page**: https://localhost:80
+- **Landing Page**: https://localhost
 - **Soofi UI (A2UI)**: https://localhost:3001
 - **Chat (Open WebUI)**: https://localhost:3000
 - **MCP Inspector**: https://localhost:6274/?transport=streamable-http&serverUrl=http://vector-mcp:8000/mcp/&MCP_PROXY_AUTH_TOKEN=dev-stack-token-12345
