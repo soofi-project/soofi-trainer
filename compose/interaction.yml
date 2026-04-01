@@ -65,6 +65,8 @@ services:
         condition: service_healthy
       tts:
         condition: service_healthy
+      flowise-init:
+        condition: service_completed_successfully
 
   # ===========================================
   # STT - Speech-to-Text Service
