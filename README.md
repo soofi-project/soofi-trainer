@@ -158,9 +158,9 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `ADVISOR_MODEL` | `gpt-4o-mini` | LLM model for the advisor agent |
-| `INTERACTION_MODEL` | `gpt-4o-mini` | LLM model for the interaction agent |
-| `TRAINING_AGENT_MODEL` | `gpt-4o-mini` | LLM model for the training agent |
+| `ADVISOR_MODEL` | `qwen35-122b-fp8` | LLM model for the advisor agent |
+| `INTERACTION_MODEL` | `qwen35-122b-fp8` | LLM model for the interaction agent |
+| `TRAINING_AGENT_MODEL` | `qwen35-122b-fp8` | LLM model for the training agent |
 
 ### Training
 
@@ -246,7 +246,7 @@ The UI sends the voice from `VITE_TTS_VOICE_DE` (German) or `VITE_TTS_VOICE_EN` 
 `up.sh` supports backend profiles via compose override files.
 
 ```bash
-./up.sh                # OpenAI (default)
+./up.sh                # Base stack (no backend override; uses .env agent models)
 ./up.sh --ollama       # Ollama (local)
 ./up.sh --lmstudio     # LM Studio (local)
 ./up.sh --triton       # NVIDIA Triton (H200)
@@ -256,13 +256,15 @@ The UI sends the voice from `VITE_TTS_VOICE_DE` (German) or `VITE_TTS_VOICE_EN` 
 
 | Profile | Chat endpoint | Embeddings | STT/TTS | Requires |
 |---------|--------------|------------|---------|---------|
-| _(default)_ | `api.openai.com` | OpenAI | OpenAI cloud | `OPENAI_API_KEY` in `~/.env.secrets` |
+| _(base stack / no override)_ | `api.openai.com` when `OPENAI_BASE_URL` is unset | `openai:text-embedding-3-large` | OpenAI cloud | `OPENAI_API_KEY` in `~/.env.secrets`; checked-in agent model defaults come from `.env` (`qwen35-122b-fp8` for all agents) |
 | `--ollama` | Ollama (`localhost:11434`) | Ollama `bge-m3` | OpenAI cloud | Ollama running + models pulled |
 | `--lmstudio` | LM Studio (`localhost:1234`) | LM Studio `bge-m3` | OpenAI cloud | LM Studio server running + models loaded |
 | `--triton` | Triton (`10.2.10.33:9000`) | OpenAI | OpenAI cloud | Triton running + model loaded, `OPENAI_API_KEY` for embeddings |
 | `--vllm` | vLLM via LiteLLM (`10.2.10.33:4000`) | Qwen3-Embedding-8B | H200 local (Piper + Whisper) | H200 inference stack deployed |
 
-Model names and all other backend settings are configured in the respective override file:
+The base stack uses the checked-in agent model defaults from `.env`. If you switch to a backend that exposes different model IDs, update `ADVISOR_MODEL`, `INTERACTION_MODEL`, and `TRAINING_AGENT_MODEL` accordingly.
+
+Base-stack model names come from `.env`. Backend-specific endpoints, embeddings, and vLLM preset overrides are configured in the files below:
 
 - `docker-compose.ollama.yml` — Ollama models, endpoint, embedding model
 - `docker-compose.lmstudio.yml` — LM Studio models, endpoint, embedding model
@@ -275,6 +277,14 @@ vLLM model selection uses preset overlays:
 - `compose/presets/vllm-nvidia-nemotron-3-super-120b-a12b-fp8.yml`
 - `compose/presets/vllm-nvidia-nemotron-3-super-120b-a12b-nvfp4.yml`
 - `compose/presets/vllm-nemotron-cascade-2-30b-a3b.yml`
+
+The parameter values for these model defaults/presets were chosen based on the recommendations stated in:
+
+- `https://github.com/NVIDIA-NeMo/Nemotron/blob/main/usage-cookbook/Nemotron-3-Super/vllm_cookbook.ipynb`
+- `https://huggingface.co/Qwen/Qwen3.5-122B-A10B-FP8`
+- `https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-NVFP4`
+- `https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-FP8`
+- `https://huggingface.co/nvidia/Nemotron-Cascade-2-30B-A3B`
 
 To change the vLLM model, select a preset:
 
