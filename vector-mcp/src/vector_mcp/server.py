@@ -59,8 +59,8 @@ def get_embeddings():
 # -------------------------------------------------
 # Reranker
 #
-# RERANKER_MODE=dummy (default) — score derived from vector distance (1 - distance); no reordering
-# RERANKER_MODE=vllm            — real Qwen3-Reranker via vLLM (H200); requires RERANKER_URL + RERANKER_CANDIDATE_LIMIT
+# RERANKER_MODE=distance         — score derived from vector distance (1 - distance); no reordering
+# RERANKER_MODE=vllm             — real Qwen3-Reranker via vLLM (H200); requires RERANKER_URL + RERANKER_CANDIDATE_LIMIT
 # -------------------------------------------------
 RERANKER_MODE = os.getenv("RERANKER_MODE", "").lower()
 
@@ -73,12 +73,12 @@ if RERANKER_MODE == "vllm":
         raise RuntimeError("RERANKER_CANDIDATE_LIMIT env var required when RERANKER_MODE=vllm")
     RERANKER_CANDIDATE_LIMIT = int(_candidate_limit)
     logger.info(f"Reranker: vllm mode, url={RERANKER_URL} candidate_limit={RERANKER_CANDIDATE_LIMIT}")
-elif RERANKER_MODE == "dummy":
+elif RERANKER_MODE == "distance":
     RERANKER_URL = ""
     RERANKER_CANDIDATE_LIMIT = 0
-    logger.info("Reranker: dummy mode (score = 1 - vector distance)")
+    logger.info("Reranker: distance mode (score = 1 - vector distance)")
 else:
-    raise RuntimeError(f"RERANKER_MODE must be 'dummy' or 'vllm', got: '{RERANKER_MODE}'")
+    raise RuntimeError(f"RERANKER_MODE must be 'distance' or 'vllm', got: '{RERANKER_MODE}'")
 
 _reranker_client: httpx.Client | None = None
 

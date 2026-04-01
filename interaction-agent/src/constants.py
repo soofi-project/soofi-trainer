@@ -26,8 +26,8 @@ AGENT_CARD_EVENT = "agent_card_event"
 TRAINING_VIEW_KEY = "training_view"
 TRAINING_VIEW_EVENT = "training_view_event"
 
-# Protocol keys for the soofi event envelope emitted by the advisor service.
-# Must match the constants defined in advisor/src/a2a_handler.py.
+# Protocol keys for the soofi event envelope emitted by advisor and training-agent services.
+# String values must match the private constants in advisor/src/a2a_handler.py and training-agent/src/a2a_handler.py.
 SOOFI_EVENT_KEY = "__soofi_event"
 SOOFI_EVENT_SEARCH_STATUS = "search_status"
 SOOFI_EVENT_RAG_SOURCES = "rag_sources"
