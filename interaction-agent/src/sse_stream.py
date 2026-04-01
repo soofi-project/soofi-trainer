@@ -13,6 +13,7 @@ from langchain_core.messages import AIMessageChunk, ToolMessage
 from langgraph.graph.state import CompiledStateGraph
 
 from .constants import (
+    ADVISOR_KEY_RAG_SOURCES,
     AGENT_CARD_EVENT,
     AGENT_CARD_KEY,
     CONTROL_DOC_VIEWER_TOOL,
@@ -26,6 +27,27 @@ from .speech import RE_SENTENCE_END, generate_speech_text
 logger = logging.getLogger(__name__)
 
 STREAM_DELAY = 0.02  # seconds between direct-LLM text chunks
+
+
+def _extract_tool_text(raw: Any) -> str:
+    """Extract plain text from a tool output regardless of format.
+
+    Handles: plain str, ToolMessage with str content,
+    ToolMessage with list-of-parts content ([{"type":"text","text":"..."}]),
+    and list-of-str content.
+    """
+    if isinstance(raw, str):
+        return raw
+    content = raw.content if hasattr(raw, "content") else raw
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        for part in content:
+            if isinstance(part, str):
+                return part
+            if isinstance(part, dict) and part.get("type") == "text":
+                return part.get("text", "")
+    return str(content)
 
 # Strip domains the LLM may prepend to /docs/ URLs (e.g. https://www.dfki.de/docs/...)
 _RE_DOCS_URL = re.compile(r"https?://[^/\s)]+(/docs/)")
@@ -274,6 +296,11 @@ class SSEStream:
 
         data = event.get("data", {})
 
+        # RAG sources transparency panel (T-09-3)
+        rag_sources = data.get(ADVISOR_KEY_RAG_SOURCES)
+        if rag_sources is not None:
+            yield _sse({"type": "RAG_SOURCES", "sources": rag_sources})
+
         for tracker in self._trackers.values():
             # Status keys
             for status_key in tracker.status_keys:
@@ -310,27 +337,22 @@ class SSEStream:
 
         # Doc viewer commands are returned as JSON from the tool
         if tool_name == CONTROL_DOC_VIEWER_TOOL:
-            raw = event.get("data", {}).get("output", "")
-            content = raw.content if hasattr(raw, "content") else raw
+            content = _extract_tool_text(event.get("data", {}).get("output", ""))
             try:
-                data = json.loads(content) if isinstance(content, str) else {}
+                data = json.loads(content)
                 doc_cmd = data.get(DOC_VIEWER_KEY)
                 if doc_cmd:
                     logger.info("Emitting DOC_VIEWER event: %s", doc_cmd)
                     yield _sse({"type": "DOC_VIEWER", **doc_cmd})
             except (json.JSONDecodeError, TypeError):
-                pass
+                logger.warning("Failed to parse DOC_VIEWER content: %s", content[:200])
             return
 
         tracker = self._trackers.get(tool_name) if tool_name else None
         if not tracker:
             return
         # Capture full tool output for tail compensation
-        raw = event.get("data", {}).get("output", "")
-        if isinstance(raw, str):
-            tracker.tool_output = raw
-        elif hasattr(raw, "content"):
-            tracker.tool_output = raw.content if isinstance(raw.content, str) else ""
+        tracker.tool_output = _extract_tool_text(event.get("data", {}).get("output", ""))
         logger.info("on_tool_end %s output: %d chars", tracker.tool_name, len(tracker.tool_output))
         # Fallback: if streaming yielded nothing, emit TOOL_CALL_END here
         if tracker.searching:

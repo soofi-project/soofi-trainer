@@ -3,7 +3,7 @@ services:
   # Training Agent - LangGraph + A2A
   # ===========================================
   training-agent:
-    image: dfkisoofi/training-agent:${TRAININGAGENT_VERSION}
+    image: dfkisoofi/training-agent:${SOOFI_TRAINER_VERSION}
     build: ./training-agent
     container_name: training-agent
     restart: unless-stopped
@@ -27,7 +27,7 @@ services:
   # Training Gateway - Training Job Management
   # ===========================================
   training-gateway:
-    image: dfkisoofi/training-gateway:${TRAINING_GATEWAY_VERSION}
+    image: dfkisoofi/training-gateway:${SOOFI_TRAINER_VERSION}
     build: ./training-pipeline/training-gateway
     container_name: training-gateway
     restart: unless-stopped
@@ -62,9 +62,9 @@ services:
   # ===========================================
   training-container:
     build: ./training-pipeline/training-container
-    image: ${TRAINING_IMAGE_NAME}:${TRAINING_IMAGE_VERSION}
+    image: ${TRAINING_IMAGE_NAME}:${SOOFI_TRAINER_VERSION}
     container_name: training-container
-    entrypoint: echo image ${TRAINING_IMAGE_NAME}:${TRAINING_IMAGE_VERSION} available
+    entrypoint: echo image ${TRAINING_IMAGE_NAME}:${SOOFI_TRAINER_VERSION} available
 
 volumes:
   training_gateway_data:

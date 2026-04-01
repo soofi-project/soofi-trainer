@@ -2,10 +2,13 @@
 MCP Server for Soofi Knowledge Base Search
 """
 
+import json
 import logging
 import os
+import time
 from typing import Any
 
+import httpx
 import uvicorn
 import weaviate
 from weaviate.classes.query import Filter, MetadataQuery
@@ -51,6 +54,77 @@ def get_embeddings():
             _embeddings.check_embedding_ctx_length = False
 
     return _embeddings
+
+
+# -------------------------------------------------
+# Reranker
+#
+# RERANKER_MODE=distance         — score derived from vector distance (1 - distance); no reordering
+# RERANKER_MODE=vllm             — real Qwen3-Reranker via vLLM (H200); requires RERANKER_URL + RERANKER_CANDIDATE_LIMIT
+# -------------------------------------------------
+RERANKER_MODE = os.getenv("RERANKER_MODE", "").lower()
+
+if RERANKER_MODE == "vllm":
+    RERANKER_URL = os.getenv("RERANKER_URL")
+    if not RERANKER_URL:
+        raise RuntimeError("RERANKER_URL env var required when RERANKER_MODE=vllm")
+    _candidate_limit = os.getenv("RERANKER_CANDIDATE_LIMIT")
+    if not _candidate_limit:
+        raise RuntimeError("RERANKER_CANDIDATE_LIMIT env var required when RERANKER_MODE=vllm")
+    RERANKER_CANDIDATE_LIMIT = int(_candidate_limit)
+    logger.info(f"Reranker: vllm mode, url={RERANKER_URL} candidate_limit={RERANKER_CANDIDATE_LIMIT}")
+elif RERANKER_MODE == "distance":
+    RERANKER_URL = ""
+    RERANKER_CANDIDATE_LIMIT = 0
+    logger.info("Reranker: distance mode (score = 1 - vector distance)")
+else:
+    raise RuntimeError(f"RERANKER_MODE must be 'distance' or 'vllm', got: '{RERANKER_MODE}'")
+
+_reranker_client: httpx.Client | None = None
+
+
+def get_reranker_client() -> httpx.Client:
+    """Lazy-init reranker HTTP client."""
+    global _reranker_client
+    if _reranker_client is None:
+        _reranker_client = httpx.Client(base_url=RERANKER_URL, timeout=5.0)
+    return _reranker_client
+
+
+def rerank(query: str, texts: list[str]) -> list[dict[str, Any]] | None:
+    """Call vLLM reranker. Returns sorted [{"index": int, "score": float}] or None on failure."""
+    if not texts:
+        return []
+    logger.info(f"Reranking {len(texts)} candidates for query='{query[:80]}'")
+    try:
+        t0 = time.perf_counter()
+        resp = get_reranker_client().post(
+            "/rerank",
+            json={
+                "model": os.getenv("RERANKER_MODEL", "qwen3-reranker-4b"),
+                "query": query,
+                "documents": texts,
+            },
+        )
+        resp.raise_for_status()
+        elapsed_ms = (time.perf_counter() - t0) * 1000
+        results = resp.json()["results"]
+        ranked = [
+            {"index": r["index"], "score": r["relevance_score"]}
+            for r in results  # vLLM returns pre-sorted by relevance descending
+        ]
+        if not ranked:
+            logger.warning("Reranker returned empty results")
+            return []
+        logger.info(
+            f"Reranking done in {elapsed_ms:.0f}ms: top score={ranked[0]['score']:.4f}, "
+            f"bottom score={ranked[-1]['score']:.4f}"
+        )
+        return ranked
+    except Exception:
+        logger.warning("Reranker unavailable, falling back to vector-only ranking", exc_info=True)
+        return None
+
 
 # -------------------------------------------------
 # Weaviate client (singleton)
@@ -122,6 +196,12 @@ def search_documents(
     
         collection = client.collections.get(collection_name)
 
+        # Some models pass filters as a JSON string instead of a dict
+        if isinstance(filters, str):
+            try:
+                filters = json.loads(filters)
+            except (json.JSONDecodeError, TypeError):
+                filters = None
         filters_applied = filters or {}
         # Coerce list values to string — some models pass ["rag"] instead of "rag"
         filters_applied = {
@@ -141,9 +221,12 @@ def search_documents(
         embeddings = get_embeddings()
         query_vector = embeddings.embed_query(query)
 
+        # Fetch more candidates when reranker is enabled
+        fetch_limit = RERANKER_CANDIDATE_LIMIT if RERANKER_MODE == "vllm" else limit
+
         search_kwargs = {
             "near_vector": query_vector,
-            "limit": limit,
+            "limit": fetch_limit,
             "return_metadata": MetadataQuery(distance=True),
         }
         if where_filter:
@@ -155,21 +238,64 @@ def search_documents(
         for obj in response.objects:
             props = dict(obj.properties)
             text = props.pop("text", None)
+            source = props.get("source", "")
+            distance = (
+                float(obj.metadata.distance)
+                if obj.metadata and obj.metadata.distance is not None
+                else None
+            )
             results.append(
                 {
                     "text": text,
                     "metadata": props,
-                    "distance": float(obj.metadata.distance)
-                    if obj.metadata and obj.metadata.distance is not None
-                    else None,
+                    "distance": distance,
+                    "source_file": source.split("/")[-1].split("#")[0] if source else "",
+                    "section_title": props.get("section", ""),
                 }
             )
 
+        # Rerank if vllm mode, otherwise derive score from vector distance
+        reranker_used = False
+        if RERANKER_MODE == "vllm" and results:
+            texts = [r["text"] or "" for r in results]
+            ranked = rerank(query, texts)
+            if ranked is not None:
+                reranked = []
+                for i, item in enumerate(ranked[:limit]):
+                    if item["index"] >= len(results):
+                        logger.warning(
+                            f"Reranker returned out-of-bounds index {item['index']} "
+                            f"(results size={len(results)}), skipping"
+                        )
+                        continue
+                    result = results[item["index"]]
+                    result["reranker_score"] = round(float(item["score"]), 4)
+                    reranked.append(result)
+                    text_preview = (result["text"] or "")[:80].replace("\n", " ")
+                    logger.info(
+                        f"  #{i+1} score={item['score']:.4f} "
+                        f"dist={result['distance']:.4f} "
+                        f"| {text_preview}..."
+                    )
+                results = reranked
+                reranker_used = True
+            else:
+                results = results[:limit]
+        else:
+            results = results[:limit]
+            # Distance mode: derive relevance score from cosine distance (score = 1 - distance)
+            for result in results:
+                if result["distance"] is not None:
+                    result["reranker_score"] = round(max(0.0, 1.0 - result["distance"]), 4)
+
+        scores_available = any(r.get("reranker_score") is not None for r in results)
         return {
             "results": results,
             "total": len(results),
             "query": query,
             "filters_applied": filters_applied,
+            "reranker_used": reranker_used,
+            "scores_available": scores_available,
         }
 
     except Exception as e:
@@ -229,7 +355,7 @@ def list_metadata() -> dict[str, Any]:
 # HTTP / ASGI entrypoint
 # -------------------------------------------------
 if __name__ == "__main__":
-    app = mcp.http_app()
+    app = mcp.http_app(path="/mcp")
     port_str = os.getenv("MCP_SERVER_PORT")
 
     if not port_str:

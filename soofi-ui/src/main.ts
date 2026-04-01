@@ -83,9 +83,17 @@ interface AgUiEvent {
 // Chat message model
 // ---------------------------------------------------------------------------
 
+interface RagSource {
+  file: string;
+  section: string;
+  score: number;
+  url: string;
+}
+
 interface ChatMessage {
   role: "user" | "assistant";
   text: string;
+  ragSources?: RagSource[];
 }
 
 interface DashboardEmbedInfo {
@@ -542,6 +550,87 @@ class SoofiChat extends SignalWatcher(LitElement) {
       40%            { opacity: 1; }
     }
 
+    /* RAG transparency panel */
+    /* RAG sources inside assistant message */
+    .rag-sources {
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid var(--color-border, #dadce0);
+      font-size: 14px;
+      animation: rag-fade-in 0.3s ease;
+    }
+    @keyframes rag-fade-in {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+    .rag-sources__title {
+      font-weight: 600;
+      color: var(--color-text-secondary, #5f6368);
+      margin-bottom: 6px;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    a.rag-sources__item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 6px;
+      border-radius: 6px;
+      text-decoration: none;
+      color: inherit;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    a.rag-sources__item:hover {
+      background: rgba(0, 0, 0, 0.04);
+    }
+    .rag-sources__file {
+      font-weight: 500;
+      color: var(--color-primary, #1a73e8);
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 180px;
+    }
+    .rag-sources__section {
+      color: var(--color-text-secondary, #5f6368);
+      flex-shrink: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .rag-sources__score {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+    .rag-sources__score-track {
+      display: block;
+      width: 50px;
+      height: 5px;
+      background: var(--color-border, #dadce0);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .rag-sources__score-fill {
+      display: block;
+      height: 100%;
+      background: var(--color-primary, #1a73e8);
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+    .rag-sources__score-label {
+      color: var(--color-text-secondary, #5f6368);
+      font-size: 13px;
+      min-width: 32px;
+      text-align: right;
+    }
+
     /* Recording status bar */
     .recording-bar {
       display: flex;
@@ -844,6 +933,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
   @state() private isRecording = false;
   @state() private searching = false;
   @state() private searchStatusLabel = "";
+  private _pendingRagSources: RagSource[] = [];
   @state() private flowState: FlowState = "idle";
   private _flowTimer: ReturnType<typeof setTimeout> | null = null;
   private _fetchController: AbortController | null = null;
@@ -950,6 +1040,24 @@ class SoofiChat extends SignalWatcher(LitElement) {
                   <div class="message message--assistant">
                     ${unsafeHTML(marked.parse(m.text) as string)}${this.streaming && i === this.messages.length - 1
                       ? html`<span class="streaming-dot"></span>`
+                      : ""}${m.ragSources?.length
+                      ? html`
+                        <div class="rag-sources">
+                          <div class="rag-sources__title">${tr("rag_sources_title", this.language)}</div>
+                          ${m.ragSources.map(s => html`
+                            <a class="rag-sources__item" href="${s.url || "#"}" @click=${(e: MouseEvent) => { if (!s.url) e.preventDefault(); }}>
+                              <span class="rag-sources__file">${s.file}</span>
+                              ${s.section ? html`<span class="rag-sources__section">${s.section}</span>` : nothing}
+                              <span class="rag-sources__score">
+                                <span class="rag-sources__score-track">
+                                  <span class="rag-sources__score-fill" style="width:${Math.round(s.score * 100)}%"></span>
+                                </span>
+                                <span class="rag-sources__score-label">${Math.round(s.score * 100)}%</span>
+                              </span>
+                            </a>
+                          `)}
+                        </div>
+                      `
                       : ""}
                   </div>
                 `
@@ -1400,6 +1508,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
     this.#processor.clearSurfaces();
     this.surfaceEntries = [];
     this.dashboardEmbed = null;
+    this._pendingRagSources = [];
 
     // Cancel any queued/playing TTS from the previous response
     this.ttsGeneration++;
@@ -1501,6 +1610,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
         if (this._flowTimer) clearTimeout(this._flowTimer);
         this.searching = true;
         this.searchStatusLabel = "";
+        this._pendingRagSources = [];
         if (event.tool === "ask_training_agent_tool") {
           this.flowState = "asking-training-agent";
         } else if (event.tool === "ask_advisor_tool") {
@@ -1511,6 +1621,26 @@ class SoofiChat extends SignalWatcher(LitElement) {
       case "TOOL_CALL_END":
         this.searching = false;
         this.searchStatusLabel = "";
+        // Attach buffered RAG sources to the last assistant message
+        if (this._pendingRagSources.length > 0) {
+          const msgs = [...this.messages];
+          const last = msgs[msgs.length - 1];
+          if (last?.role === "assistant") {
+            last.ragSources = this._pendingRagSources;
+            this.messages = msgs;
+          }
+          // Reset doc links to current sources only (not accumulated)
+          this.docLinks = this._pendingRagSources
+            .map(s => s.url)
+            .filter(u => u && u.startsWith("/docs/"));
+          this.docLinksCurrentIdx = -1;
+          this._pendingRagSources = [];
+        }
+        // End streaming — the second LLM call is suppressed anyway,
+        // so don't make the user wait for it.
+        if (event.tool === "ask_advisor_tool" || event.tool === "ask_training_agent_tool") {
+          this.streaming = false;
+        }
         if (this._flowTimer) clearTimeout(this._flowTimer);
         if (this.flowState === "asking-training-agent" || this.flowState === "training-searching"
             || this.flowState === "training-mcp-returning" || this.flowState === "ta-returning") {
@@ -1540,6 +1670,11 @@ class SoofiChat extends SignalWatcher(LitElement) {
           this.flowState = "searching";
         }
         // Other tools (show_agent_card, etc.): label shown but no flow animation
+        break;
+
+      case "RAG_SOURCES":
+        // Buffer sources — attach to message after the advisor response is fully streamed
+        this._pendingRagSources = (event.sources as RagSource[]) || [];
         break;
 
       case "SPEECH_TEXT":
@@ -1584,6 +1719,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
           if (action === "close") {
             this.trainingProgressVisible = false;
           } else {
+            this._dismissSidePanel();
             this.trainingProgressVisible = true;
           }
         }
@@ -1693,8 +1829,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
   }
 
   private async openDocViewer(url: string): Promise<void> {
-    // Close agent cards if open — they share the panel
-    this.agentCards = null;
+    this._dismissSidePanel();
     this.docViewerUrl = url;
     // Sync index for next/previous navigation
     const idx = this.docLinks.indexOf(url);
@@ -1730,6 +1865,15 @@ class SoofiChat extends SignalWatcher(LitElement) {
     } catch {
       this.docContent = `<p>${tr("doc_load_error_generic", this.language)}</p>`;
     }
+  }
+
+  /** Dismiss whichever side-panel is currently visible. */
+  private _dismissSidePanel(): void {
+    this.docViewerUrl = null;
+    this.docContent = "";
+    this.docViewerAnchors = [];
+    this.agentCards = null;
+    this.trainingProgressVisible = false;
   }
 
   private closeDocViewer(): void {
@@ -1882,8 +2026,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
     if (action === "open") {
       const cards = event.cards as Array<[string, AgentCardData]>;
       if (cards?.length) {
-        // Close doc viewer if open — they share the panel
-        this.closeDocViewer();
+        this._dismissSidePanel();
         this.agentCards = cards;
       }
     }
@@ -1920,6 +2063,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
     this.streaming = false;
     this.searching = false;
     this.searchStatusLabel = "";
+    this._pendingRagSources = [];
     this.flowState = "idle";
     this.docViewerUrl = null;
     this.docContent = "";

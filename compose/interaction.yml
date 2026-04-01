@@ -3,7 +3,7 @@ services:
   # Interaction Agent - LangGraph + AG-UI SSE
   # ===========================================
   interaction-agent:
-    image: dfkisoofi/soofi-ui-interaction-agent:${SOOFI_UI_INTERACTIONAGENT_VERSION}
+    image: dfkisoofi/soofi-ui-interaction-agent:${SOOFI_TRAINER_VERSION}
     build: ./interaction-agent
     container_name: interaction-agent
     restart: unless-stopped
@@ -31,7 +31,7 @@ services:
   # Soofi UI - A2UI Frontend
   # ===========================================
   soofi-ui:
-    image: dfkisoofi/soofi-ui:${SOOFI_UI_VERSION}
+    image: dfkisoofi/soofi-ui:${SOOFI_TRAINER_VERSION}
     build:
       context: ./soofi-ui
       args:
@@ -63,12 +63,14 @@ services:
         condition: service_healthy
       tts:
         condition: service_healthy
+      flowise-init:
+        condition: service_completed_successfully
 
   # ===========================================
   # STT - Speech-to-Text Service
   # ===========================================
   stt:
-    image: dfkisoofi/soofi-stt:${STT_VERSION}
+    image: dfkisoofi/soofi-stt:${SOOFI_TRAINER_VERSION}
     build: ./stt
     container_name: stt
     restart: unless-stopped
@@ -87,7 +89,7 @@ services:
   # TTS - Text-to-Speech Service
   # ===========================================
   tts:
-    image: dfkisoofi/soofi-tts:${TTS_VERSION}
+    image: dfkisoofi/soofi-tts:${SOOFI_TRAINER_VERSION}
     build: ./tts
     container_name: tts
     restart: unless-stopped

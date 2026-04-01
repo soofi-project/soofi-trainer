@@ -167,7 +167,7 @@ services:
       - soofi-admin-network
 
   landingpage:
-    image: dfkisoofi/landingpage:${LANDING_PAGE_VERSION}
+    image: dfkisoofi/landingpage:${SOOFI_TRAINER_VERSION}
     container_name: landingpage
     restart: always
     build: ./landingpage

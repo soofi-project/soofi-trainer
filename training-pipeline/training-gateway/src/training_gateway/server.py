@@ -19,7 +19,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Build MCP ASGI app (must happen before lifespan to access its lifespan)
-mcp_app = mcp.http_app()
+mcp_app = mcp.http_app(path="/mcp")
 
 
 @asynccontextmanager
