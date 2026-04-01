@@ -20,10 +20,15 @@ model = os.getenv("DATASET_AGENT_MODEL")
 if not model:
     raise RuntimeError("DATASET_AGENT_MODEL env var required.")
 
+base_url = os.getenv("OPENAI_BASE_URL") or None
+
 
 def build_graph(tools: list[BaseTool]) -> CompiledStateGraph:
     """Build the LangGraph ReAct agent with the given tools."""
-    llm = ChatOpenAI(model=model).bind_tools(tools, parallel_tool_calls=False)
+    llm = ChatOpenAI(
+        model=model,
+        **({"openai_api_base": base_url} if base_url else {}),
+    ).bind_tools(tools, **({"parallel_tool_calls": False} if not base_url else {}))
     tool_node = ToolNode(tools)
 
     async def agent(state: MessagesState, config: RunnableConfig) -> MessagesState:
