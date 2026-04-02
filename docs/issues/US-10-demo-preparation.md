@@ -4,6 +4,7 @@
   - [T-10-1](T-10-1-mobile-ui-ipad.md)
   - [T-10-2](T-10-2-demo-use-cases.md)
   - [T-10-3](T-10-3-aas-submodels.md)
+  - [T-10-4](T-10-4-caddy-letsencrypt-domain.md)
 
 /label ~UserStory_US-10
 /label ~UserStory
@@ -37,6 +38,12 @@ Generate AI-Dataset submodels (Teilmodelle) conforming to the Asset Administrati
 (AAS) standard. The training pipeline output should be exportable as AAS submodel descriptors
 so that trained models and their datasets can be represented in an industry-standard digital
 twin format.
+
+### T-10-4 — HTTPS mit registrierter Domain & Let's Encrypt (Cloudflare)
+Zweite Caddy-Variante für den Betrieb auf einem öffentlichen Server mit registrierter Domain.
+Nutzt `ghcr.io/caddybuilds/caddy-cloudflare:v2.11.2` und Let's Encrypt per Cloudflare
+DNS-Challenge. Beide Caddy-Dienste bleiben im Stack und werden per Docker Compose Profile
+(`local` / `domain`) ausgewählt.
 
 ## Acceptance Criteria
 

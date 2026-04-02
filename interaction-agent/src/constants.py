@@ -10,6 +10,10 @@ TRAINING_AGENT_KEY_CHUNK = "training_agent_chunk"
 TRAINING_AGENT_KEY_STATUS = "training_agent_status"
 TRAINING_AGENT_KEY_JOB_STARTED = "training_agent_job_started"
 
+# Keys for dataset-agent stream events
+DATASET_AGENT_KEY_CHUNK = "dataset_agent_chunk"
+DATASET_AGENT_KEY_STATUS = "dataset_agent_status"
+
 # Keys for doc viewer control events
 DOC_VIEWER_KEY = "doc_viewer"
 CONTROL_DOC_VIEWER_TOOL = "control_doc_viewer"
@@ -17,6 +21,7 @@ CONTROL_DOC_VIEWER_TOOL = "control_doc_viewer"
 # Custom event names for adispatch_custom_event (must match graph.py → sse_stream.py)
 ADVISOR_EVENT = "advisor_event"
 TRAINING_EVENT = "training_event"
+DATASET_EVENT = "dataset_event"
 
 # Keys for agent card viewer events
 AGENT_CARD_KEY = "agent_card"
@@ -26,8 +31,12 @@ AGENT_CARD_EVENT = "agent_card_event"
 TRAINING_VIEW_KEY = "training_view"
 TRAINING_VIEW_EVENT = "training_view_event"
 
-# Protocol keys for the soofi event envelope emitted by the advisor service.
-# Must match the constants defined in advisor/src/a2a_handler.py.
+# Protocol keys for the soofi event envelope emitted by advisor and training-agent services.
+# String values must match the private constants in advisor/src/a2a_handler.py and training-agent/src/a2a_handler.py.
 SOOFI_EVENT_KEY = "__soofi_event"
 SOOFI_EVENT_SEARCH_STATUS = "search_status"
+SOOFI_EVENT_RAG_SOURCES = "rag_sources"
 SOOFI_EVENT_JOB_STARTED = "job_started"
+
+# Key for RAG sources forwarded from advisor to SSE stream
+ADVISOR_KEY_RAG_SOURCES = "advisor_rag_sources"

@@ -1,4 +1,4 @@
-"""A2A AgentExecutor that delegates to the LangGraph advisor graph."""
+"""A2A AgentExecutor that delegates to the LangGraph dataset agent graph."""
 
 import json
 import logging
@@ -17,19 +17,13 @@ from .prompts import SYSTEM_PROMPT_DE, SYSTEM_PROMPT_EN
 
 logger = logging.getLogger(__name__)
 
-# Protocol constants for the soofi event envelope shared with interaction-agent/graph.py
 _SOOFI_EVENT_KEY = "__soofi_event"
 _EVENT_SEARCH_STATUS = "search_status"
-_EVENT_RAG_SOURCES = "rag_sources"
 _RE_LANG_TAG = re.compile(r"\[LANG:(de|en)\]\s*$")
 
 
-class AdvisorAgentExecutor(AgentExecutor):
-    """Wraps the LangGraph advisor graph as an A2A AgentExecutor.
-
-    Accepts a callable that returns the graph, so the executor can be
-    instantiated before the graph is built (during module-level setup).
-    """
+class DatasetAgentExecutor(AgentExecutor):
+    """Wraps the LangGraph dataset graph as an A2A AgentExecutor."""
 
     def __init__(self, graph_provider: Callable[[], CompiledStateGraph | None]) -> None:
         self._graph_provider = graph_provider
@@ -44,7 +38,7 @@ class AdvisorAgentExecutor(AgentExecutor):
                     status=TaskStatus(
                         state=TaskState.failed,
                         message=new_agent_text_message(
-                            "Advisor graph not initialized yet.",
+                            "Dataset agent graph not initialized yet.",
                             context.context_id,
                             context.task_id,
                         ),
@@ -72,7 +66,6 @@ class AdvisorAgentExecutor(AgentExecutor):
 
         raw_text = context.message.parts[0].root.text
 
-        # Extract [LANG:xx] tag from the end of the message
         lang: Language = "de"
         lang_match = _RE_LANG_TAG.search(raw_text)
         if lang_match:
@@ -83,7 +76,6 @@ class AdvisorAgentExecutor(AgentExecutor):
         thread_id = context.context_id or context.task_id
         logger.info("A2A request (thread=%s, lang=%s): %s", thread_id, lang, user_text[:200])
 
-        # Signal that we're working
         await event_queue.enqueue_event(
             TaskStatusUpdateEvent(
                 task_id=context.task_id,
@@ -93,21 +85,19 @@ class AdvisorAgentExecutor(AgentExecutor):
             )
         )
 
-        # Run the LangGraph agent with thread_id for conversation memory.
-        # Stream each LLM token as a TaskStatusUpdateEvent so the client
-        # can display partial results in real time.
         system_prompt = SYSTEM_PROMPT_EN if lang == "en" else SYSTEM_PROMPT_DE
         config = {"configurable": {"thread_id": thread_id, "system_prompt": system_prompt}}
         collected: list[str] = []
+
         try:
             async for event in graph.astream_events(
                 {"messages": [HumanMessage(content=user_text)]},
                 version="v2",
                 config=config,
             ):
-                if event["event"] == "on_tool_start" and "search_documents" in event.get("name", ""):
+                if event["event"] == "on_tool_start":
                     status_json = json.dumps(
-                        {_SOOFI_EVENT_KEY: _EVENT_SEARCH_STATUS, "text": tr("search_status", lang)},
+                        {_SOOFI_EVENT_KEY: _EVENT_SEARCH_STATUS, "text": tr("searching_datasets", lang)},
                         ensure_ascii=False,
                     )
                     await event_queue.enqueue_event(
@@ -123,77 +113,6 @@ class AdvisorAgentExecutor(AgentExecutor):
                             final=False,
                         )
                     )
-
-                elif (
-                    event["event"] == "on_tool_end"
-                    and "search_documents" in event.get("name", "")
-                ):
-                    raw_output = event.get("data", {}).get("output", "")
-                    # MCP tools return ToolMessage with .content as list of parts
-                    if hasattr(raw_output, "content"):
-                        raw_output = raw_output.content
-                    if isinstance(raw_output, list):
-                        text_parts = [
-                            p["text"] for p in raw_output
-                            if isinstance(p, dict) and p.get("type") == "text"
-                        ]
-                        raw_output = text_parts[0] if text_parts else ""
-                    try:
-                        tool_result = (
-                            json.loads(raw_output)
-                            if isinstance(raw_output, str)
-                            else raw_output
-                        )
-                    except (json.JSONDecodeError, TypeError):
-                        tool_result = None
-                    if isinstance(tool_result, dict):
-                        seen: dict[tuple[str, str], int] = {}
-                        sources = []
-                        for r in tool_result.get("results", []):
-                            score = r.get("reranker_score")
-                            if score is None:
-                                continue
-                            file = r.get("source_file", "")
-                            section = r.get("section_title", "")
-                            key = (file, section)
-                            if key in seen:
-                                # Keep the one with the higher score
-                                prev_idx = seen[key]
-                                if score > sources[prev_idx]["score"]:
-                                    sources[prev_idx] = {
-                                        "file": file,
-                                        "section": section,
-                                        "score": score,
-                                        "url": r.get("metadata", {}).get("source", ""),
-                                    }
-                                continue
-                            seen[key] = len(sources)
-                            sources.append({
-                                "file": file,
-                                "section": section,
-                                "score": score,
-                                "url": r.get("metadata", {}).get("source", ""),
-                            })
-                        if sources:
-                            sources_json = json.dumps(
-                                {_SOOFI_EVENT_KEY: _EVENT_RAG_SOURCES, "sources": sources},
-                                ensure_ascii=False,
-                            )
-                            await event_queue.enqueue_event(
-                                TaskStatusUpdateEvent(
-                                    task_id=context.task_id,
-                                    context_id=context.context_id,
-                                    status=TaskStatus(
-                                        state=TaskState.working,
-                                        message=new_agent_text_message(
-                                            sources_json,
-                                            context.context_id,
-                                            context.task_id,
-                                        ),
-                                    ),
-                                    final=False,
-                                )
-                            )
 
                 elif event["event"] == "on_chat_model_stream":
                     chunk = event["data"]["chunk"]
@@ -233,7 +152,7 @@ class AdvisorAgentExecutor(AgentExecutor):
             return
 
         response_text = "".join(collected) or tr("no_response", lang)
-        logger.info("A2A response: %s", response_text[:1000])
+        logger.info("A2A response: %s", response_text[:200])
 
         await event_queue.enqueue_event(
             Task(

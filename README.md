@@ -8,46 +8,46 @@ An agentic system that guides users through the LLM specialization process — f
 
 | Service | URL | Description |
 |---------|-----|-------------|
-| Landing Page | http://localhost:80 | Reveal.js start page with service links |
-| Soofi UI | http://localhost:3001 | A2UI chat frontend (Lit Web Components) |
-| Open WebUI | http://localhost:3000 | Chat interface |
-| Portainer | http://localhost:9090 | Docker management UI |
-| Flowise | http://localhost:4040 | Flow-based AI pipeline editor |
+| Landing Page | https://localhost | Reveal.js start page with service links |
+| Soofi UI | https://localhost:3001 | A2UI chat frontend (Lit Web Components) |
+| Open WebUI | https://localhost:3000 | Chat interface |
+| Portainer | https://localhost:9090 | Docker management UI |
+| Flowise | https://localhost:4040 | Flow-based AI pipeline editor |
 | Interaction Agent | docker-internal (interaction-agent:8000) | LangGraph ReAct agent, AG-UI SSE, A2A orchestrator |
 | Advisor | docker-internal (advisor:8000) | LangGraph LLM specialization advisor (A2A) |
 | Training Agent | docker-internal (training-agent:8000) | LangGraph training job manager (A2A) |
-| Training Gateway | http://localhost:8099 | Training job management (MCP) |
-| STT | http://localhost:8010 | Speech-to-text service (OpenAI Whisper-1) |
-| TTS | http://localhost:8011 | Text-to-speech service (OpenAI tts-1) |
+| Training Gateway | https://localhost:8099 | Training job management (MCP) |
+| STT | https://localhost:8010 | Speech-to-text service (OpenAI Whisper-1) |
+| TTS | https://localhost:8011 | Text-to-speech service (OpenAI tts-1) |
 | Vector MCP | docker-internal (vector-mcp:8000) | Knowledge base search (MCP) |
-| MCP Inspector | http://localhost:6274 | MCP debugging tool |
+| MCP Inspector | https://localhost:6274 | MCP debugging tool |
 | Weaviate | docker-internal (weaviate:8080) | Vector database |
-| N8N | http://localhost:5678 | Workflow Automation Platform |
-| MinIO | http://localhost:9000 | S3-compatible object storage |
-| MinIO Console | http://localhost:9001 | MinIO admin UI |
-| Grafana | http://localhost:3002 | Grafana monitoring dashboard |
+| N8N | https://localhost:5678 | Workflow Automation Platform |
+| MinIO | https://localhost:9000 | S3-compatible object storage |
+| MinIO Console | https://localhost:9001 | MinIO admin UI |
+| Grafana | https://localhost:3002 | Grafana monitoring dashboard |
 
 ### AAS Stack (82xx)
 
 | Service | URL | Description |
 |---------|-----|-------------|
-| AAS WebUI | http://localhost:8280 | BaSyx AAS GUI |
-| Mnestix Browser | http://localhost:8281 | Mnestix AAS Browser |
-| Mnestix Proxy | http://localhost:8265 | Mnestix reverse proxy |
-| AAS Registry | http://localhost:8287 | BaSyx AAS Shell Registry |
-| SM Registry | http://localhost:8288 | BaSyx Submodel Registry |
-| AAS Environment | http://localhost:8289 | BaSyx AAS Environment (shells + submodels) |
-| AAS Discovery | http://localhost:8290 | BaSyx AAS Discovery Service |
+| AAS WebUI | https://localhost:8280 | BaSyx AAS GUI |
+| Mnestix Browser | https://localhost:8281 | Mnestix AAS Browser |
+| Mnestix Proxy | https://localhost:8265 | Mnestix reverse proxy |
+| AAS Registry | https://localhost:8287 | BaSyx AAS Shell Registry |
+| SM Registry | https://localhost:8288 | BaSyx Submodel Registry |
+| AAS Environment | https://localhost:8289 | BaSyx AAS Environment (shells + submodels) |
+| AAS Discovery | https://localhost:8290 | BaSyx AAS Discovery Service |
 
 ### EDC Stack (83xx)
 
 | Service | URL | Description |
 |---------|-----|-------------|
-| Portal Provider | http://localhost:8380 | EDC Provider UI |
-| Portal Consumer | http://localhost:8381 | EDC Consumer UI |
-| EDC Provider | http://localhost:8390 | Eclipse Dataspace Connector (Provider) |
-| EDC Consumer | http://localhost:8391 | Eclipse Dataspace Connector (Consumer) |
-| EDC Consumer MCP | http://localhost:8392 | EDC Consumer MCP Server |
+| Portal Provider | https://localhost:8380 | EDC Provider UI |
+| Portal Consumer | https://localhost:8381 | EDC Consumer UI |
+| EDC Provider | https://localhost:8390 | Eclipse Dataspace Connector (Provider) |
+| EDC Consumer | https://localhost:8391 | Eclipse Dataspace Connector (Consumer) |
+| EDC Consumer MCP | https://localhost:8392 | EDC Consumer MCP Server |
 
 ## Quick Start
 
@@ -74,15 +74,15 @@ EOF
 
 ### 3. Open the UI
 
-- **Landing Page**: http://localhost:80
-- **Soofi UI (A2UI)**: http://localhost:3001
-- **Chat (Open WebUI)**: http://localhost:3000
-- **MCP Inspector**: http://localhost:6274/?transport=streamable-http&serverUrl=http://vector-mcp:8000/mcp/&MCP_PROXY_AUTH_TOKEN=dev-stack-token-12345
-- **Grafana**: http://localhost:3002
+- **Landing Page**: https://localhost
+- **Soofi UI (A2UI)**: https://localhost:3001
+- **Chat (Open WebUI)**: https://localhost:3000
+- **MCP Inspector**: https://localhost:6274/?transport=streamable-http&serverUrl=http://vector-mcp:8000/mcp/&MCP_PROXY_AUTH_TOKEN=dev-stack-token-12345
+- **Grafana**: https://localhost:3002
 
 ### 4. Try the Soofi UI
 
-Open http://localhost:3001 and ask the agent about LLM specialization methods (RAG, LoRA, QLoRA, SFT, DPO, …). Push-to-talk: hold **Space** to record, release to send. The agent searches the knowledge base and streams a spoken response.
+Open https://localhost:3001 and ask the agent about LLM specialization methods (RAG, LoRA, QLoRA, SFT, DPO, …). Push-to-talk: hold **Space** to record, release to send. The agent searches the knowledge base and streams a spoken response.
 
 ### Stop the stack
 
@@ -122,7 +122,7 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `ENV_SECRETS_FILE` | `~/.env.secrets` | Path to secrets file |
-| `LANDING_PAGE_PORT` | `80` | Landing page external port |
+| `LANDING_PAGE_PORT` | `443` | Landing page external port |
 | `LANDING_PAGE_HOSTNAME` | `localhost` | Hostname used in slide links |
 | `LANDING_PAGE_WATCH_SLIDES` | `true` | Poll slides templates for changes (dev) |
 | `EMBEDDING_MODEL` | `openai:text-embedding-3-large` | Embedding model (`provider:model`, e.g. `ollama:bge-m3`) |
@@ -201,13 +201,14 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 | `AAS_ENVIRONMENT_PORT` | `8289` | AAS Environment port |
 | `AAS_DISCOVERY_PORT` | `8290` | AAS Discovery port |
 
-> **Note:** `AAS_HOSTNAME` is used to build the externally-reachable endpoint URLs that are registered in the AAS/Submodel Registry. The browser needs to be able to reach `http://${AAS_HOSTNAME}:${AAS_ENVIRONMENT_PORT}` directly. When changing this, restart all AAS services.
+> **Note:** `AAS_HOSTNAME` is used to build the externally-reachable endpoint URLs that are registered in the AAS/Submodel Registry. The browser needs to be able to reach `https://${AAS_HOSTNAME}:${AAS_ENVIRONMENT_PORT}` directly. When changing this, restart all AAS services.
 
 ### EDC Stack
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `EDC_MCP_VERSION` | `0.1.0` | EDC Consumer MCP image version |
+| `HUGGINGFACE_MCP_VERSION` | `0.1.0` | HuggingFace MCP image version |
 | `EDC_PORTAL_PROVIDER_PORT` | `8380` | EDC Provider Portal port |
 | `EDC_PORTAL_CONSUMER_PORT` | `8381` | EDC Consumer Portal port |
 | `EDC_PROVIDER_PORT` | `8390` | EDC Provider public endpoint port |
@@ -311,6 +312,8 @@ soofi-trainer/
 ├── knowledge/              # Markdown knowledge documents + YAML metadata
 ├── knowledge-ingestion/    # One-shot ingestion container (local build)
 ├── advisor/                # LangGraph advisor agent (local build)
+├── dataset-agent/          # LangGraph dataset search agent (local build)
+├── huggingface-mcp/        # HuggingFace MCP server (local build)
 ├── vector-mcp/             # Vector MCP server (local build)
 ├── soofi-ui/               # A2UI Lit frontend (local build)
 ├── interaction-agent/      # LangGraph ReAct agent, AG-UI SSE, A2A orchestrator (local build)

@@ -62,6 +62,12 @@ while [ "$#" -gt 0 ]; do
     shift
 done
 
+# Default to "local" profile if none specified
+if [ -z "$PROFILE_FLAGS" ]; then
+    PROFILE_FLAGS="--profile local"
+    echo "[INFO] No profile specified — using default: local"
+fi
+
 # Build compose file args
 COMPOSE_FILES=(-f docker-compose.yml)
 if [ "$BACKEND_OVERRIDE" != "chatgpt" ]; then
@@ -93,6 +99,11 @@ if [ "$BACKEND_OVERRIDE" = "vllm" ]; then
     fi
     echo "[INFO] vLLM preset: $VLLM_PRESET"
     COMPOSE_FILES+=(-f "$PRESET_FILE")
+fi
+
+# Log active Docker profiles
+if [ -n "$PROFILE_FLAGS" ]; then
+    echo "[INFO] Docker profiles:$(echo "$PROFILE_FLAGS" | sed 's/--profile/,/g' | tr -d ' ')"
 fi
 
 # Start containers (build only if --build passed)

@@ -1,25 +1,29 @@
 """LangGraph ReAct agent for the Soofi Interaction Agent."""
 
 import asyncio
+import collections
 import contextvars
 import json
 import logging
 import os
 import re
+import uuid
 from typing import Any, Literal
 
 import httpx
 from langchain_core.callbacks import adispatch_custom_event
+from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
 from langgraph.graph import MessagesState, StateGraph
 from langgraph.graph.state import CompiledStateGraph
-from langgraph.prebuilt import InjectedState, ToolNode
-from typing_extensions import Annotated
+from langgraph.prebuilt import ToolNode
 
 from .a2a_client import ask_advisor as _ask_advisor
+from .a2a_client import ask_dataset_agent as _ask_dataset_agent
 from .a2a_client import ask_training_agent as _ask_training_agent
 from .a2a_client import stream_advisor as _stream_advisor
+from .a2a_client import stream_dataset_agent as _stream_dataset_agent
 from .a2a_client import stream_training_agent as _stream_training_agent
 from .constants import (
     ADVISOR_EVENT,
@@ -27,9 +31,14 @@ from .constants import (
     ADVISOR_KEY_SEARCH_STATUS,
     AGENT_CARD_EVENT,
     AGENT_CARD_KEY,
+    DATASET_AGENT_KEY_CHUNK,
+    DATASET_AGENT_KEY_STATUS,
+    DATASET_EVENT,
     DOC_VIEWER_KEY,
+    ADVISOR_KEY_RAG_SOURCES,
     SOOFI_EVENT_JOB_STARTED,
     SOOFI_EVENT_KEY,
+    SOOFI_EVENT_RAG_SOURCES,
     SOOFI_EVENT_SEARCH_STATUS,
     TRAINING_AGENT_KEY_CHUNK,
     TRAINING_AGENT_KEY_JOB_STARTED,
@@ -44,6 +53,113 @@ from .prompts import get_system_prompt
 
 logger = logging.getLogger(__name__)
 
+_DATASET_SEARCH_TERMS = (
+    "datensatz",
+    "datensaetze",
+    "datensätze",
+    "datenangebot",
+    "datenangebote",
+    "dataset",
+    "datasets",
+    "huggingface",
+    "datenraum",
+    "dataspace",
+    "edc",
+    "katalog",
+    "catalog",
+    "asset",
+    "assets",
+)
+
+_DATASET_SEARCH_INTENT_TERMS = (
+    "finde",
+    "such",
+    "suche",
+    "zeige",
+    "welche",
+    "was gibt es",
+    "gibt es",
+    "liste",
+    "list",
+    "verfugbar",
+    "verfügbar",
+    "angebot",
+    "angebote",
+    "discover",
+    "search",
+    "find",
+    "show",
+    "available",
+)
+
+_TRAINING_TERMS = (
+    "training",
+    "fine-tuning",
+    "finetuning",
+    "finetune",
+    "lora",
+    "qlora",
+    "job",
+)
+
+_DATASET_COMPOUND_TERMS = (
+    "trainingsdaten",
+    "trainingsdatensatz",
+    "trainingsdatensaetze",
+    "trainingsdatensätze",
+)
+
+
+def _latest_user_text(state: MessagesState) -> str:
+    for message in reversed(state["messages"]):
+        if isinstance(message, HumanMessage) and isinstance(message.content, str):
+            return message.content
+    return ""
+
+
+def _latest_message_is_user(state: MessagesState) -> bool:
+    if not state["messages"]:
+        return False
+    last_message = state["messages"][-1]
+    return isinstance(last_message, HumanMessage) and isinstance(last_message.content, str)
+
+
+def _has_prior_assistant_context(state: MessagesState) -> bool:
+    """Return True when at least one prior assistant message exists."""
+    # Keep direct-routing as a first-turn shortcut only; follow-ups should use LLM context.
+    return any(isinstance(message, AIMessage) for message in state["messages"][:-1])
+
+
+def _contains_term_as_word(text: str, term: str) -> bool:
+    """Match a term as a standalone word/phrase to avoid substring false positives."""
+    pattern = r"\\b" + re.escape(term) + r"\\b"
+    return re.search(pattern, text) is not None
+
+
+def _should_route_to_dataset_agent(text: str) -> bool:
+    normalized = text.casefold()
+    has_dataset_topic = any(term in normalized for term in _DATASET_SEARCH_TERMS)
+    has_search_intent = any(term in normalized for term in _DATASET_SEARCH_INTENT_TERMS)
+    has_dataset_compound = any(term in normalized for term in _DATASET_COMPOUND_TERMS)
+    has_training_topic = any(
+        _contains_term_as_word(normalized, term) for term in _TRAINING_TERMS
+    ) and not has_dataset_compound
+    return has_dataset_topic and has_search_intent and not has_training_topic
+
+
+def _build_direct_tool_call(tool_name: str, question: str) -> AIMessage:
+    return AIMessage(
+        content="",
+        tool_calls=[
+            {
+                "name": tool_name,
+                "args": {"question": question},
+                "id": f"call_{uuid.uuid4().hex}",
+                "type": "tool_call",
+            }
+        ],
+    )
+
 # Context variables to pass the A2A context_id into tools per-request
 _advisor_context_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "_advisor_context_id", default=None
@@ -51,7 +167,14 @@ _advisor_context_id: contextvars.ContextVar[str | None] = contextvars.ContextVar
 _training_context_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "_training_context_id", default=None
 )
+_dataset_context_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "_dataset_context_id", default=None
+)
 _language: contextvars.ContextVar[Language] = contextvars.ContextVar("_language", default="de")
+# RAG source URLs per conversation — persisted across requests via advisor context_id.
+# LRU-bounded to prevent unbounded memory growth from long-running processes.
+_RAG_URLS_MAX = 256
+_rag_urls_store: collections.OrderedDict[str, list[str]] = collections.OrderedDict()
 
 # Agent registry: parsed from AGENT_REGISTRY env var (comma-separated name=url pairs)
 _raw_registry = os.getenv("AGENT_REGISTRY", "")
@@ -91,10 +214,11 @@ async def show_agent_card(
         "all", "interaction-agent", "advisor", "training-agent", "dataset-agent", "close"
     ],  # Keep enum values in sync with AGENT_REGISTRY in .env
 ) -> str:
-    """Show or close the A2A agent card panel.
+    """Show or close the A2A agent card panel. YOU MUST call this tool — never respond with text only.
 
-    Use this tool when the user asks about available agents, their capabilities,
-    or agent cards, or when the user wants to close the agent card panel.
+    REQUIRED for: agent cards, agent details, "welche Agenten", "Agenten zeigen/schließen",
+    "mach zu", "schließen", "close". Use "close" to close the panel.
+    Never confirm open/close actions without calling this tool first.
 
     Args:
         agent: Which agent card to show, "all" for all agents, or "close" to close.
@@ -147,11 +271,10 @@ async def ask_advisor_tool(question: str) -> str:
     ctx_id = _advisor_context_id.get()
     lang = _language.get()
     full_text = ""
-    cite_suffix = "\n\n" + tr("cite_sources", lang)
     lang_tag = f" [LANG:{lang}]"
 
     try:
-        async for chunk in _stream_advisor(question + cite_suffix + lang_tag, context_id=ctx_id):
+        async for chunk in _stream_advisor(question + lang_tag, context_id=ctx_id):
             # Detect special event envelopes from the advisor
             try:
                 parsed = json.loads(chunk)
@@ -163,6 +286,20 @@ async def ask_advisor_tool(question: str) -> str:
                 await adispatch_custom_event(
                     ADVISOR_EVENT, {ADVISOR_KEY_SEARCH_STATUS: parsed["text"]}
                 )
+            elif event_type == SOOFI_EVENT_RAG_SOURCES:
+                await adispatch_custom_event(
+                    ADVISOR_EVENT, {ADVISOR_KEY_RAG_SOURCES: parsed["sources"]}
+                )
+                # Store source URLs so control_doc_viewer can reference them
+                urls = [
+                    s.get("url", "") for s in parsed.get("sources", [])
+                    if s.get("url")
+                ]
+                ctx_key = _advisor_context_id.get() or ""
+                _rag_urls_store[ctx_key] = urls
+                _rag_urls_store.move_to_end(ctx_key)
+                while len(_rag_urls_store) > _RAG_URLS_MAX:
+                    _rag_urls_store.popitem(last=False)
             else:
                 full_text += chunk
                 await adispatch_custom_event(
@@ -234,11 +371,56 @@ async def ask_training_agent_tool(question: str) -> str:
 
 
 @tool
-async def control_training_view(action: Literal["open", "close"]) -> str:
-    """Open or close the training jobs panel in the UI.
+async def ask_dataset_agent_tool(question: str) -> str:
+    """Ask the Dataset Agent to search for suitable public datasets via A2A.
 
-    Use this tool when the user asks to see the training jobs overview,
-    the job list, or wants to close the training panel.
+    Use this tool for dataset discovery requests, especially searches on
+    HuggingFace and Eclipse Dataspace (EDC).
+
+    Args:
+        question: The dataset search request to send to the Dataset Agent.
+    """
+    ctx_id = _dataset_context_id.get()
+    lang = _language.get()
+    full_text = ""
+    lang_tag = f" [LANG:{lang}]"
+
+    try:
+        async for chunk in _stream_dataset_agent(question + lang_tag, context_id=ctx_id):
+            try:
+                parsed = json.loads(chunk)
+                event_type = parsed.get(SOOFI_EVENT_KEY) if isinstance(parsed, dict) else None
+            except (json.JSONDecodeError, ValueError):
+                event_type = None
+
+            if event_type == SOOFI_EVENT_SEARCH_STATUS:
+                await adispatch_custom_event(
+                    DATASET_EVENT, {DATASET_AGENT_KEY_STATUS: parsed.get("text", "")}
+                )
+            else:
+                full_text += chunk
+                await adispatch_custom_event(
+                    DATASET_EVENT, {DATASET_AGENT_KEY_CHUNK: chunk}
+                )
+    except Exception:
+        logger.exception("Dataset agent streaming failed after %d chars", len(full_text))
+        if not full_text:
+            logger.warning("Falling back to blocking ask_dataset_agent call")
+            full_text = await _ask_dataset_agent(question, context_id=ctx_id)
+
+    if not full_text:
+        logger.warning("Dataset agent streaming yielded no content, falling back to blocking call")
+        full_text = await _ask_dataset_agent(question, context_id=ctx_id)
+
+    return full_text
+
+
+@tool
+async def control_training_view(action: Literal["open", "close"]) -> str:
+    """Open or close the training jobs panel. YOU MUST call this tool — never respond with text only.
+
+    REQUIRED for: "Jobs zeigen", "Trainingsübersicht", "Job-Ansicht schließen",
+    "show jobs", "close training view". Never confirm open/close without calling this tool first.
 
     Args:
         action: "open" to show the training jobs panel, "close" to hide it.
@@ -254,15 +436,16 @@ async def control_training_view(action: Literal["open", "close"]) -> str:
 
 
 @tool
-def control_doc_viewer(action: str, state: Annotated[dict, InjectedState], index: int = 1) -> str:
-    """Control the document viewer panel in the UI.
+def control_doc_viewer(action: str, index: int = 1) -> str:
+    """Control the document/sources viewer. YOU MUST call this tool — never respond with text only.
+
+    REQUIRED for: "öffne Quelle X", "Quelle schließen", "nächste Quelle", "mach zu",
+    "close sources", "open source X". Never confirm open/close without calling this tool first.
 
     Args:
         action: One of "open", "close", "next", "previous".
-                "open" opens the document at the given index (1-based).
-        index: 1-based index of the document link to open (only for action "open").
-               The links are numbered in the order they appeared in the conversation.
-        state: Injected conversation state (not visible to the LLM).
+                "open" opens the source at the given index (1-based).
+        index: 1-based index matching the numbered sources shown below the answer.
     """
     lang = _language.get()
     if action == "close":
@@ -272,7 +455,9 @@ def control_doc_viewer(action: str, state: Annotated[dict, InjectedState], index
     elif action == "previous":
         label = tr("doc_previous", lang)
     else:
-        total = _count_doc_links(state)
+        ctx_key = _advisor_context_id.get() or ""
+        urls = _rag_urls_store.get(ctx_key, [])
+        total = len(urls)
         if total == 0:
             return tr("doc_none", lang)
         if index < 1 or index > total:
@@ -284,25 +469,12 @@ def control_doc_viewer(action: str, state: Annotated[dict, InjectedState], index
     )
 
 
-# Match both relative /docs/ links and full URLs with /docs/ path
-_RE_DOC_LINK = re.compile(r"\[([^\]]+)\]\((?:https?://[^/\s)]+)?/docs/[^)]+\)")
-
-
-def _count_doc_links(state: dict) -> int:
-    """Count markdown links matching /docs/ across all conversation messages."""
-    count = 0
-    for msg in state.get("messages", []):
-        content = msg.content if hasattr(msg, "content") else ""
-        if isinstance(content, str):
-            count += len(_RE_DOC_LINK.findall(content))
-    return count
-
-
 def build_graph() -> CompiledStateGraph:
     """Build the LangGraph ReAct agent for the Interaction Agent."""
     tools = [
         ask_advisor_tool,
         ask_training_agent_tool,
+        ask_dataset_agent_tool,
         show_agent_card,
         control_doc_viewer,
         control_training_view,
@@ -314,6 +486,18 @@ def build_graph() -> CompiledStateGraph:
     tool_node = ToolNode(tools)
 
     async def agent(state: MessagesState) -> MessagesState:
+        latest_user_text = _latest_user_text(state)
+        if (
+            _latest_message_is_user(state)
+            and latest_user_text
+            and not _has_prior_assistant_context(state)
+            and _should_route_to_dataset_agent(latest_user_text)
+        ):
+            logger.info("Direct dataset routing for message: %s", latest_user_text[:200])
+            return {
+                "messages": [_build_direct_tool_call("ask_dataset_agent_tool", latest_user_text)]
+            }
+
         system = {"role": "system", "content": get_system_prompt(_language.get())}
         response = await llm.ainvoke([system] + state["messages"])
         if hasattr(response, "tool_calls") and response.tool_calls:
@@ -327,6 +511,9 @@ def build_graph() -> CompiledStateGraph:
             logger.info("Tool result (%s): %s", msg.name, str(msg.content)[:500])
         return result
 
+    # Tools whose responses are already streamed to the user — no second LLM call needed
+    _STREAMING_TOOLS = {"ask_advisor_tool", "ask_training_agent_tool"}
+
     def should_continue(state: MessagesState) -> str:
         if not state["messages"]:
             return "__end__"
@@ -335,6 +522,16 @@ def build_graph() -> CompiledStateGraph:
             return "tools"
         return "__end__"
 
+    def after_tools(state: MessagesState) -> str:
+        """Skip the second LLM call if a streaming tool already delivered the response."""
+        for msg in reversed(state["messages"]):
+            # Stop at the last AI message — don't look further back
+            if hasattr(msg, "tool_calls"):
+                break
+            if hasattr(msg, "name") and msg.name in _STREAMING_TOOLS:
+                return "__end__"
+        return "agent"
+
     graph_builder = StateGraph(MessagesState)
     graph_builder.add_node("agent", agent)
     graph_builder.add_node("tools", run_tools)
@@ -342,7 +539,9 @@ def build_graph() -> CompiledStateGraph:
     graph_builder.add_conditional_edges(
         "agent", should_continue, {"tools": "tools", "__end__": "__end__"}
     )
-    graph_builder.add_edge("tools", "agent")
+    graph_builder.add_conditional_edges(
+        "tools", after_tools, {"agent": "agent", "__end__": "__end__"}
+    )
 
     return graph_builder.compile()
 
@@ -355,6 +554,11 @@ def set_advisor_context_id(context_id: str | None) -> None:
 def set_training_context_id(context_id: str | None) -> None:
     """Set the A2A context_id for the current request (used by ask_training_agent_tool)."""
     _training_context_id.set(context_id)
+
+
+def set_dataset_context_id(context_id: str | None) -> None:
+    """Set the A2A context_id for the current request (used by ask_dataset_agent_tool)."""
+    _dataset_context_id.set(context_id)
 
 
 def set_language(lang: Language) -> None:
