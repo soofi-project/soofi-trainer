@@ -28,15 +28,14 @@ function parseSvg(source: string): SVGSVGElement {
   return doc.documentElement as unknown as SVGSVGElement;
 }
 
-/** Map MCP tool name from the dataset agent to a short display label. */
+/** Map MCP tool name from the dataset agent to a short display label.
+ *  HuggingFace tools are explicitly matched; everything else is EDC
+ *  (the dataset agent only talks to these two MCP backends). */
 function mcpTargetLabel(tool: string): string {
-  if (tool.startsWith("search_huggingface") || tool.startsWith("get_huggingface"))
+  if (!tool) return "";
+  if (tool.startsWith("hub_repo") || tool.includes("huggingface"))
     return "HuggingFace";
-  if (tool.startsWith("query_federated") || tool.startsWith("get_federated")
-    || tool.startsWith("list_assets") || tool.startsWith("find_assets")
-    || tool.startsWith("get_asset") || tool.startsWith("get_catalog"))
-    return "EDC";
-  return tool ? "MCP" : "EDC";
+  return "EDC";
 }
 
 function buildSvgSource(s: FlowState, mcpTarget = ""): string {
