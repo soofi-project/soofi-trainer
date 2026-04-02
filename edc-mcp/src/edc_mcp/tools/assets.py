@@ -48,11 +48,11 @@ def register_asset_tools(mcp: FastMCP):
         return await api_list_assets(offset=offset, limit=limit)
 
     @mcp.tool()
-    async def find_assets(filter_expressions: List[dict], offset: int = 0, limit: int = 10) -> List[dict]:
+    async def find_assets(filter_expressions: Optional[List[dict]] = None, offset: int = 0, limit: int = 10) -> List[dict]:
         """Find and return assets by filter expressions from the EDC Management API
 
         Args:
-            filter_expressions: List of filter expression dicts (e.g., [{"operandLeft": "properties.'http://purl.org/dc/terms/title'", "operator": "LIKE", "operandRight": "%keyword%"}])
+            filter_expressions: List of filter expression dicts (e.g., [{"operandLeft": "properties.'http://purl.org/dc/terms/title'", "operator": "LIKE", "operandRight": "%keyword%"}]). If omitted, returns all assets.
             offset: Number of items to skip before starting to collect the result set
             limit: Maximum number of items to return
 
