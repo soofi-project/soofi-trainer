@@ -39,6 +39,7 @@ services:
       - HOST=0.0.0.0
       - MCP_PROXY_AUTH_TOKEN=${MCP_AUTH_TOKEN}
       - MCP_AUTO_OPEN_ENABLED=false
+      - ALLOWED_ORIGINS=https://localhost:${MCPINSPECTOR_CLIENT_PORT},https://${LANDING_PAGE_HOSTNAME}:${MCPINSPECTOR_CLIENT_PORT}
     networks:
       - soofi-network
 
