@@ -2,7 +2,6 @@ services:
   advisor:
     environment:
       ADVISOR_MODEL: NVIDIA-Nemotron-3-Super-120B-A12B-FP8
-      OPENAI_BASE_URL: http://10.2.10.33:4000/v1
       ADVISOR_TEMPERATURE: 0.6
       ADVISOR_TOP_P: 0.95
       ADVISOR_MIN_P: 0.01
@@ -11,7 +10,6 @@ services:
   interaction-agent:
     environment:
       INTERACTION_MODEL: NVIDIA-Nemotron-3-Super-120B-A12B-FP8
-      OPENAI_BASE_URL: http://10.2.10.33:4000/v1
       INTERACTION_TEMPERATURE: 0.6
       INTERACTION_TOP_P: 0.95
       INTERACTION_MIN_P: 0.01
@@ -19,7 +17,6 @@ services:
   training-agent:
     environment:
       TRAINING_AGENT_MODEL: NVIDIA-Nemotron-3-Super-120B-A12B-FP8
-      OPENAI_BASE_URL: http://10.2.10.33:4000/v1
       TRAINING_AGENT_TEMPERATURE: 0.6
       TRAINING_AGENT_TOP_P: 0.95
       TRAINING_AGENT_MIN_P: 0.01
