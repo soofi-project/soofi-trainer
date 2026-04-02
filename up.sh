@@ -22,6 +22,7 @@ VLLM_PRESETS=(
     "nvidia-nemotron-3-super-120b-a12b-fp8"
     "nvidia-nemotron-3-super-120b-a12b-nvfp4"
     "nemotron-cascade-2-30b-a3b"
+    "mixed-models"
 )
 
 print_vllm_presets() {
