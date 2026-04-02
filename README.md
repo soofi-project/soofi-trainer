@@ -10,7 +10,6 @@ An agentic system that guides users through the LLM specialization process — f
 |---------|-----|-------------|
 | Landing Page | https://localhost | Reveal.js start page with service links |
 | Soofi UI | https://localhost:3001 | A2UI chat frontend (Lit Web Components) |
-| Open WebUI | https://localhost:3000 | Chat interface |
 | Portainer | https://localhost:9090 | Docker management UI |
 | Interaction Agent | docker-internal (interaction-agent:8000) | LangGraph ReAct agent, AG-UI SSE, A2A orchestrator |
 | Advisor | docker-internal (advisor:8000) | LangGraph LLM specialization advisor (A2A) |
@@ -74,7 +73,6 @@ EOF
 
 - **Landing Page**: https://localhost
 - **Soofi UI (A2UI)**: https://localhost:3001
-- **Chat (Open WebUI)**: https://localhost:3000
 - **MCP Inspector**: https://localhost:6274/?transport=streamable-http&serverUrl=http://vector-mcp:8000/mcp/&MCP_PROXY_AUTH_TOKEN=dev-stack-token-12345
 - **Grafana**: https://localhost:3002
 
@@ -96,7 +94,6 @@ The stack uses named Docker volumes (prefixed with `soofi-trainer_`):
 | Volume | Content |
 |--------|---------|
 | `soofi-trainer_weaviate_data` | Weaviate vector database |
-| `soofi-trainer_open_webui_data` | Open WebUI settings & chat history |
 | `soofi-trainer_minio_data` | MinIO object storage |
 | `soofi-trainer_prometheus_data` | Prometheus database |
 | `soofi-trainer_grafana_data` | Grafana config |
@@ -130,7 +127,6 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `SOOFI_UI_PORT` | `3001` | Soofi UI (A2UI frontend) port |
-| `OPENWEBUI_PORT` | `3000` | Open WebUI port |
 | `STT_PORT` | `8010` | STT service external port |
 | `TTS_PORT` | `8011` | TTS service external port |
 | `STT_LANGUAGE` | `de` | Whisper transcription language |
@@ -281,7 +277,7 @@ soofi-trainer/
 │   ├── knowledge.yml       # Weaviate, Vector MCP, MinIO, Ingestion, Advisor
 │   ├── training.yml        # Training Agent, Gateway, Container
 │   ├── interaction.yml     # Interaction Agent, Soofi UI, STT, TTS
-│   ├── tools.yml           # Open WebUI, MCP Inspector
+│   ├── tools.yml           # MCP Inspector
 │   ├── aas.yml             # BaSyx AAS stack (82xx ports)
 │   ├── edc.yml             # Eclipse Dataspace Connector stack (83xx ports)
 │   ├── monitoring.yml      # Grafana, Prometheus
@@ -325,15 +321,6 @@ After changing AASX files, restart the AAS services:
 ```bash
 docker compose restart aas-discovery aas-registry sm-registry
 docker compose restart aas-environment
-```
-
-## OpenWebUI
-
-### Load OpenWebUI functions
-OpenWebUI starts without functions. Execute the following to load all functions from `compose/tools/openwebui/functions`
-
-```bash
-./compose/tools/openwebui/import_functions.sh
 ```
 
 ## License
