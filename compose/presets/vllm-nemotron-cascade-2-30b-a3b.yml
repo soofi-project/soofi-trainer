@@ -1,7 +1,7 @@
 services:
   advisor:
     environment:
-      ADVISOR_MODEL: Nemotron-Cascade-2-30B-A3B
+      ADVISOR_MODEL: Nemotron-Cascade-2-30B-A3B-fp8
       ADVISOR_TEMPERATURE: 0.6
       ADVISOR_TOP_P: 0.95
       ADVISOR_MIN_P: 0.01
@@ -9,7 +9,7 @@ services:
 
   interaction-agent:
     environment:
-      INTERACTION_MODEL: Nemotron-Cascade-2-30B-A3B
+      INTERACTION_MODEL: Nemotron-Cascade-2-30B-A3B-fp8
       INTERACTION_TEMPERATURE: 0.6
       INTERACTION_TOP_P: 0.95
       INTERACTION_MIN_P: 0.01
@@ -17,7 +17,7 @@ services:
 
   training-agent:
     environment:
-      TRAINING_AGENT_MODEL: Nemotron-Cascade-2-30B-A3B
+      TRAINING_AGENT_MODEL: Nemotron-Cascade-2-30B-A3B-fp8
       TRAINING_AGENT_TEMPERATURE: 0.6
       TRAINING_AGENT_TOP_P: 0.95
       TRAINING_AGENT_MIN_P: 0.01
