@@ -1,4 +1,7 @@
 # When enabling thinking, change temperature to 0.6 and presence penalty to 0.0
+# Running a big model for the most demaning task of the system, plus smaller tasks 
+# that demand less reasoning abilities, or higher throughput, or smaller latencies
+# is feasible as shown with this experimental preset.
 services:
   advisor:
     environment:
