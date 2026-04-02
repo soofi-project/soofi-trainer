@@ -33,6 +33,7 @@ from .constants import (
     AGENT_CARD_KEY,
     DATASET_AGENT_KEY_CHUNK,
     DATASET_AGENT_KEY_STATUS,
+    DATASET_AGENT_KEY_TOOL,
     DATASET_EVENT,
     DOC_VIEWER_KEY,
     ADVISOR_KEY_RAG_SOURCES,
@@ -398,9 +399,11 @@ async def ask_dataset_agent_tool(question: str) -> str:
                 event_type = None
 
             if event_type == SOOFI_EVENT_SEARCH_STATUS:
-                await adispatch_custom_event(
-                    DATASET_EVENT, {DATASET_AGENT_KEY_STATUS: parsed.get("text", "")}
-                )
+                payload: dict[str, str] = {DATASET_AGENT_KEY_STATUS: parsed.get("text", "")}
+                tool = parsed.get("tool", "")
+                if tool:
+                    payload[DATASET_AGENT_KEY_TOOL] = tool
+                await adispatch_custom_event(DATASET_EVENT, payload)
             else:
                 full_text += chunk
                 await adispatch_custom_event(

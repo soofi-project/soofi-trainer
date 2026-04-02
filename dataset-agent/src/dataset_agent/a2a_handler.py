@@ -96,8 +96,13 @@ class DatasetAgentExecutor(AgentExecutor):
                 config=config,
             ):
                 if event["event"] == "on_tool_start":
+                    tool_name = event.get("name", "")
                     status_json = json.dumps(
-                        {_SOOFI_EVENT_KEY: _EVENT_SEARCH_STATUS, "text": tr("searching_datasets", lang)},
+                        {
+                            _SOOFI_EVENT_KEY: _EVENT_SEARCH_STATUS,
+                            "text": tr("searching_datasets", lang),
+                            "tool": tool_name,
+                        },
                         ensure_ascii=False,
                     )
                     await event_queue.enqueue_event(
