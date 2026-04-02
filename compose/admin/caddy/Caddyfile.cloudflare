@@ -19,10 +19,6 @@
 	reverse_proxy portainer:9000
 }
 
-{$LANDING_PAGE_HOSTNAME}:{$N8N_EXTERNAL_PORT} {
-	reverse_proxy n8n:5678
-}
-
 {$LANDING_PAGE_HOSTNAME}:{$OPENWEBUI_PORT} {
 	reverse_proxy open-webui:8080 {
         header_down Location "http://" "https://"

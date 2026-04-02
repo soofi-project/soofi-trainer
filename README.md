@@ -21,7 +21,6 @@ An agentic system that guides users through the LLM specialization process — f
 | Vector MCP | docker-internal (vector-mcp:8000) | Knowledge base search (MCP) |
 | MCP Inspector | https://localhost:6274 | MCP debugging tool |
 | Weaviate | docker-internal (weaviate:8080) | Vector database |
-| N8N | https://localhost:5678 | Workflow Automation Platform |
 | MinIO | https://localhost:9000 | S3-compatible object storage |
 | MinIO Console | https://localhost:9001 | MinIO admin UI |
 | Grafana | https://localhost:3002 | Grafana monitoring dashboard |
@@ -99,8 +98,6 @@ The stack uses named Docker volumes (prefixed with `soofi-trainer_`):
 | `soofi-trainer_weaviate_data` | Weaviate vector database |
 | `soofi-trainer_open_webui_data` | Open WebUI settings & chat history |
 | `soofi-trainer_minio_data` | MinIO object storage |
-| `soofi-trainer_postgres_data` | N8N PostgreSQL database |
-| `soofi-trainer_n8n_data` | N8N encryption keys & config |
 | `soofi-trainer_prometheus_data` | Prometheus database |
 | `soofi-trainer_grafana_data` | Grafana config |
 | `soofi-trainer_training_gateway_data` | Training Gateway job state |
@@ -284,7 +281,7 @@ soofi-trainer/
 │   ├── knowledge.yml       # Weaviate, Vector MCP, MinIO, Ingestion, Advisor
 │   ├── training.yml        # Training Agent, Gateway, Container
 │   ├── interaction.yml     # Interaction Agent, Soofi UI, STT, TTS
-│   ├── tools.yml           # Open WebUI, N8N, MCP Inspector
+│   ├── tools.yml           # Open WebUI, MCP Inspector
 │   ├── aas.yml             # BaSyx AAS stack (82xx ports)
 │   ├── edc.yml             # Eclipse Dataspace Connector stack (83xx ports)
 │   ├── monitoring.yml      # Grafana, Prometheus
@@ -330,32 +327,10 @@ docker compose restart aas-discovery aas-registry sm-registry
 docker compose restart aas-environment
 ```
 
-## N8N
-
-### Import N8N workflows
-N8N starts without workflows. Execute the following to load all workflows from `compose/tools/n8n/workflows`
-
-```bash
-./compose/tools/n8n/import_workflows.sh
-```
-
-### Set up credentials
-Workflows that use OpenAI (e.g. Advisor-Agent) need credentials. These are not exported with workflows and must be created manually:
-
-1. Go to **Settings → Credentials → Add Credential → OpenAI API**
-2. Set the API Key to `{{ $env.OPENAI_API_KEY }}` (pulls the key from the environment)
-
-### Backup N8N DB
-Create a new database dump if the existing SQL cannot be imported anymore (e.g. due to N8N updates).
-
-```bash
-docker exec -t postgres_n8n pg_dump -U n8n n8n > n8n-backup-$(date +%Y%m%d-%H%M).sql
-```
-
 ## OpenWebUI
 
 ### Load OpenWebUI functions
-OpenWebUI starts without functions (e.g. to connect to N8N). Execute the following to load all functions from `compose/tools/openwebui/functions`
+OpenWebUI starts without functions. Execute the following to load all functions from `compose/tools/openwebui/functions`
 
 ```bash
 ./compose/tools/openwebui/import_functions.sh
