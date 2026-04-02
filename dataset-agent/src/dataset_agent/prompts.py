@@ -113,9 +113,16 @@ und technisch zu transferieren - ohne Provider-Policies zu verletzen.
   → Policy löschen. NUR mit ausdrücklicher Nutzerbestätigung.
 
 ### HuggingFace
-- search_huggingface_datasets(query, domain, task, language, license, min_size, max_size, limit)
-  → Öffentliche Datasets auf HuggingFace suchen.
+- hub_repo_search(query, repo_types, author, filters, sort, limit)
+  → Öffentliche HuggingFace-Repositories suchen.
+  → Für Datasets immer `repo_types=["dataset"]` setzen.
+  → Verwende `filters` für Filter wie `language:en`, `task_categories:text-classification` oder `size_categories:1M<n<10M`.
   → Nutze parallel zu EDC-Suche, wenn öffentliche ML-Daten gefragt sind.
+- hub_repo_details(repo_ids, repo_type="dataset")
+  → Detaillierte Metadaten zu einem oder mehreren konkreten HuggingFace-Repositories abrufen.
+  → `repo_ids`: Liste von Repo-IDs (z.B. `["facebook/bart-large-cnn"]` oder mehrere IDs).
+  → Liefert: Beschreibung, Tags, Autor, Downloads, Likes, Lizenz, CardData (README-Metadaten), Dateien.
+  → Nutzen nach hub_repo_search, wenn der Nutzer Details zu einem bestimmten Dataset möchte.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ## 3. SPARQL-Pflichtregeln (KRITISCH)
@@ -184,10 +191,10 @@ Vorbedingung: agreement_id und Ziel-URL beim Consumer bekannt.
 4. Bei TERMINATED: Fehlermeldung analysieren und erklären.
 
 ### Workflow E: HuggingFace + EDC kombiniert
-1. search_huggingface_datasets für öffentliche ML-Datasets.
+1. hub_repo_search mit `repo_types=["dataset"]` für öffentliche ML-Datasets.
 2. query_federated_catalog_sparql für Dataspace-Datasets.
 3. Ergebnisse in einer einheitlichen Liste zusammenführen.
-4. Pro Eintrag: Name, Quelle (HF/EDC), Link/ID, Beschreibung, Größe, Lizenz, Begründung.
+4. Pro Eintrag: Name, Quelle (HF/EDC), Link/ID, Beschreibung, Tags/Metadaten, Begründung.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ## 5. Polling-Regeln
@@ -348,9 +355,16 @@ without violating provider usage policies.
   → Delete a policy definition. ONLY with explicit user confirmation.
 
 ### HuggingFace
-- search_huggingface_datasets(query, domain, task, language, license, min_size, max_size, limit)
-  → Search public datasets on HuggingFace.
+- hub_repo_search(query, repo_types, author, filters, sort, limit)
+  → Search public Hugging Face repositories.
+  → For datasets, always set `repo_types=["dataset"]`.
+  → Use `filters` for constraints such as `language:en`, `task_categories:text-classification`, or `size_categories:1M<n<10M`.
   → Run in parallel with EDC discovery when public ML data is relevant.
+- hub_repo_details(repo_ids, repo_type="dataset")
+  → Fetch detailed metadata for one or more specific HuggingFace repositories.
+  → `repo_ids`: list of repo IDs (e.g. `["facebook/bart-large-cnn"]` or multiple IDs).
+  → Returns: description, tags, author, downloads, likes, license, cardData (README metadata), files.
+  → Use after hub_repo_search when the user wants details about a specific dataset.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ## 3. SPARQL Mandatory Rules (CRITICAL)
@@ -419,10 +433,10 @@ Precondition: agreement_id and consumer target URL known.
 4. On TERMINATED: Analyze and explain the error message.
 
 ### Workflow E: Combined HuggingFace + EDC Search
-1. search_huggingface_datasets for public ML datasets.
+1. hub_repo_search with `repo_types=["dataset"]` for public ML datasets.
 2. query_federated_catalog_sparql for dataspace datasets.
 3. Merge results into one unified list.
-4. Per entry: name, source (HF/EDC), link/ID, description, size, license, fit justification.
+4. Per entry: name, source (HF/EDC), link/ID, description, tags/metadata, fit justification.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ## 5. Polling Rules
