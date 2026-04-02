@@ -935,6 +935,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
   @state() private searchStatusLabel = "";
   private _pendingRagSources: RagSource[] = [];
   @state() private flowState: FlowState = "idle";
+  @state() private datasetMcpTarget = "";
   private _flowTimer: ReturnType<typeof setTimeout> | null = null;
   private _fetchController: AbortController | null = null;
   @state() private docViewerUrl: string | null = null;
@@ -1101,7 +1102,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
           : nothing}
       </div>
 
-      <soofi-agent-flow .flowState=${this.flowState}></soofi-agent-flow>
+      <soofi-agent-flow .flowState=${this.flowState} .mcpTarget=${this.datasetMcpTarget}></soofi-agent-flow>
 
       ${this.searching
         ? html`
@@ -1617,6 +1618,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
           this.flowState = "asking-advisor";
         } else if (event.tool === "ask_dataset_agent_tool") {
           this.flowState = "asking-dataset-agent";
+          this.datasetMcpTarget = "";
         }
         break;
 
@@ -1678,8 +1680,9 @@ class SoofiChat extends SignalWatcher(LitElement) {
           this.flowState = "training-searching";
         } else if (this.flowState === "asking-advisor") {
           this.flowState = "searching";
-        } else if (this.flowState === "asking-dataset-agent") {
+        } else if (this.flowState === "asking-dataset-agent" || this.flowState === "dataset-searching") {
           this.flowState = "dataset-searching";
+          if (event.mcpTool) this.datasetMcpTarget = event.mcpTool as string;
         }
         // Other tools (show_agent_card, etc.): label shown but no flow animation
         break;

@@ -17,6 +17,7 @@ from .constants import (
     AGENT_CARD_EVENT,
     AGENT_CARD_KEY,
     CONTROL_DOC_VIEWER_TOOL,
+    DATASET_AGENT_KEY_TOOL,
     DOC_VIEWER_KEY,
     TRAINING_VIEW_EVENT,
     TRAINING_VIEW_KEY,
@@ -306,7 +307,11 @@ class SSEStream:
             for status_key in tracker.status_keys:
                 status = data.get(status_key)
                 if status:
-                    yield _sse({"type": "SEARCH_STATUS", "label": status})
+                    evt: dict[str, Any] = {"type": "SEARCH_STATUS", "label": status}
+                    mcp_tool = data.get(DATASET_AGENT_KEY_TOOL)
+                    if mcp_tool:
+                        evt["mcpTool"] = mcp_tool
+                    yield _sse(evt)
 
             # Capture keys (e.g. job_started_id)
             for event_key, attr_name in tracker.capture_keys.items():

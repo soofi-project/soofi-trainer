@@ -28,7 +28,17 @@ function parseSvg(source: string): SVGSVGElement {
   return doc.documentElement as unknown as SVGSVGElement;
 }
 
-function buildSvgSource(s: FlowState): string {
+/** Map MCP tool name from the dataset agent to a short display label.
+ *  HuggingFace tools are explicitly matched; everything else is EDC
+ *  (the dataset agent only talks to these two MCP backends). */
+function mcpTargetLabel(tool: string): string {
+  if (!tool) return "";
+  if (tool.startsWith("hub_repo") || tool.includes("huggingface"))
+    return "HuggingFace";
+  return "EDC";
+}
+
+function buildSvgSource(s: FlowState, mcpTarget = ""): string {
   const isAdvisor  = s === "asking-advisor" || s === "searching"
                   || s === "mcp-returning"  || s === "a2a-returning";
   const isTraining = s === "asking-training-agent" || s === "training-searching"
@@ -92,7 +102,9 @@ function buildSvgSource(s: FlowState): string {
   }
 
   if (isDataset) {
-    // Dataset Agent path: Browser → IA → Dataset Agent → EDC
+    const showMcp = !!mcpTarget;
+    const targetLabel = mcpTargetLabel(mcpTarget);
+    // Dataset Agent path: Browser → IA → Dataset Agent → (EDC/HuggingFace)
     return `<svg xmlns="${SVG_NS}" viewBox="0 0 760 60" preserveAspectRatio="xMidYMid meet">
       <line class="${eC(aguiOn)}" x1="90"  y1="${CY}" x2="185" y2="${CY}"/>
       <text class="${lC(aguiOn)}" x="137" y="${CY - 10}">AG-UI</text>
@@ -102,10 +114,12 @@ function buildSvgSource(s: FlowState): string {
       ${s === "asking-dataset-agent" || s === "dataset-searching" ? dots("dot-da-fwd",  345, 440) : ""}
       ${s === "da-returning"         ? dots("dot-da-back", 440, 345) : ""}
 
+      ${showMcp ? `
       <line class="${eC(isDataset)}" x1="575" y1="${CY}" x2="650" y2="${CY}"/>
       <text class="${lC(isDataset)}" x="612" y="${CY - 10}">MCP</text>
       ${s === "dataset-searching"      ? dots("dot-da-mcp-fwd",  575, 650) : ""}
       ${s === "dataset-mcp-returning"  ? dots("dot-da-mcp-back", 650, 575) : ""}
+      ` : ""}
 
       <rect class="node-rect"          x="0"   y="${NT}" width="90"  height="${NH}" rx="8"/>
       <text class="node-label"         x="45"  y="${CY}">Browser</text>
@@ -116,8 +130,10 @@ function buildSvgSource(s: FlowState): string {
       <rect class="node-rect${daCls}"  x="440" y="${NT}" width="135" height="${NH}" rx="8"/>
       <text class="node-label"         x="507" y="${CY}">Dataset Agent</text>
 
+      ${showMcp ? `
       <rect class="node-rect${edcCls}" x="650" y="${NT}" width="110" height="${NH}" rx="8"/>
-      <text class="node-label"         x="705" y="${CY}">EDC</text>
+      <text class="node-label"         x="705" y="${CY}">${targetLabel}</text>
+      ` : ""}
     </svg>`;
   }
 
@@ -244,8 +260,10 @@ export class SoofiAgentFlow extends LitElement {
   `;
 
   @property() flowState: FlowState = "idle";
+  @property() mcpTarget = "";
 
   private _prevFlowState: FlowState = "idle";
+  private _prevMcpTarget = "";
 
   render() {
     const visible = this.flowState !== "idle";
@@ -255,13 +273,14 @@ export class SoofiAgentFlow extends LitElement {
   }
 
   protected updated(changed: PropertyValues): void {
-    if (!changed.has("flowState")) return;
-    if (this.flowState === this._prevFlowState) return;
+    if (!changed.has("flowState") && !changed.has("mcpTarget")) return;
+    if (this.flowState === this._prevFlowState && this.mcpTarget === this._prevMcpTarget) return;
     this._prevFlowState = this.flowState;
+    this._prevMcpTarget = this.mcpTarget;
 
     const host = this.shadowRoot?.getElementById("svg-host");
     if (!host) return;
-    const imported = document.importNode(parseSvg(buildSvgSource(this.flowState)), true);
+    const imported = document.importNode(parseSvg(buildSvgSource(this.flowState, this.mcpTarget)), true);
     host.replaceChildren(imported);
   }
 }
