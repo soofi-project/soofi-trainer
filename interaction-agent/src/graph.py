@@ -6,13 +6,10 @@ import contextvars
 import json
 import logging
 import os
-import re
-import uuid
 from typing import Any, Literal
 
 import httpx
 from langchain_core.callbacks import adispatch_custom_event
-from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
 from langgraph.graph import MessagesState, StateGraph
@@ -52,112 +49,6 @@ from .prompts import get_system_prompt
 
 logger = logging.getLogger(__name__)
 
-_DATASET_SEARCH_TERMS = (
-    "datensatz",
-    "datensaetze",
-    "datensätze",
-    "datenangebot",
-    "datenangebote",
-    "dataset",
-    "datasets",
-    "huggingface",
-    "datenraum",
-    "dataspace",
-    "edc",
-    "katalog",
-    "catalog",
-    "asset",
-    "assets",
-)
-
-_DATASET_SEARCH_INTENT_TERMS = (
-    "finde",
-    "such",
-    "suche",
-    "zeige",
-    "welche",
-    "was gibt es",
-    "gibt es",
-    "liste",
-    "list",
-    "verfugbar",
-    "verfügbar",
-    "angebot",
-    "angebote",
-    "discover",
-    "search",
-    "find",
-    "show",
-    "available",
-)
-
-_TRAINING_TERMS = (
-    "training",
-    "fine-tuning",
-    "finetuning",
-    "finetune",
-    "lora",
-    "qlora",
-    "job",
-)
-
-_DATASET_COMPOUND_TERMS = (
-    "trainingsdaten",
-    "trainingsdatensatz",
-    "trainingsdatensaetze",
-    "trainingsdatensätze",
-)
-
-
-def _latest_user_text(state: MessagesState) -> str:
-    for message in reversed(state["messages"]):
-        if isinstance(message, HumanMessage) and isinstance(message.content, str):
-            return message.content
-    return ""
-
-
-def _latest_message_is_user(state: MessagesState) -> bool:
-    if not state["messages"]:
-        return False
-    last_message = state["messages"][-1]
-    return isinstance(last_message, HumanMessage) and isinstance(last_message.content, str)
-
-
-def _has_prior_assistant_context(state: MessagesState) -> bool:
-    """Return True when at least one prior assistant message exists."""
-    # Keep direct-routing as a first-turn shortcut only; follow-ups should use LLM context.
-    return any(isinstance(message, AIMessage) for message in state["messages"][:-1])
-
-
-def _contains_term_as_word(text: str, term: str) -> bool:
-    """Match a term as a standalone word/phrase to avoid substring false positives."""
-    pattern = r"\\b" + re.escape(term) + r"\\b"
-    return re.search(pattern, text) is not None
-
-
-def _should_route_to_dataset_agent(text: str) -> bool:
-    normalized = text.casefold()
-    has_dataset_topic = any(term in normalized for term in _DATASET_SEARCH_TERMS)
-    has_search_intent = any(term in normalized for term in _DATASET_SEARCH_INTENT_TERMS)
-    has_dataset_compound = any(term in normalized for term in _DATASET_COMPOUND_TERMS)
-    has_training_topic = any(
-        _contains_term_as_word(normalized, term) for term in _TRAINING_TERMS
-    ) and not has_dataset_compound
-    return has_dataset_topic and has_search_intent and not has_training_topic
-
-
-def _build_direct_tool_call(tool_name: str, question: str) -> AIMessage:
-    return AIMessage(
-        content="",
-        tool_calls=[
-            {
-                "name": tool_name,
-                "args": {"question": question},
-                "id": f"call_{uuid.uuid4().hex}",
-                "type": "tool_call",
-            }
-        ],
-    )
 
 # Context variables to pass the A2A context_id into tools per-request
 _advisor_context_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
@@ -490,18 +381,6 @@ def build_graph() -> CompiledStateGraph:
     tool_node = ToolNode(tools)
 
     async def agent(state: MessagesState) -> MessagesState:
-        latest_user_text = _latest_user_text(state)
-        if (
-            _latest_message_is_user(state)
-            and latest_user_text
-            and not _has_prior_assistant_context(state)
-            and _should_route_to_dataset_agent(latest_user_text)
-        ):
-            logger.info("Direct dataset routing for message: %s", latest_user_text[:200])
-            return {
-                "messages": [_build_direct_tool_call("ask_dataset_agent_tool", latest_user_text)]
-            }
-
         system = {"role": "system", "content": get_system_prompt(_language.get())}
         response = await llm.ainvoke([system] + state["messages"])
         if hasattr(response, "tool_calls") and response.tool_calls:
@@ -516,7 +395,7 @@ def build_graph() -> CompiledStateGraph:
         return result
 
     # Tools whose responses are already streamed to the user — no second LLM call needed
-    _STREAMING_TOOLS = {"ask_advisor_tool", "ask_training_agent_tool"}
+    _STREAMING_TOOLS = {"ask_advisor_tool", "ask_training_agent_tool", "ask_dataset_agent_tool"}
 
     def should_continue(state: MessagesState) -> str:
         if not state["messages"]:
