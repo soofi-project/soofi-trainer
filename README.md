@@ -12,7 +12,6 @@ An agentic system that guides users through the LLM specialization process — f
 | Soofi UI | https://localhost:3001 | A2UI chat frontend (Lit Web Components) |
 | Open WebUI | https://localhost:3000 | Chat interface |
 | Portainer | https://localhost:9090 | Docker management UI |
-| Flowise | https://localhost:4040 | Flow-based AI pipeline editor |
 | Interaction Agent | docker-internal (interaction-agent:8000) | LangGraph ReAct agent, AG-UI SSE, A2A orchestrator |
 | Advisor | docker-internal (advisor:8000) | LangGraph LLM specialization advisor (A2A) |
 | Training Agent | docker-internal (training-agent:8000) | LangGraph training job manager (A2A) |
@@ -135,7 +134,6 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 |----------|---------|-------------|
 | `SOOFI_UI_PORT` | `3001` | Soofi UI (A2UI frontend) port |
 | `OPENWEBUI_PORT` | `3000` | Open WebUI port |
-| `FLOWISE_PORT` | `4040` | Flowise port |
 | `STT_PORT` | `8010` | STT service external port |
 | `TTS_PORT` | `8011` | TTS service external port |
 | `STT_LANGUAGE` | `de` | Whisper transcription language |
@@ -286,7 +284,7 @@ soofi-trainer/
 │   ├── knowledge.yml       # Weaviate, Vector MCP, MinIO, Ingestion, Advisor
 │   ├── training.yml        # Training Agent, Gateway, Container
 │   ├── interaction.yml     # Interaction Agent, Soofi UI, STT, TTS
-│   ├── tools.yml           # Open WebUI, N8N, MCP Inspector, Flowise
+│   ├── tools.yml           # Open WebUI, N8N, MCP Inspector
 │   ├── aas.yml             # BaSyx AAS stack (82xx ports)
 │   ├── edc.yml             # Eclipse Dataspace Connector stack (83xx ports)
 │   ├── monitoring.yml      # Grafana, Prometheus

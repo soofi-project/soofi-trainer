@@ -29,10 +29,6 @@
     }
 }
 
-{$LANDING_PAGE_HOSTNAME}:{$FLOWISE_PORT} {
-	reverse_proxy flowise:3000
-}
-
 {$LANDING_PAGE_HOSTNAME}:{$MCPINSPECTOR_CLIENT_PORT} {
 	reverse_proxy mcp-inspector:6274
 }
