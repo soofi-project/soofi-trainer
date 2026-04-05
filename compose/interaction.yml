@@ -16,7 +16,7 @@ services:
       - DATASET_AGENT_A2A_URL=http://dataset-agent:8000
       - AGENT_REGISTRY=interaction-agent=http://interaction-agent:8000,advisor=http://advisor:8000,training-agent=http://training-agent:8000,dataset-agent=http://dataset-agent:8000
     volumes:
-      - ./session-logs:/app/session-logs
+      - ${SESSION_LOG_HOST_DIR:-./session-logs}:/app/session-logs
     networks:
       - soofi-network
     depends_on:
