@@ -12,15 +12,16 @@ import pytest
 _FRICTION_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (
         re.compile(
-            r"\b(nein[,!]?\s|falsch|nicht gemeint|ich meine|gemeint war|"
-            r"das stimmt nicht|missverstanden|nicht richtig)\b",
+            r"\b(nein[,!]?\s|nee[,!]?\s|falsch|nicht gemeint|ich meine|ich meinte|"
+            r"gemeint war|das stimmt nicht|das stimmt nicht ganz|missverstanden|nicht richtig|"
+            r"eigentlich wollte|eigentlich meinte)\b",
             re.I,
         ),
         "correction",
     ),
     (
         re.compile(
-            r"\b(no[,!]?\s|wrong|i mean|that'?s not|not what i meant)\b",
+            r"\b(no[,!]?\s|wrong|i mean|i meant|that'?s not|not what i meant)\b",
             re.I,
         ),
         "correction",
@@ -36,10 +37,19 @@ _FRICTION_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (
         re.compile(
             r"\b(und was ist mit|aber was|haben Sie vergessen|nicht erwähnt|fehlt noch|"
-            r"was ist mit)\b",
+            r"da fehlt|fehlt da|fehlt noch|was ist mit|naja[,!]?\s|nur .{0,30}fehlt)\b",
             re.I,
         ),
         "incomplete_answer",
+    ),
+    (
+        re.compile(
+            r"\b(hätte erwartet|hätte ich erwartet|ich hätte .{0,20}erwartet|"
+            r"warum hast du (das )?nicht|warum haben Sie (das )?nicht|"
+            r"das hätte|solltest du|hättest du)\b",
+            re.I,
+        ),
+        "unexpected_behavior",
     ),
 ]
 
@@ -96,6 +106,45 @@ class TestFrictionDetection:
 
     def test_no_friction_empty(self) -> None:
         assert _detect_friction("") is None
+
+    # -- neue Patterns (aus realem Session-Log abgeleitet) -------------------
+
+    def test_correction_nee(self) -> None:
+        result = _detect_friction("Nee, ich meinte die jetzige 2026.")
+        assert result is not None
+        assert result[0] == "correction"
+
+    def test_correction_ich_meinte(self) -> None:
+        result = _detect_friction("Ich meinte eigentlich Fine-Tuning, nicht RAG.")
+        assert result is not None
+        assert result[0] == "correction"
+
+    def test_correction_i_meant(self) -> None:
+        result = _detect_friction("I meant the 2026 edition.")
+        assert result is not None
+        assert result[0] == "correction"
+
+    def test_incomplete_answer_da_fehlt(self) -> None:
+        result = _detect_friction("Naja, aber da fehlt ja noch Pre-Training.")
+        assert result is not None
+        assert result[0] == "incomplete_answer"
+
+    def test_incomplete_answer_naja(self) -> None:
+        result = _detect_friction("Naja, das war nur Fine-Tuning.")
+        assert result is not None
+        assert result[0] == "incomplete_answer"
+
+    def test_unexpected_behavior_haefte_erwartet(self) -> None:
+        result = _detect_friction(
+            "Ich hätte jetzt erwartet, dass du die Ansicht schließt."
+        )
+        assert result is not None
+        assert result[0] == "unexpected_behavior"
+
+    def test_unexpected_behavior_warum_nicht(self) -> None:
+        result = _detect_friction("Warum hast du das nicht gemacht?")
+        assert result is not None
+        assert result[0] == "unexpected_behavior"
 
 
 # ---------------------------------------------------------------------------

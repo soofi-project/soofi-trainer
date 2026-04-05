@@ -33,15 +33,16 @@ SESSION_LOG_TIMEOUT_S: int = int(os.getenv("SESSION_LOG_TIMEOUT_S", "300"))
 _FRICTION_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (
         re.compile(
-            r"\b(nein[,!]?\s|falsch|nicht gemeint|ich meine|gemeint war|"
-            r"das stimmt nicht|missverstanden|nicht richtig)\b",
+            r"\b(nein[,!]?\s|nee[,!]?\s|falsch|nicht gemeint|ich meine|ich meinte|"
+            r"gemeint war|das stimmt nicht|das stimmt nicht ganz|missverstanden|nicht richtig|"
+            r"eigentlich wollte|eigentlich meinte)\b",
             re.I,
         ),
         "correction",
     ),
     (
         re.compile(
-            r"\b(no[,!]?\s|wrong|i mean|that'?s not|not what i meant)\b",
+            r"\b(no[,!]?\s|wrong|i mean|i meant|that'?s not|not what i meant)\b",
             re.I,
         ),
         "correction",
@@ -57,10 +58,19 @@ _FRICTION_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (
         re.compile(
             r"\b(und was ist mit|aber was|haben Sie vergessen|nicht erwähnt|fehlt noch|"
-            r"was ist mit)\b",
+            r"da fehlt|fehlt da|fehlt noch|was ist mit|naja[,!]?\s|nur .{0,30}fehlt)\b",
             re.I,
         ),
         "incomplete_answer",
+    ),
+    (
+        re.compile(
+            r"\b(hätte erwartet|hätte ich erwartet|ich hätte .{0,20}erwartet|"
+            r"warum hast du (das )?nicht|warum haben Sie (das )?nicht|"
+            r"das hätte|solltest du|hättest du)\b",
+            re.I,
+        ),
+        "unexpected_behavior",
     ),
 ]
 
