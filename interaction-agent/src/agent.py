@@ -28,6 +28,7 @@ from .graph import (
     set_training_context_id,
 )
 from .i18n import Language
+from .session_logger import get_or_create_logger
 from .sse_stream import SSEStream, ToolStreamTracker
 
 logging.basicConfig(level=logging.INFO)
@@ -132,8 +133,17 @@ async def agent_endpoint(request: Request) -> StreamingResponse:
     set_dataset_context_id(session_id)
     set_language(lang)
 
+    sl = get_or_create_logger(session_id or "", lang)
+    if sl and messages:
+        latest = next(
+            (m for m in reversed(messages) if m.get("role") == "user"),
+            None,
+        )
+        if latest:
+            sl.log_user_message(latest.get("content") or latest.get("text") or "")
+
     lc_messages = _build_lc_messages(messages)
-    sse = SSEStream(graph, TRACKERS, language=lang)
+    sse = SSEStream(graph, TRACKERS, language=lang, session_logger=sl)
 
     return StreamingResponse(
         sse.stream(lc_messages),
