@@ -5,6 +5,8 @@
   - [T-10-2](T-10-2-demo-use-cases.md)
   - [T-10-3](T-10-3-aas-submodels.md)
   - [T-10-4](T-10-4-caddy-letsencrypt-domain.md)
+  - [T-10-5](T-10-5-session-logs.md)
+  - [T-10-6](T-10-6-session-log-analysis-agent.md)
 
 /label ~UserStory_US-10
 /label ~UserStory
@@ -39,6 +41,18 @@ Generate AI-Dataset submodels (Teilmodelle) conforming to the Asset Administrati
 so that trained models and their datasets can be represented in an industry-standard digital
 twin format.
 
+### T-10-6 — Session-Log-Analyse-Agent
+Ein Claude-Code-Skill (`/analyse-sessions`) liest alle Logs aus `session-logs/`, aggregiert
+Friction-Events, bewertet sie nach Häufigkeit × Schwere × Aktualität und legt automatisch
+priorisierte Verbesserungs-Tasks in `docs/issues/` an. Keine externe Infrastruktur nötig.
+
+### T-10-5 — Session-Logs
+Nach jeder Benutzer-Session wird automatisch ein strukturiertes Protokoll als Markdown-Datei
+im Ordner `session-logs/` abgelegt. Der Dateiname enthält einen ISO-8601-Zeitstempel und die
+Session-ID. Logs erfassen Gesprächsverlauf, Tool-Aufrufe, RAG-Quellen und Metadaten (Dauer,
+Nachrichtenanzahl) — ohne externe Observability-Infrastruktur. Ziel: Demo-Abläufe
+nachvollziehen und gezielt optimieren.
+
 ### T-10-4 — HTTPS mit registrierter Domain & Let's Encrypt (Cloudflare)
 Zweite Caddy-Variante für den Betrieb auf einem öffentlichen Server mit registrierter Domain.
 Nutzt `ghcr.io/caddybuilds/caddy-cloudflare:v2.11.2` und Let's Encrypt per Cloudflare
@@ -54,3 +68,6 @@ DNS-Challenge. Beide Caddy-Dienste bleiben im Stack und werden per Docker Compos
 - [ ] AAS submodel structure defined for AI-Dataset artifacts
 - [ ] Training pipeline can export at least one AAS-compliant submodel descriptor
 - [ ] Full demo runs without errors on the target hardware
+- [ ] Session logs are written to `session-logs/` after each conversation
+- [ ] Log files contain full conversation, tool calls, RAG sources, and metadata
+- [ ] `/analyse-sessions` extracts weighted refinements from session logs and creates tasks automatically
