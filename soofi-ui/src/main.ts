@@ -250,12 +250,12 @@ class SoofiChat extends SignalWatcher(LitElement) {
       line-height: 1;
       color: var(--color-text, #202124);
       flex: 1;
+      margin: 15px 0;
     }
     .header-logo {
       display: block;
       height: 28px;
       width: auto;
-      margin: 15px 0;
     }
     .lang-toggle {
       display: flex;
