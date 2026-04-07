@@ -245,8 +245,9 @@ class SoofiChat extends SignalWatcher(LitElement) {
       display: flex;
       align-items: center;
       gap: 6px;
-      font-size: 20px;
+      font-size: 28px;
       font-weight: 500;
+      line-height: 1;
       color: var(--color-text, #202124);
       flex: 1;
     }
