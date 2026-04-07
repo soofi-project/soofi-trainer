@@ -252,6 +252,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
       flex: 1;
     }
     .header-logo {
+      display: block;
       height: 28px;
       width: auto;
     }
@@ -1104,7 +1105,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
     return html`
       <div class="chat-column">
       <header>
-        <h1><img src="/logo.png" alt="Soofi" class="header-logo" /> Trainer</h1>
+        <h1><img src="/logo.png" alt="Soofi" class="header-logo" /><span>Trainer</span></h1>
         <div class="lang-toggle" @click=${this.toggleLanguage}>
           <span class=${this.language === "de" ? "active" : ""}>DE</span>
           <span class=${this.language === "en" ? "active" : ""}>EN</span>
