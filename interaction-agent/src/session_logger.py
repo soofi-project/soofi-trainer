@@ -9,7 +9,6 @@ import asyncio
 import collections
 import logging
 import os
-import re
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -21,66 +20,15 @@ logger = logging.getLogger(__name__)
 # Config
 # ---------------------------------------------------------------------------
 
-SESSION_LOG_ENABLED: bool = os.getenv("SESSION_LOG_ENABLED", "true").lower() == "true"
-SESSION_LOG_DIR: Path = Path(os.getenv("SESSION_LOG_DIR", "/app/session-logs"))
-SESSION_LOG_TIMEOUT_S: int = int(os.getenv("SESSION_LOG_TIMEOUT_S", "300"))
+SESSION_LOG_ENABLED: bool = os.environ["SESSION_LOG_ENABLED"].lower() == "true"
+SESSION_LOG_DIR: Path = Path(os.environ["SESSION_LOG_DIR"])
+SESSION_LOG_TIMEOUT_S: int = int(os.environ["SESSION_LOG_TIMEOUT_S"])
 
 # ---------------------------------------------------------------------------
 # Friction heuristics
 # ---------------------------------------------------------------------------
 
-# Each entry: (compiled pattern, subtype).  All matches → confidence:low.
-_FRICTION_PATTERNS: list[tuple[re.Pattern[str], str]] = [
-    (
-        re.compile(
-            r"\b(nein[,!]?\s|nee[,!]?\s|falsch|nicht gemeint|ich meine|ich meinte|"
-            r"gemeint war|das stimmt nicht|das stimmt nicht ganz|missverstanden|nicht richtig|"
-            r"eigentlich wollte|eigentlich meinte)\b",
-            re.I,
-        ),
-        "correction",
-    ),
-    (
-        re.compile(
-            r"\b(no[,!]?\s|wrong|i mean|i meant|that'?s not|not what i meant)\b",
-            re.I,
-        ),
-        "correction",
-    ),
-    (
-        re.compile(
-            r"\b(können Sie das präzisier|was meinen Sie|ich verstehe nicht|"
-            r"bitte erkläre|nicht klar|unklar)\b",
-            re.I,
-        ),
-        "clarification_request",
-    ),
-    (
-        re.compile(
-            r"\b(und was ist mit|aber was|haben Sie vergessen|nicht erwähnt|fehlt noch|"
-            r"da fehlt|fehlt da|fehlt noch|was ist mit|naja[,!]?\s|nur .{0,30}fehlt)\b",
-            re.I,
-        ),
-        "incomplete_answer",
-    ),
-    (
-        re.compile(
-            r"\b(hätte erwartet|hätte ich erwartet|ich hätte .{0,20}erwartet|"
-            r"warum hast du (das )?nicht|warum haben Sie (das )?nicht|"
-            r"das hätte|solltest du|hättest du)\b",
-            re.I,
-        ),
-        "unexpected_behavior",
-    ),
-]
-
-
-def _detect_friction(text: str) -> tuple[str, str] | None:
-    """Return (subtype, confidence) if a friction pattern matches, else None."""
-    for pattern, subtype in _FRICTION_PATTERNS:
-        if pattern.search(text):
-            return subtype, "low"
-    return None
+from src.friction import detect_friction as _detect_friction
 
 
 # ---------------------------------------------------------------------------
@@ -116,7 +64,7 @@ class SessionLogger:
 
         with open(self._path, "w", encoding="utf-8") as f:
             f.write(f"# Soofi Session — {self.started_at.strftime('%Y-%m-%d %H:%M:%S')}\n\n")
-            f.write("## Verlauf\n\n")
+            f.write("## Log\n\n")
             f.flush()
 
         logger.info("Session log created: %s", self._path.name)
@@ -155,12 +103,12 @@ class SessionLogger:
             self._append(
                 f"<!-- type:friction subtype:{subtype} confidence:{confidence} ts:{ts} -->\n"
                 f"<!-- friction: {text[:200].replace(chr(10), ' ')} -->\n"
-                f"**[{ts}] Benutzer:**\n{text}\n\n"
+                f"**[{ts}] User:**\n{text}\n\n"
             )
         else:
             self._append(
                 f"<!-- type:user ts:{ts} -->\n"
-                f"**[{ts}] Benutzer:**\n{text}\n\n"
+                f"**[{ts}] User:**\n{text}\n\n"
             )
 
     def log_tool_call(self, tool_name: str, query: str = "") -> None:
@@ -170,7 +118,7 @@ class SessionLogger:
             self._advisor_calls += 1
             self._append(
                 f'<!-- type:tool_call tool:ask_advisor ts:{ts} query:"{q}" -->\n'
-                f'**[{ts}] → Advisor** *(Suche: "{q}")*\n\n'
+                f'**[{ts}] → Advisor** *(query: "{q}")*\n\n'
             )
         elif tool_name == "ask_training_agent_tool":
             self._training_calls += 1
@@ -191,7 +139,7 @@ class SessionLogger:
         ts = datetime.now().strftime("%H:%M:%S")
         self._append(
             f"<!-- type:rag_sources ts:{ts} count:{len(sources)} -->\n"
-            f"**[{ts}] RAG-Quellen:**\n"
+            f"**[{ts}] RAG Sources:**\n"
         )
         for s in sources:
             file_name = s.get("file", s.get("source", s.get("title", "?")))
@@ -213,7 +161,7 @@ class SessionLogger:
             latency_ms = int((now - self._last_user_ts).total_seconds() * 1000)
         self._append(
             f"<!-- type:agent ts:{ts} latency_ms:{latency_ms} -->\n"
-            f"**[{ts}] Soofi:**\n{text}\n\n"
+            f"**[{ts}] Soofi:**\n{text}\n\n"  # agent name intentionally kept
         )
         # Heuristic recommendation detection
         text_lower = text.lower()
@@ -230,14 +178,14 @@ class SessionLogger:
         ts = datetime.now().strftime("%H:%M:%S")
         self._append(
             f"<!-- type:training_started ts:{ts} job_id:{job_id} -->\n"
-            f"**[{ts}] Training gestartet** (Job: `{job_id}`)\n\n"
+            f"**[{ts}] Training started** (job: `{job_id}`)\n\n"
         )
 
     def log_error(self, error: str) -> None:
         ts = datetime.now().strftime("%H:%M:%S")
         self._append(
             f"<!-- type:error ts:{ts} -->\n"
-            f"**[{ts}] Fehler:** {error[:300]}\n\n"
+            f"**[{ts}] Error:** {error[:300]}\n\n"
         )
 
     def finalize(self, end_reason: str = "normal") -> None:
@@ -251,18 +199,18 @@ class SessionLogger:
         self._append(
             f"<!-- type:session_end ts:{ts} reason:{end_reason} -->\n\n"
             f"---\n\n"
-            f"## Metadaten\n\n"
-            f"| Schlüssel | Wert |\n"
-            f"|-----------|------|\n"
-            f"| Session-Ende | {end_reason} |\n"
-            f"| Dauer | {duration_s // 60} min {duration_s % 60} s |\n"
-            f"| Nachrichten | {self._message_count} |\n"
-            f"| Advisor-Aufrufe | {self._advisor_calls} |\n"
-            f"| Training-Aufrufe | {self._training_calls} |\n"
-            f"| RAG-Quellen | {self._rag_sources_total} |\n"
-            f"| Friction-Events | {self._friction_events} |\n"
-            f"| Empfehlung | {self._recommendation} |\n"
-            f"| Training gestartet | {'Ja' if self._training_started else 'Nein'} |\n"
+            f"## Metadata\n\n"
+            f"| Key | Value |\n"
+            f"|-----|-------|\n"
+            f"| Session end | {end_reason} |\n"
+            f"| Duration | {duration_s // 60} min {duration_s % 60} s |\n"
+            f"| Messages | {self._message_count} |\n"
+            f"| Advisor calls | {self._advisor_calls} |\n"
+            f"| Training calls | {self._training_calls} |\n"
+            f"| RAG sources | {self._rag_sources_total} |\n"
+            f"| Friction events | {self._friction_events} |\n"
+            f"| Recommendation | {self._recommendation} |\n"
+            f"| Training started | {'yes' if self._training_started else 'no'} |\n"
         )
 
         # Prepend YAML frontmatter (one-time rewrite)

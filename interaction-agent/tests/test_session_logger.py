@@ -1,64 +1,10 @@
 """Tests for session_logger.py — pure function tests, no external deps."""
 
-import re
 from pathlib import Path
 
 import pytest
 
-# ---------------------------------------------------------------------------
-# Friction detection (inline copy — avoids import-time env-var side effects)
-# ---------------------------------------------------------------------------
-
-_FRICTION_PATTERNS: list[tuple[re.Pattern[str], str]] = [
-    (
-        re.compile(
-            r"\b(nein[,!]?\s|nee[,!]?\s|falsch|nicht gemeint|ich meine|ich meinte|"
-            r"gemeint war|das stimmt nicht|das stimmt nicht ganz|missverstanden|nicht richtig|"
-            r"eigentlich wollte|eigentlich meinte)\b",
-            re.I,
-        ),
-        "correction",
-    ),
-    (
-        re.compile(
-            r"\b(no[,!]?\s|wrong|i mean|i meant|that'?s not|not what i meant)\b",
-            re.I,
-        ),
-        "correction",
-    ),
-    (
-        re.compile(
-            r"\b(können Sie das präzisier|was meinen Sie|ich verstehe nicht|"
-            r"bitte erkläre|nicht klar|unklar)\b",
-            re.I,
-        ),
-        "clarification_request",
-    ),
-    (
-        re.compile(
-            r"\b(und was ist mit|aber was|haben Sie vergessen|nicht erwähnt|fehlt noch|"
-            r"da fehlt|fehlt da|fehlt noch|was ist mit|naja[,!]?\s|nur .{0,30}fehlt)\b",
-            re.I,
-        ),
-        "incomplete_answer",
-    ),
-    (
-        re.compile(
-            r"\b(hätte erwartet|hätte ich erwartet|ich hätte .{0,20}erwartet|"
-            r"warum hast du (das )?nicht|warum haben Sie (das )?nicht|"
-            r"das hätte|solltest du|hättest du)\b",
-            re.I,
-        ),
-        "unexpected_behavior",
-    ),
-]
-
-
-def _detect_friction(text: str) -> tuple[str, str] | None:
-    for pattern, subtype in _FRICTION_PATTERNS:
-        if pattern.search(text):
-            return subtype, "low"
-    return None
+from src.friction import detect_friction as _detect_friction
 
 
 # ---------------------------------------------------------------------------
@@ -162,7 +108,7 @@ class TestSessionLogger:
         assert len(files) == 1
         content = files[0].read_text(encoding="utf-8")
         assert "# Soofi Session" in content
-        assert "## Verlauf" in content
+        assert "## Log" in content
 
     def test_user_message_appended(self, tmp_path: Path) -> None:
         sl = SessionLogger("test-session-002", language="de", log_dir=tmp_path)
@@ -213,8 +159,8 @@ class TestSessionLogger:
         assert "end_reason: normal" in content
         assert "language: de" in content
         assert "message_count: 1" in content
-        assert "## Verlauf" in content
-        assert "## Metadaten" in content
+        assert "## Log" in content
+        assert "## Metadata" in content
 
     def test_recommendation_detected_lora(self, tmp_path: Path) -> None:
         sl = SessionLogger("test-session-007", language="de", log_dir=tmp_path)
