@@ -254,7 +254,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
       font-weight: 600;
       letter-spacing: 0.5px;
       cursor: pointer;
-      background: var(--color-hover, #f1f3f4);
+      background: var(--color-hover, #E6E8EE);
       box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.15);
     }
     .lang-toggle span {
@@ -266,7 +266,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
     .lang-toggle span.active {
       background: var(--color-primary, #1a73e8);
       color: #fff;
-      box-shadow: 0 2px 4px rgba(26, 115, 232, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      box-shadow: 0 2px 4px rgba(91, 30, 251, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
     }
     .lang-toggle span:not(.active):hover {
       color: var(--color-text, #202124);
@@ -285,7 +285,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
       transition: background 0.15s, color 0.15s;
     }
     .reset-btn:hover {
-      background: var(--color-hover, #f1f3f4);
+      background: var(--color-hover, #E6E8EE);
       color: var(--color-text, #202124);
     }
     .reset-btn svg {
@@ -354,7 +354,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
       color: var(--color-text, #202124);
     }
     .dialog-actions .cancel:hover {
-      background: var(--color-hover, #f1f3f4);
+      background: var(--color-hover, #E6E8EE);
     }
     .dialog-actions .confirm {
       background: #d93025;
@@ -385,7 +385,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
     }
     .message--user {
       align-self: flex-end;
-      background: var(--color-user-bg, #e8f0fe);
+      background: var(--color-user-bg, #EDE9FE);
       color: var(--color-text, #202124);
       white-space: pre-wrap;
     }
@@ -422,13 +422,13 @@ class SoofiChat extends SignalWatcher(LitElement) {
     }
     .message--assistant a:hover { text-decoration: underline; }
     .message--assistant code {
-      background: #f1f3f4;
+      background: #E6E8EE;
       padding: 2px 6px;
       border-radius: 4px;
       font-size: 0.9em;
     }
     .message--assistant pre {
-      background: #f1f3f4;
+      background: #E6E8EE;
       padding: 12px;
       border-radius: 8px;
       overflow-x: auto;
@@ -668,7 +668,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
       user-select: none;
     }
     .ptt-button:hover {
-      background: #f1f3f4;
+      background: #E6E8EE;
     }
     .ptt-button.recording {
       background: #e53935;
@@ -715,7 +715,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
       gap: 6px;
       padding: 8px 16px;
       border-bottom: 1px solid var(--color-border, #dadce0);
-      background: #fafafa;
+      background: #F5F6F8;
     }
     .doc-viewer__jump-link {
       font-size: 12px;
@@ -724,7 +724,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
       text-decoration: none;
       padding: 2px 8px;
       border-radius: 12px;
-      background: #e8f0fe;
+      background: #EDE9FE;
     }
     .doc-viewer__jump-link:hover {
       text-decoration: underline;
@@ -759,13 +759,13 @@ class SoofiChat extends SignalWatcher(LitElement) {
     }
     .doc-viewer__body a:hover { text-decoration: underline; }
     .doc-viewer__body code {
-      background: #f1f3f4;
+      background: #E6E8EE;
       padding: 2px 6px;
       border-radius: 4px;
       font-size: 0.9em;
     }
     .doc-viewer__body pre {
-      background: #f1f3f4;
+      background: #E6E8EE;
       padding: 12px;
       border-radius: 8px;
       overflow-x: auto;
@@ -773,7 +773,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
     }
     .doc-viewer__body pre code { background: none; padding: 0; }
     .doc-viewer__body .highlighted-section {
-      border-left: 3px solid #f9a825;
+      border-left: 3px solid #FFC549;
       padding-left: 8px;
       margin-left: -11px;
     }
@@ -816,7 +816,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
       padding: 12px 16px;
       cursor: pointer;
       font-weight: 500;
-      background: #fafafa;
+      background: #F5F6F8;
       list-style: none;
       user-select: none;
     }
@@ -858,7 +858,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
       align-items: center;
       gap: 12px;
       padding: 6px 0;
-      border-bottom: 1px solid #f1f3f4;
+      border-bottom: 1px solid #E6E8EE;
     }
     .agent-card__row:last-child { border-bottom: none; }
     .agent-card__label {
@@ -878,7 +878,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
     .agent-card__skill {
       margin: 8px 0;
       padding: 8px 12px;
-      background: #f8f9fa;
+      background: #F5F6F8;
       border-radius: 6px;
     }
     .agent-card__skill strong {
@@ -899,7 +899,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
       font-size: 11px;
       padding: 1px 6px;
       border-radius: 10px;
-      background: #e8f0fe;
+      background: #EDE9FE;
       color: var(--color-primary, #1a73e8);
     }
 

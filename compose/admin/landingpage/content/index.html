@@ -13,12 +13,45 @@
 
 		<title>Soofi</title>
 
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+
 		<link rel="stylesheet" href="dist/reset.css">
 		<link rel="stylesheet" href="dist/reveal.css">
 		<link rel="stylesheet" href="dist/theme/white.css">
 
 		<!-- Theme used for syntax highlighted code -->
 		<link rel="stylesheet" href="plugin/highlight/monokai.css">
+
+		<!-- Soofi CI overrides -->
+		<style>
+			:root {
+				--r-background-color: #F5F6F8;
+				--r-main-font: 'Poppins', 'Segoe UI', sans-serif;
+				--r-heading-font: 'Poppins', 'Segoe UI', sans-serif;
+				--r-main-color: #000029;
+				--r-heading-color: #000029;
+				--r-link-color: #5B1EFB;
+				--r-link-color-hover: #7711DD;
+				--r-selection-background-color: #EDE9FE;
+			}
+			.reveal .slides section {
+				text-align: left;
+			}
+			.reveal h1, .reveal h2 {
+				background: linear-gradient(90deg, #5B1EFB, #AA22CC);
+				-webkit-background-clip: text;
+				-webkit-text-fill-color: transparent;
+				background-clip: text;
+			}
+			.reveal ul li::marker {
+				color: #16ABFC;
+			}
+			.reveal strong {
+				color: #5B1EFB;
+			}
+		</style>
 	</head>
 	<body>
 		<div class="reveal">

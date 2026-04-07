@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap');
+
 *,
 *::before,
 *::after {
@@ -7,23 +9,25 @@
 }
 
 :root {
-  --color-bg: #f5f5f5;
+  /* Soofi CI */
+  --color-bg: #F5F6F8;
   --color-surface: #ffffff;
-  --color-primary: #1a73e8;
-  --color-primary-hover: #1557b0;
-  --color-text: #202124;
-  --color-text-secondary: #5f6368;
-  --color-border: #dadce0;
-  --color-user-bg: #e8f0fe;
+  --color-primary: #5B1EFB;        /* Electric Indigo */
+  --color-primary-hover: #4A15D4;
+  --color-text: #000029;           /* Dark Blue */
+  --color-text-secondary: rgba(0, 0, 41, 0.52);
+  --color-border: #E6E8EE;         /* Light Grey */
+  --color-hover: #E6E8EE;
+  --color-user-bg: #EDE9FE;        /* Indigo tint */
   --color-assistant-bg: #ffffff;
   --radius: 12px;
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  --shadow: 0 1px 3px rgba(0, 0, 41, 0.1);
 }
 
 html,
 body {
   height: 100%;
-  font-family: "Segoe UI", Roboto, sans-serif;
+  font-family: "Poppins", "Segoe UI", Roboto, sans-serif;
   background: var(--color-bg);
   color: var(--color-text);
 }
