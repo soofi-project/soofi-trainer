@@ -149,9 +149,10 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `ADVISOR_MODEL` | `qwen35-122b-fp8` | LLM model for the advisor agent |
-| `INTERACTION_MODEL` | `qwen35-122b-fp8` | LLM model for the interaction agent |
-| `TRAINING_AGENT_MODEL` | `qwen35-122b-fp8` | LLM model for the training agent |
+| `ADVISOR_MODEL` | `gpt-4o-mini` | LLM model for the advisor agent |
+| `INTERACTION_MODEL` | `gpt-4o-mini` | LLM model for the interaction agent |
+| `TRAINING_AGENT_MODEL` | `gpt-4o-mini` | LLM model for the training agent |
+| `DATASET_AGENT_MODEL` | `gpt-4o-mini` | LLM model for the dataset agent |
 
 ### Training
 
@@ -208,18 +209,6 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 
 > **Voice config**: `VITE_*` variables are injected at **runtime** via `docker-entrypoint.sh` → `env.js` → `window.__ENV`. Changing them in `.env` only requires a restart (`./up.sh`), not a rebuild. A one-time `./up.sh --build` is needed after upgrading to the entrypoint-based image.
 
-### Agent LLM controls
-
-Each agent reads its own sampling controls from `.env`:
-
-- Advisor: `ADVISOR_TEMPERATURE`, `ADVISOR_TOP_P`, `ADVISOR_TOP_K`, `ADVISOR_MIN_P`, `ADVISOR_PRESENCE_PENALTY`, `ADVISOR_REPEAT_PENALTY`, `ADVISOR_ENABLE_THINKING`
-- Interaction: `INTERACTION_TEMPERATURE`, `INTERACTION_TOP_P`, `INTERACTION_TOP_K`, `INTERACTION_MIN_P`, `INTERACTION_PRESENCE_PENALTY`, `INTERACTION_REPEAT_PENALTY`, `INTERACTION_ENABLE_THINKING`
-- Training: `TRAINING_AGENT_TEMPERATURE`, `TRAINING_AGENT_TOP_P`, `TRAINING_AGENT_TOP_K`, `TRAINING_AGENT_MIN_P`, `TRAINING_AGENT_PRESENCE_PENALTY`, `TRAINING_AGENT_REPEAT_PENALTY`, `TRAINING_AGENT_ENABLE_THINKING`
-
-`temperature`, `top_p`, and `presence_penalty` are always sent to the chat backend. `top_k`, `min_p`, `repeat_penalty`, and `enable_thinking` are only forwarded when `OPENAI_BASE_URL` points to a custom OpenAI-compatible backend such as vLLM/LiteLLM, Triton, LM Studio, or Ollama.
-
-The `./up.sh --vllm` flow layers `docker-compose.vllm.yml` with a model preset from `compose/presets/`.
-
 ### Voice mapping (H200 / Piper)
 
 | Voice | Model | Language |
@@ -238,57 +227,24 @@ The UI sends the voice from `VITE_TTS_VOICE_DE` (German) or `VITE_TTS_VOICE_EN` 
 `up.sh` supports backend profiles via compose override files.
 
 ```bash
-./up.sh                # Base stack (no backend override; uses .env agent models)
+./up.sh                # OpenAI (default)
 ./up.sh --ollama       # Ollama (local)
 ./up.sh --lmstudio     # LM Studio (local)
 ./up.sh --triton       # NVIDIA Triton (H200)
 ./up.sh --vllm         # vLLM via LiteLLM (H200) — STT/TTS local
-./up.sh --vllm --preset nvidia-nemotron-3-super-120b-a12b-fp8
 ```
 
 | Profile | Chat endpoint | Embeddings | STT/TTS | Requires |
 |---------|--------------|------------|---------|---------|
-| _(base stack / no override)_ | `api.openai.com` when `OPENAI_BASE_URL` is unset | `openai:text-embedding-3-large` | OpenAI cloud | `OPENAI_API_KEY` in `~/.env.secrets`; checked-in agent model defaults come from `.env` (`qwen35-122b-fp8` for all agents) |
+| _(default)_ | `api.openai.com` | OpenAI | OpenAI cloud | `OPENAI_API_KEY` in `~/.env.secrets` |
 | `--ollama` | Ollama (`localhost:11434`) | Ollama `bge-m3` | OpenAI cloud | Ollama running + models pulled |
 | `--lmstudio` | LM Studio (`localhost:1234`) | LM Studio `bge-m3` | OpenAI cloud | LM Studio server running + models loaded |
 | `--triton` | Triton (`10.2.10.33:9000`) | OpenAI | OpenAI cloud | Triton running + model loaded, `OPENAI_API_KEY` for embeddings |
 | `--vllm` | vLLM via LiteLLM (`10.2.10.33:4000`) | Qwen3-Embedding-8B | H200 local (Piper + Whisper) | H200 inference stack deployed |
 
-The base stack uses the checked-in agent model defaults from `.env`. If you switch to a backend that exposes different model IDs, update `ADVISOR_MODEL`, `INTERACTION_MODEL`, and `TRAINING_AGENT_MODEL` accordingly.
+The base stack uses the checked-in OpenAI-compatible model defaults from `.env`. Backend-specific endpoints and model overrides are configured in the backend compose files.
 
-Base-stack model names come from `.env`. Backend-specific endpoints, embeddings, and vLLM preset overrides are configured in the files below:
-
-- `docker-compose.ollama.yml` — Ollama models, endpoint, embedding model
-- `docker-compose.lmstudio.yml` — LM Studio models, endpoint, embedding model
-- `docker-compose.triton.yml` — Triton endpoint and model
-- `docker-compose.vllm.yml` — Shared vLLM/LiteLLM wiring
-
-vLLM model selection uses preset overlays:
-
-- `compose/presets/vllm-qwen35-122b-fp8.yml`
-- `compose/presets/vllm-nvidia-nemotron-3-super-120b-a12b-fp8.yml`
-- `compose/presets/vllm-nvidia-nemotron-3-super-120b-a12b-nvfp4.yml`
-- `compose/presets/vllm-nemotron-cascade-2-30b-a3b.yml`
-
-The parameter values for these model defaults/presets were chosen based on the recommendations stated in:
-
-- `https://github.com/NVIDIA-NeMo/Nemotron/blob/main/usage-cookbook/Nemotron-3-Super/vllm_cookbook.ipynb`
-- `https://huggingface.co/Qwen/Qwen3.5-122B-A10B-FP8`
-- `https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-NVFP4`
-- `https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-FP8`
-- `https://huggingface.co/nvidia/Nemotron-Cascade-2-30B-A3B`
-
-To change the vLLM model, select a preset:
-
-```bash
-./up.sh --vllm
-./up.sh --vllm --preset qwen35-122b-fp8
-./up.sh --vllm --preset nvidia-nemotron-3-super-120b-a12b-fp8
-./up.sh --vllm --preset nvidia-nemotron-3-super-120b-a12b-nvfp4
-./up.sh --vllm --preset nemotron-cascade-2-30b-a3b
-```
-
-Other backends still use their single override file directly.
+For `--vllm`, edit `docker-compose.vllm.yml` directly to switch the active model block or adjust the vLLM-specific sampling parameters. Alternative configurations are kept there as commented blocks.
 
 > **Note:** When switching the embedding model (e.g. from OpenAI to Ollama), the vector dimensions change and existing Weaviate data becomes incompatible. Wipe the volume before restarting:
 > ```bash
