@@ -253,7 +253,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
     }
     .header-logo {
       display: block;
-      height: 36px;
+      height: 28px;
       width: auto;
     }
     .lang-toggle {
