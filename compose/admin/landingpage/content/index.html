@@ -35,20 +35,61 @@
 				--r-link-color: #5B1EFB;
 				--r-link-color-hover: #7711DD;
 				--r-selection-background-color: #EDE9FE;
+				--r-progress-color: #5B1EFB;
+				--r-controls-color: #5B1EFB;
+				--r-controls-back-arrow-opacity: 0.5;
 			}
+
+			/* Text slides: left-aligned */
 			.reveal .slides section {
 				text-align: left;
 			}
+
+			/* H1/H2: indigo→violet gradient */
 			.reveal h1, .reveal h2 {
 				background: linear-gradient(90deg, #5B1EFB, #AA22CC);
 				-webkit-background-clip: text;
 				-webkit-text-fill-color: transparent;
 				background-clip: text;
 			}
+
+			/* H3: single CI accent */
+			.reveal h3 {
+				color: #5B1EFB;
+			}
+
+			/* Bullet markers: Cian */
 			.reveal ul li::marker {
 				color: #16ABFC;
 			}
+
+			/* Strong: Electric Indigo */
 			.reveal strong {
+				color: #5B1EFB;
+			}
+
+			/* Links */
+			.reveal a {
+				font-weight: 500;
+			}
+
+			/* Title slide: centered, logo prominent */
+			.reveal .slides > section:first-child {
+				text-align: center;
+			}
+			.reveal .slides > section:first-child img {
+				width: 320px;
+				max-width: 60%;
+				margin-bottom: 24px;
+			}
+			.reveal .slides > section:first-child p {
+				color: #000029;
+				font-size: 1.1em;
+				opacity: 0.7;
+			}
+
+			/* Navigation controls */
+			.reveal .controls {
 				color: #5B1EFB;
 			}
 		</style>

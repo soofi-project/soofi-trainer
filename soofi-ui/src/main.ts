@@ -245,7 +245,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
       display: flex;
       align-items: baseline;
       gap: 6px;
-      font-size: 40px;
+      font-size: 38px;
       font-weight: 500;
       line-height: 1;
       color: var(--color-text, #202124);
@@ -398,11 +398,22 @@ class SoofiChat extends SignalWatcher(LitElement) {
       background: var(--color-user-bg, #EDE9FE);
       color: var(--color-text, #202124);
       white-space: pre-wrap;
+      box-shadow: var(--shadow, 0 1px 3px rgba(0, 0, 41, 0.1));
     }
     .message--assistant {
       align-self: flex-start;
-      background: var(--color-assistant-bg, #fff);
-      box-shadow: var(--shadow, 0 1px 3px rgba(0, 0, 0, 0.12));
+      background-color: var(--color-assistant-bg, #fff);
+      /* Gradient corner accents: 1cm L-shape at top-left and bottom-left.
+         Fade to transparent so short bubbles blend and tall ones fade gracefully. */
+      background-image:
+        linear-gradient(90deg,  #E71CC5, #FFC549, transparent),
+        linear-gradient(180deg, #E71CC5, #AA22CC, transparent),
+        linear-gradient(90deg,  #7711DD, #00DCFD, transparent),
+        linear-gradient(0deg,   #5B1EFB, #7711DD, transparent);
+      background-repeat: no-repeat;
+      background-size: 1cm 4px, 4px 1cm, 1cm 4px, 4px 1cm;
+      background-position: top left, top left, bottom left, bottom left;
+      box-shadow: var(--shadow, 0 1px 3px rgba(0, 0, 41, 0.1));
     }
 
     /* Markdown inside assistant messages */
@@ -1106,7 +1117,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
     return html`
       <div class="chat-column">
       <header>
-        <h1><img src="/logo.png" alt="Soofi" class="header-logo" /><span>Trainer</span></h1>
+        <h1><img src="/logo.png" alt="Soofi" class="header-logo" /><span>-Trainer</span></h1>
         <div class="lang-toggle" @click=${this.toggleLanguage}>
           <span class=${this.language === "de" ? "active" : ""}>DE</span>
           <span class=${this.language === "en" ? "active" : ""}>EN</span>

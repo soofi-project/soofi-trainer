@@ -10,13 +10,13 @@
 
 :root {
   /* Soofi CI */
-  --color-bg: #F5F6F8;
+  --color-bg: #E6E8EE;           /* Light Grey */
   --color-surface: #ffffff;
   --color-primary: #5B1EFB;        /* Electric Indigo */
   --color-primary-hover: #4A15D4;
   --color-text: #000029;           /* Dark Blue */
   --color-text-secondary: rgba(0, 0, 41, 0.52);
-  --color-border: #E6E8EE;         /* Light Grey */
+  --color-border: #F5F6F8;         /* OFF White */
   --color-hover: #E6E8EE;
   --color-user-bg: #EDE9FE;        /* Indigo tint */
   --color-assistant-bg: #ffffff;
