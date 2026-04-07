@@ -28,7 +28,7 @@ Sovereign Open Source Foundational Models
 
 ---
 
-<!-- .slide: data-background-color="#0f1115" data-background-iframe="https://${LANDING_PAGE_HOSTNAME}:${SOOFI_UI_PORT}" data-background-interactive -->
+<!-- .slide: data-background-color="#0f1115" data-background-iframe="https://${LANDING_PAGE_HOSTNAME}:${SOOFI_UI_PORT}" data-background-interactive data-preload -->
 
 ---
 
