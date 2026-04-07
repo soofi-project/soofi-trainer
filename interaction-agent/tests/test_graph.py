@@ -12,7 +12,7 @@ import pytest
 # Inline copy of after_tools logic (avoids importing graph.py with all its deps)
 # ---------------------------------------------------------------------------
 
-_STREAMING_TOOLS = {"ask_advisor_tool", "ask_training_agent_tool"}
+_STREAMING_TOOLS = {"ask_advisor_tool", "ask_training_agent_tool", "ask_dataset_agent_tool"}
 
 
 def after_tools(state: dict) -> str:
@@ -41,6 +41,11 @@ class TestAfterTools:
     def test_training_tool_skips(self) -> None:
         tool_msg = SimpleNamespace(name="ask_training_agent_tool")
         ai_msg = SimpleNamespace(tool_calls=[{"name": "ask_training_agent_tool"}])
+        assert after_tools({"messages": [ai_msg, tool_msg]}) == "__end__"
+
+    def test_dataset_agent_tool_skips(self) -> None:
+        tool_msg = SimpleNamespace(name="ask_dataset_agent_tool")
+        ai_msg = SimpleNamespace(tool_calls=[{"name": "ask_dataset_agent_tool"}])
         assert after_tools({"messages": [ai_msg, tool_msg]}) == "__end__"
 
     def test_non_streaming_tool_continues(self) -> None:
