@@ -85,7 +85,7 @@ Welche Datenmenge brauche ich mindestens?
 **[14:33:08] Soofi:**
 Für LoRA Fine-Tuning sind typischerweise 500–2000 annotierte Beispiele ausreichend ...
 
-<!-- type:friction subtype:correction ts:14:34:22 -->
+<!-- type:friction subtype:correction confidence:low ts:14:34:22 -->
 <!-- friction: Benutzer korrigiert vorherige Eingabe — "nein, ich meine Textklassifikation,
      nicht Bildklassifikation" — Agent hatte Domäne falsch interpretiert -->
 **[14:34:22] Benutzer:**
@@ -141,7 +141,7 @@ ausführen kann:
 1. **Batch-Lesen**: Alle `.md`-Dateien in `session-logs/` einlesen, YAML-Frontmatter parsen
 2. **Friction-Aggregation**: Alle `type:friction`-Events über alle Sessions sammeln und
    nach `subtype` gruppieren
-3. **Gewichtung**: Häufigkeit × Schwere (z. B. `abandoned` > `correction` > `repetition`)
+3. **Gewichtung**: `score = frequency × severity × recency_factor` (z. B. `abandoned` > `correction` > `repetition`; Sessions < 24 h mit Faktor 1.5, älter als 7 d mit 0.6)
 4. **Refinement-Extraktion**: Pro Friction-Cluster einen Verbesserungsvorschlag formulieren
 5. **Task-Anlage**: Automatisch Issues in `docs/issues/` als Markdown-Dateien erstellen
 
@@ -181,7 +181,7 @@ der einzig sinnvolle Ort für das Logging.
 Friction-Events werden **nicht automatisch** vom Agent erkannt (zu fehleranfällig). Stattdessen:
 
 - `correction`: Heuristik — Benutzer-Nachricht enthält "nein", "falsch", "ich meine" o. ä.
-  → Logger annotiert als **Kandidat**, mit `confidence: low|high`
+  → Logger annotiert als **Kandidat**, mit `confidence:low` oder `confidence:high`
 - `tool_failure`, `error`: Direkt aus Exceptions / Error-Events
 - `abandoned`: Aus `end_reason=timeout` + kein `recommendation`-Event
 

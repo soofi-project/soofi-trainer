@@ -23,6 +23,7 @@ from .constants import (
     TRAINING_VIEW_KEY,
 )
 from .i18n import Language, tr
+from .session_logger import SessionLogger
 from .speech import RE_SENTENCE_END, generate_speech_text
 
 logger = logging.getLogger(__name__)
@@ -143,6 +144,7 @@ class SSEStream:
         graph: CompiledStateGraph,
         trackers: list[ToolStreamTracker],
         language: Language = "de",
+        session_logger: SessionLogger | None = None,
     ) -> None:
         self._graph = graph
         self._language = language
@@ -157,6 +159,7 @@ class SSEStream:
         self._chunk_buffer = ""
         self._speech_emitted = False
         self._result_messages: list[Any] = []
+        self._session_logger = session_logger
 
     # -- public entry point --------------------------------------------------
 
@@ -249,6 +252,11 @@ class SSEStream:
 
         yield _sse({"type": "RUN_FINISHED", "threadId": thread_id, "runId": run_id})
 
+        if self._session_logger:
+            if self._response_text:
+                self._session_logger.log_agent_response(self._response_text)
+            await self._session_logger.reset_timeout()
+
     # -- event handlers ------------------------------------------------------
 
     async def _handle_tool_start(self, event: dict[str, Any]) -> AsyncGenerator[str, None]:
@@ -262,6 +270,9 @@ class SSEStream:
                 await asyncio.sleep(tracker.on_start_delay)
             if tracker.on_start_label:
                 yield _sse({"type": "SEARCH_STATUS", "label": tracker.on_start_label})
+            if self._session_logger and tool_name:
+                query = event.get("data", {}).get("input", {}).get("question", "")
+                self._session_logger.log_tool_call(tool_name, query)
 
     async def _handle_custom_event(self, event: dict[str, Any]) -> AsyncGenerator[str, None]:
         # Agent card events — dispatched directly from show_agent_card tool
@@ -301,6 +312,8 @@ class SSEStream:
         rag_sources = data.get(ADVISOR_KEY_RAG_SOURCES)
         if rag_sources is not None:
             yield _sse({"type": "RAG_SOURCES", "sources": rag_sources})
+            if self._session_logger:
+                self._session_logger.log_rag_sources(rag_sources)
 
         for tracker in self._trackers.values():
             # Status keys
@@ -318,6 +331,8 @@ class SSEStream:
                 value = data.get(event_key)
                 if value:
                     tracker.captured[attr_name] = value
+                    if self._session_logger and attr_name == "job_id":
+                        self._session_logger.log_training_started(value)
 
             # Chunk key — the main text stream (empty key = no streaming)
             chunk = data.get(tracker.chunk_key) if tracker.chunk_key else None

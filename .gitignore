@@ -5,6 +5,9 @@
 # Data directories
 data/
 
+# Session logs (auto-generated, not committed)
+session-logs/
+
 # Logs
 *.log
 logs/
