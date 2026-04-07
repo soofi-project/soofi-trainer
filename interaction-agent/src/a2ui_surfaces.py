@@ -15,17 +15,12 @@ _mcp_token = os.getenv("MCP_AUTH_TOKEN")
 if not _mcp_token:
     raise RuntimeError("MCP_AUTH_TOKEN env var required.")
 
-_n8n_port = os.getenv("N8N_EXTERNAL_PORT")
-if not _n8n_port:
-    raise RuntimeError("N8N_EXTERNAL_PORT env var required.")
-
 MCP_INSPECTOR_URL = (
     f"http://localhost:{_mcp_port}"
     f"/?transport=streamable-http"
     f"&serverUrl=http://vector-mcp:8000/mcp"
     f"&MCP_PROXY_AUTH_TOKEN={_mcp_token}"
 )
-N8N_URL = f"http://localhost:{_n8n_port}"
 
 # ---------------------------------------------------------------------------
 # Dashboard descriptions
@@ -35,11 +30,6 @@ MCP_INSPECTOR_DESC = (
     "Der MCP Inspector zeigt die verfügbaren Semantic-Search-Tools "
     "(search_documents, list_metadata) und ermöglicht Testaufrufe "
     "gegen die Weaviate-Vektordatenbank."
-)
-N8N_DESC = (
-    "N8N ist unsere visuelle Workflow-Automation-Plattform. "
-    "Hier können Sie Verarbeitungs-Pipelines und "
-    "Integrationen grafisch modellieren und ausführen."
 )
 
 # ---------------------------------------------------------------------------
@@ -86,6 +76,3 @@ def mcp_inspector_surface() -> list[dict[str, Any]]:
     return _dashboard_surface(MCP_INSPECTOR_URL, "MCP Inspector", MCP_INSPECTOR_DESC)
 
 
-def n8n_surface() -> list[dict[str, Any]]:
-    """A2UI surface for N8N dashboard link."""
-    return _dashboard_surface(N8N_URL, "N8N Workflows", N8N_DESC)

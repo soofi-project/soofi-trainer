@@ -935,6 +935,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
   @state() private searchStatusLabel = "";
   private _pendingRagSources: RagSource[] = [];
   @state() private flowState: FlowState = "idle";
+  @state() private datasetMcpTarget = "";
   private _flowTimer: ReturnType<typeof setTimeout> | null = null;
   private _fetchController: AbortController | null = null;
   @state() private docViewerUrl: string | null = null;
@@ -1101,7 +1102,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
           : nothing}
       </div>
 
-      <soofi-agent-flow .flowState=${this.flowState}></soofi-agent-flow>
+      <soofi-agent-flow .flowState=${this.flowState} .mcpTarget=${this.datasetMcpTarget}></soofi-agent-flow>
 
       ${this.searching
         ? html`
@@ -1615,6 +1616,9 @@ class SoofiChat extends SignalWatcher(LitElement) {
           this.flowState = "asking-training-agent";
         } else if (event.tool === "ask_advisor_tool") {
           this.flowState = "asking-advisor";
+        } else if (event.tool === "ask_dataset_agent_tool") {
+          this.flowState = "asking-dataset-agent";
+          this.datasetMcpTarget = "";
         }
         break;
 
@@ -1638,7 +1642,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
         }
         // End streaming — the second LLM call is suppressed anyway,
         // so don't make the user wait for it.
-        if (event.tool === "ask_advisor_tool" || event.tool === "ask_training_agent_tool") {
+        if (event.tool === "ask_advisor_tool" || event.tool === "ask_training_agent_tool" || event.tool === "ask_dataset_agent_tool") {
           this.streaming = false;
         }
         if (this._flowTimer) clearTimeout(this._flowTimer);
@@ -1658,6 +1662,14 @@ class SoofiChat extends SignalWatcher(LitElement) {
             this.flowState = "a2a-returning";
             this._flowTimer = setTimeout(() => { this.flowState = "idle"; }, 900);
           }, 900);
+        } else if (this.flowState === "asking-dataset-agent" || this.flowState === "dataset-searching"
+            || this.flowState === "dataset-mcp-returning" || this.flowState === "da-returning") {
+          // Dataset Agent: MCP back → A2A back → idle
+          this.flowState = "dataset-mcp-returning";
+          this._flowTimer = setTimeout(() => {
+            this.flowState = "da-returning";
+            this._flowTimer = setTimeout(() => { this.flowState = "idle"; }, 900);
+          }, 900);
         }
         // Other tools (show_agent_card, show_dashboard, etc.): no flow animation
         break;
@@ -1668,6 +1680,9 @@ class SoofiChat extends SignalWatcher(LitElement) {
           this.flowState = "training-searching";
         } else if (this.flowState === "asking-advisor") {
           this.flowState = "searching";
+        } else if (this.flowState === "asking-dataset-agent" || this.flowState === "dataset-searching") {
+          this.flowState = "dataset-searching";
+          if (event.mcpTool) this.datasetMcpTarget = event.mcpTool as string;
         }
         // Other tools (show_agent_card, etc.): label shown but no flow animation
         break;
@@ -1703,7 +1718,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
         // Safety net: if the flow is still in an active (pre-return) state,
         // TOOL_CALL_END was likely never received — reset to idle.
         // Don't interrupt return animations (they have their own timers).
-        const stuck = ["asking-advisor", "asking-training-agent", "searching", "training-searching"];
+        const stuck = ["asking-advisor", "asking-training-agent", "asking-dataset-agent", "searching", "training-searching", "dataset-searching"];
         if (stuck.includes(this.flowState)) {
           if (this._flowTimer) clearTimeout(this._flowTimer);
           this._flowTimer = null;

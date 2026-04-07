@@ -13,6 +13,7 @@ TRAINING_AGENT_KEY_JOB_STARTED = "training_agent_job_started"
 # Keys for dataset-agent stream events
 DATASET_AGENT_KEY_CHUNK = "dataset_agent_chunk"
 DATASET_AGENT_KEY_STATUS = "dataset_agent_status"
+DATASET_AGENT_KEY_TOOL = "dataset_agent_tool"
 
 # Keys for doc viewer control events
 DOC_VIEWER_KEY = "doc_viewer"
