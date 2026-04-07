@@ -243,7 +243,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
     }
     header h1 {
       display: flex;
-      align-items: center;
+      align-items: baseline;
       gap: 6px;
       font-size: 40px;
       font-weight: 500;
