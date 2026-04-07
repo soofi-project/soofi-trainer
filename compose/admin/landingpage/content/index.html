@@ -36,29 +36,34 @@
 		<script src="plugin/markdown/markdown.js"></script>
 		<script src="plugin/highlight/highlight.js"></script>
 		<script>
+			// Reveal.js sets allow="autoplay", appends the iframe, then immediately sets
+			// src — all in one synchronous block. MutationObserver fires too late.
+			// We intercept setAttribute at the prototype level so microphone is added to
+			// the allow attribute in the same call stack, before navigation starts.
+			(function () {
+				const _setAttribute = HTMLIFrameElement.prototype.setAttribute;
+				HTMLIFrameElement.prototype.setAttribute = function (attr, value) {
+					if (attr === 'src' && this.closest && this.closest('.slide-background')) {
+						const current = this.getAttribute('allow') || '';
+						if (!current.includes('microphone')) {
+							_setAttribute.call(this, 'allow', current ? `${current}; microphone` : 'microphone');
+						}
+					}
+					_setAttribute.call(this, attr, value);
+				};
+			})();
+
 			Reveal.initialize({
 				hash: true,
 				plugins: [ RevealMarkdown, RevealHighlight, RevealNotes ]
 			});
 
-			const applyBackgroundIframePermissions = () => {
-				document.querySelectorAll('.slide-background iframe').forEach(iframe => {
-					const current = iframe.getAttribute('allow') || '';
-					if (!current.includes('microphone')) {
-						iframe.setAttribute('allow', current ? `${current}; microphone` : 'microphone');
-					}
-				});
-			};
-
 			Reveal.on('ready', () => {
-				applyBackgroundIframePermissions();
 				document.querySelectorAll('.reveal a[href^="http"]').forEach(a => {
 					a.target = '_blank';
 					a.rel = 'noopener';
 				});
 			});
-			
-			Reveal.on('slidechanged', applyBackgroundIframePermissions);
 		</script>
 	</body>
 </html>
