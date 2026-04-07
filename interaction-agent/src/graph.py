@@ -49,7 +49,6 @@ from .constants import (
     TRAINING_VIEW_KEY,
 )
 from .i18n import Language, tr
-from .llm_config import build_llm_kwargs
 from .prompts import get_system_prompt
 
 logger = logging.getLogger(__name__)
@@ -176,6 +175,11 @@ _language: contextvars.ContextVar[Language] = contextvars.ContextVar("_language"
 # LRU-bounded to prevent unbounded memory growth from long-running processes.
 _RAG_URLS_MAX = 256
 _rag_urls_store: collections.OrderedDict[str, list[str]] = collections.OrderedDict()
+
+base_url = os.getenv("OPENAI_BASE_URL") or None
+model_name = os.getenv("INTERACTION_MODEL")
+if not model_name:
+    raise RuntimeError("INTERACTION_MODEL env var required.")
 
 # Agent registry: parsed from AGENT_REGISTRY env var (comma-separated name=url pairs)
 _raw_registry = os.getenv("AGENT_REGISTRY", "")
@@ -482,9 +486,11 @@ def build_graph() -> CompiledStateGraph:
         control_doc_viewer,
         control_training_view,
     ]
-    llm_kwargs = build_llm_kwargs("INTERACTION_MODEL", "INTERACTION")
-    llm = ChatOpenAI(**llm_kwargs).bind_tools(
-        tools, **({"parallel_tool_calls": False} if "openai_api_base" not in llm_kwargs else {})
+    llm = ChatOpenAI(
+        model=model_name,
+        **({"openai_api_base": base_url} if base_url else {}),
+    ).bind_tools(
+        tools, **({"parallel_tool_calls": False} if not base_url else {})
     )
     tool_node = ToolNode(tools)
 

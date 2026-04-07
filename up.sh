@@ -16,46 +16,34 @@ echo ""
 # Load environment variables
 source .env 2>/dev/null || true
 
-VLLM_PRESET_DEFAULT="qwen35-122b-fp8"
-VLLM_PRESETS=(
-    "qwen35-122b-fp8"
-    "nvidia-nemotron-3-super-120b-a12b-fp8"
-    "nvidia-nemotron-3-super-120b-a12b-nvfp4"
-    "nemotron-cascade-2-30b-a3b"
-    "mixed-models"
-)
-
-print_vllm_presets() {
-    printf '%s\n' "${VLLM_PRESETS[@]}"
-}
-
 # Parse args
 BUILD_FLAG=""
 BACKEND_OVERRIDE="chatgpt"
-VLLM_PRESET=""
-while [ "$#" -gt 0 ]; do
+PROFILE_FLAGS=""
+
+while [[ $# -gt 0 ]]; do
     case "$1" in
         --build)    BUILD_FLAG="--build" ;;
         --chatgpt)  BACKEND_OVERRIDE="chatgpt" ;;
         --ollama)   BACKEND_OVERRIDE="ollama" ;;
         --lmstudio) BACKEND_OVERRIDE="lmstudio" ;;
-        --triton) BACKEND_OVERRIDE="triton" ;;
-        --vllm) BACKEND_OVERRIDE="vllm" ;;
-        --preset)
+        --triton)   BACKEND_OVERRIDE="triton" ;;
+        --vllm)     BACKEND_OVERRIDE="vllm" ;;
+        --profile)
             shift
-            if [ -z "${1:-}" ]; then
-                echo "[ERROR] Missing value for --preset"
-                echo "[HINT]  Example: ./up.sh --vllm --preset ${VLLM_PRESET_DEFAULT}"
+            if [[ -z "$1" || "$1" == --* ]]; then
+                echo "[ERROR] --profile requires a value"
+                echo "[HINT]  Usage: --profile <name>  (can be repeated for multiple profiles)"
                 exit 1
             fi
-            VLLM_PRESET="$1"
+            PROFILE_FLAGS="$PROFILE_FLAGS --profile $1"
             ;;
-        --preset=*)
-            VLLM_PRESET="${1#*=}"
+        --profile=*)
+            PROFILE_FLAGS="$PROFILE_FLAGS --profile ${1#--profile=}"
             ;;
         --*)
             echo "[ERROR] Unknown flag: $1"
-            echo "[HINT]  Available flags: --build, --chatgpt, --ollama, --lmstudio, --triton, --vllm, --preset"
+            echo "[HINT]  Available flags: --build, --chatgpt, --ollama, --lmstudio, --triton, --vllm, --profile <name>"
             exit 1
             ;;
     esac
@@ -81,26 +69,6 @@ if [ "$BACKEND_OVERRIDE" != "chatgpt" ]; then
     COMPOSE_FILES+=(-f "$OVERRIDE_FILE")
 fi
 
-if [ -n "$VLLM_PRESET" ] && [ "$BACKEND_OVERRIDE" != "vllm" ]; then
-    echo "[ERROR] --preset can only be used together with --vllm"
-    exit 1
-fi
-
-if [ "$BACKEND_OVERRIDE" = "vllm" ]; then
-    if [ -z "$VLLM_PRESET" ]; then
-        VLLM_PRESET="$VLLM_PRESET_DEFAULT"
-    fi
-    PRESET_FILE="compose/presets/vllm-${VLLM_PRESET}.yml"
-    if [ ! -f "$PRESET_FILE" ]; then
-        echo "[ERROR] vLLM preset file not found: $PRESET_FILE"
-        echo "[HINT]  Available vLLM presets:"
-        print_vllm_presets
-        exit 1
-    fi
-    echo "[INFO] vLLM preset: $VLLM_PRESET"
-    COMPOSE_FILES+=(-f "$PRESET_FILE")
-fi
-
 # Log active Docker profiles
 if [ -n "$PROFILE_FLAGS" ]; then
     echo "[INFO] Docker profiles:$(echo "$PROFILE_FLAGS" | sed 's/--profile/,/g' | tr -d ' ')"
@@ -112,12 +80,12 @@ if [ -n "$BUILD_FLAG" ]; then
 else
     echo "[INFO] Starting containers..."
 fi
-docker compose "${COMPOSE_FILES[@]}" up -d --wait --remove-orphans ${BUILD_FLAG:+$BUILD_FLAG}
+docker compose "${COMPOSE_FILES[@]}" $PROFILE_FLAGS up -d --wait --remove-orphans $BUILD_FLAG
 
 # Check container status
 echo ""
 echo "[INFO] Container Status:"
-docker compose "${COMPOSE_FILES[@]}" ps
+docker compose "${COMPOSE_FILES[@]}" $PROFILE_FLAGS ps
 
 # Print URLs
 echo ""

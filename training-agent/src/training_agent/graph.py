@@ -1,6 +1,7 @@
 """LangGraph ReAct agent for the Soofi Training Agent."""
 
 import logging
+import os
 
 from langchain_core.messages import ToolMessage
 from langchain_core.runnables import RunnableConfig
@@ -11,17 +12,18 @@ from langgraph.graph import MessagesState, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import ToolNode
 
-from .llm_config import build_llm_kwargs
 from .prompts import SYSTEM_PROMPT_DE
 
 logger = logging.getLogger(__name__)
 
+model = os.getenv("TRAINING_AGENT_MODEL")
+if not model:
+    raise RuntimeError("TRAINING_AGENT_MODEL env var required.")
+
 
 def build_graph(tools: list[BaseTool]) -> CompiledStateGraph:
     """Build the LangGraph ReAct agent with the given tools."""
-    llm = ChatOpenAI(**build_llm_kwargs("TRAINING_AGENT_MODEL", "TRAINING_AGENT")).bind_tools(
-        tools, parallel_tool_calls=False
-    )
+    llm = ChatOpenAI(model=model).bind_tools(tools, parallel_tool_calls=False)
     tool_node = ToolNode(tools)
 
     async def agent(state: MessagesState, config: RunnableConfig) -> MessagesState:
