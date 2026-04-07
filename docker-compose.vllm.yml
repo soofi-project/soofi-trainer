@@ -9,22 +9,28 @@
 services:
   advisor:
     environment:
-      # Active: qwen35-122b-fp8 (non-thinking)
-      # If enabling thinking, set temperature=0.6, top_p=0.95, top_k=20, min_p=0.0, presence_penalty=0.0, repetition_penalty=1.0
-      # ADVISOR_MODEL: qwen35-122b-fp8
-      # ADVISOR_TEMPERATURE: 1.0
-      # ADVISOR_TOP_P: 1.0
-      # ADVISOR_TOP_K: 40
-      # ADVISOR_MIN_P: 0.0
-      # ADVISOR_PRESENCE_PENALTY: 2.0
-      # ADVISOR_REPEAT_PENALTY: 1.0
-      # ADVISOR_ENABLE_THINKING: false
-      # Alt: Nemotron-Cascade-2-30B-A3B-fp8 (thinking)
+      SOOFI_LLM_BACKEND: vllm
+      # Active: Nemotron-Cascade-2-30B-A3B-fp8 (thinking)
       ADVISOR_MODEL: Nemotron-Cascade-2-30B-A3B-fp8
       ADVISOR_TEMPERATURE: 0.6
       ADVISOR_TOP_P: 0.95
       ADVISOR_MIN_P: 0.01
       ADVISOR_ENABLE_THINKING: true
+      # Alt: qwen35-122b-fp8 (non-thinking)
+      # ADVISOR_MODEL: qwen35-122b-fp8
+      # ADVISOR_TEMPERATURE: 1.0
+      # ADVISOR_TOP_P: 0.95
+      # ADVISOR_TOP_K: 20
+      # ADVISOR_MIN_P: 0.0
+      # ADVISOR_PRESENCE_PENALTY: 1.5
+      # ADVISOR_REPEAT_PENALTY: 1.0
+      # ADVISOR_ENABLE_THINKING: false
+      # Alt: Nemotron-Cascade-2-30B-A3B-fp8 (thinking)
+      # ADVISOR_MODEL: Nemotron-Cascade-2-30B-A3B-fp8
+      # ADVISOR_TEMPERATURE: 0.6
+      # ADVISOR_TOP_P: 0.95
+      # ADVISOR_MIN_P: 0.01
+      # ADVISOR_ENABLE_THINKING: true
       # Alt: NVIDIA-Nemotron-3-Super-120B-A12B-FP8 (thinking)
       # ADVISOR_MODEL: NVIDIA-Nemotron-3-Super-120B-A12B-FP8
       # ADVISOR_TEMPERATURE: 0.6
@@ -47,13 +53,14 @@ services:
 
   interaction-agent:
     environment:
+      SOOFI_LLM_BACKEND: vllm
       # Active: qwen35-122b-fp8 (non-thinking)
       INTERACTION_MODEL: qwen35-122b-fp8
       INTERACTION_TEMPERATURE: 1.0
-      INTERACTION_TOP_P: 1.0
-      INTERACTION_TOP_K: 40
+      INTERACTION_TOP_P: 0.95
+      INTERACTION_TOP_K: 20
       INTERACTION_MIN_P: 0.0
-      INTERACTION_PRESENCE_PENALTY: 2.0
+      INTERACTION_PRESENCE_PENALTY: 1.5
       INTERACTION_REPEAT_PENALTY: 1.0
       INTERACTION_ENABLE_THINKING: false
       # Alt: Nemotron-Cascade-2-30B-A3B-fp8 (thinking)
@@ -96,21 +103,28 @@ services:
 
   training-agent:
     environment:
-      # Active: qwen35-122b-fp8 (non-thinking)
-      # TRAINING_AGENT_MODEL: qwen35-122b-fp8
-      # TRAINING_AGENT_TEMPERATURE: 1.0
-      # TRAINING_AGENT_TOP_P: 1.0
-      # TRAINING_AGENT_TOP_K: 40
-      # TRAINING_AGENT_MIN_P: 0.0
-      # TRAINING_AGENT_PRESENCE_PENALTY: 2.0
-      # TRAINING_AGENT_REPEAT_PENALTY: 1.0
-      # TRAINING_AGENT_ENABLE_THINKING: false
-      # Alt: Nemotron-Cascade-2-30B-A3B-fp8 (thinking)
+      SOOFI_LLM_BACKEND: vllm
+      # Active: Nemotron-Cascade-2-30B-A3B-fp8 (thinking)
       TRAINING_AGENT_MODEL: Nemotron-Cascade-2-30B-A3B-fp8
       TRAINING_AGENT_TEMPERATURE: 0.6
       TRAINING_AGENT_TOP_P: 0.95
       TRAINING_AGENT_MIN_P: 0.01
       TRAINING_AGENT_ENABLE_THINKING: true
+      # Alt: qwen35-122b-fp8 (non-thinking)
+      # TRAINING_AGENT_MODEL: qwen35-122b-fp8
+      # TRAINING_AGENT_TEMPERATURE: 1.0
+      # TRAINING_AGENT_TOP_P: 0.95
+      # TRAINING_AGENT_TOP_K: 20
+      # TRAINING_AGENT_MIN_P: 0.0
+      # TRAINING_AGENT_PRESENCE_PENALTY: 1.5
+      # TRAINING_AGENT_REPEAT_PENALTY: 1.0
+      # TRAINING_AGENT_ENABLE_THINKING: false
+      # Alt: Nemotron-Cascade-2-30B-A3B-fp8 (thinking)
+      # TRAINING_AGENT_MODEL: Nemotron-Cascade-2-30B-A3B-fp8
+      # TRAINING_AGENT_TEMPERATURE: 0.6
+      # TRAINING_AGENT_TOP_P: 0.95
+      # TRAINING_AGENT_MIN_P: 0.01
+      # TRAINING_AGENT_ENABLE_THINKING: true
       # Alt: NVIDIA-Nemotron-3-Super-120B-A12B-FP8 (thinking)
       # TRAINING_AGENT_MODEL: NVIDIA-Nemotron-3-Super-120B-A12B-FP8
       # TRAINING_AGENT_TEMPERATURE: 0.6
@@ -138,6 +152,53 @@ services:
       # TRAINING_AGENT_PRESENCE_PENALTY: 1.0
       # TRAINING_AGENT_REPEAT_PENALTY: 1.0
       # TRAINING_AGENT_ENABLE_THINKING: false
+      OPENAI_BASE_URL: http://10.2.10.33:4000/v1
+
+  dataset-agent:
+    environment:
+      SOOFI_LLM_BACKEND: vllm
+      # Active: Nemotron-Cascade-2-30B-A3B-fp8 (thinking)
+      DATASET_AGENT_MODEL: Nemotron-Cascade-2-30B-A3B-fp8
+      DATASET_AGENT_TEMPERATURE: 0.6
+      DATASET_AGENT_TOP_P: 0.95
+      DATASET_AGENT_MIN_P: 0.01
+      DATASET_AGENT_ENABLE_THINKING: true
+      # Alt: qwen35-122b-fp8 (non-thinking)
+      # DATASET_AGENT_MODEL: qwen35-122b-fp8
+      # DATASET_AGENT_TEMPERATURE: 1.0
+      # DATASET_AGENT_TOP_P: 0.95
+      # DATASET_AGENT_TOP_K: 20
+      # DATASET_AGENT_MIN_P: 0.0
+      # DATASET_AGENT_PRESENCE_PENALTY: 1.5
+      # DATASET_AGENT_REPEAT_PENALTY: 1.0
+      # DATASET_AGENT_ENABLE_THINKING: false
+      # Alt: Nemotron-Cascade-2-30B-A3B-fp8 (thinking)
+      # DATASET_AGENT_MODEL: Nemotron-Cascade-2-30B-A3B-fp8
+      # DATASET_AGENT_TEMPERATURE: 0.6
+      # DATASET_AGENT_TOP_P: 0.95
+      # DATASET_AGENT_MIN_P: 0.01
+      # DATASET_AGENT_ENABLE_THINKING: true
+      # Alt: NVIDIA-Nemotron-3-Super-120B-A12B-FP8 (thinking)
+      # DATASET_AGENT_MODEL: NVIDIA-Nemotron-3-Super-120B-A12B-FP8
+      # DATASET_AGENT_TEMPERATURE: 0.6
+      # DATASET_AGENT_TOP_P: 0.95
+      # DATASET_AGENT_MIN_P: 0.01
+      # DATASET_AGENT_ENABLE_THINKING: true
+      # Alt: NVIDIA-Nemotron-3-Super-120B-A12B-NVFP4 (non-thinking)
+      # DATASET_AGENT_MODEL: NVIDIA-Nemotron-3-Super-120B-A12B-NVFP4
+      # DATASET_AGENT_TEMPERATURE: 0.6
+      # DATASET_AGENT_TOP_P: 0.95
+      # DATASET_AGENT_MIN_P: 0.01
+      # DATASET_AGENT_ENABLE_THINKING: false
+      # Alt: mixed-agents experimental
+      # DATASET_AGENT_MODEL: Nemotron-Cascade-2-30B-A3B
+      # DATASET_AGENT_TEMPERATURE: 1.0
+      # DATASET_AGENT_TOP_P: 0.95
+      # DATASET_AGENT_TOP_K: 40
+      # DATASET_AGENT_MIN_P: 0.0
+      # DATASET_AGENT_PRESENCE_PENALTY: 1.0
+      # DATASET_AGENT_REPEAT_PENALTY: 1.0
+      # DATASET_AGENT_ENABLE_THINKING: false
       OPENAI_BASE_URL: http://10.2.10.33:4000/v1
 
   knowledge-ingestion:

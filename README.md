@@ -244,7 +244,7 @@ The UI sends the voice from `VITE_TTS_VOICE_DE` (German) or `VITE_TTS_VOICE_EN` 
 
 The base stack uses the checked-in OpenAI-compatible model defaults from `.env`. Backend-specific endpoints and model overrides are configured in the backend compose files.
 
-For `--vllm`, edit `docker-compose.vllm.yml` directly to switch the active model block or adjust the vLLM-specific sampling parameters. Alternative configurations are kept there as commented blocks.
+For `--vllm`, edit `docker-compose.vllm.yml` directly to switch the active model block or adjust the vLLM-specific sampling parameters. Those settings are only consumed when the vLLM override sets `SOOFI_LLM_BACKEND=vllm`; the default stack and the other backend overrides continue to rely on their provider defaults. Alternative configurations are kept there as commented blocks.
 
 > **Note:** When switching the embedding model (e.g. from OpenAI to Ollama), the vector dimensions change and existing Weaviate data becomes incompatible. Wipe the volume before restarting:
 > ```bash
