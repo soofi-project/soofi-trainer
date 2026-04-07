@@ -196,7 +196,7 @@ class TestSessionLogger:
 
     def test_get_or_create_returns_same_instance(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         import src.session_logger as sl_mod
-        monkeypatch.setattr(sl_mod, "SESSION_LOG_DIR", tmp_path)
+        monkeypatch.setattr(sl_mod, "SESSION_LOG_HOST_DIR", tmp_path)
         monkeypatch.setattr(sl_mod, "SESSION_LOG_ENABLED", True)
         monkeypatch.setattr(sl_mod, "_sessions", type(sl_mod._sessions)())
 
