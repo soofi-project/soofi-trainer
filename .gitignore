@@ -42,3 +42,5 @@ training-pipeline/training-gateway/training.db
 training-pipeline/training-gateway/training.db-shm
 training-pipeline/training-gateway/training.db-wal
 docker-compose.override.yml
+.codex
+AGENTS.md
