@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 SESSION_LOG_ENABLED: bool = os.environ["SESSION_LOG_ENABLED"].lower() == "true"
-SESSION_LOG_DIR: Path = Path(os.environ["SESSION_LOG_DIR"])
+SESSION_LOG_HOST_DIR: Path = Path(os.environ["SESSION_LOG_HOST_DIR"])
 SESSION_LOG_TIMEOUT_S: int = int(os.environ["SESSION_LOG_TIMEOUT_S"])
 
 # ---------------------------------------------------------------------------
