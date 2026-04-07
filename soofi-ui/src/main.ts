@@ -237,7 +237,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 16px 24px;
+      padding: 8px 24px;
       background: var(--color-surface, #fff);
       border-bottom: 1px solid var(--color-border, #dadce0);
     }
@@ -245,7 +245,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
       display: flex;
       align-items: center;
       gap: 6px;
-      font-size: 28px;
+      font-size: 40px;
       font-weight: 500;
       line-height: 1;
       color: var(--color-text, #202124);
@@ -253,7 +253,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
     }
     .header-logo {
       display: block;
-      height: 28px;
+      height: 40px;
       width: auto;
     }
     .lang-toggle {
