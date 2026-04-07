@@ -56,7 +56,7 @@ class SessionLogger:
         self._last_user_ts: datetime | None = None
         self._timeout_task: asyncio.Task[None] | None = None
 
-        self._log_dir = log_dir or SESSION_LOG_DIR
+        self._log_dir = log_dir or SESSION_LOG_HOST_DIR
         self._log_dir.mkdir(parents=True, exist_ok=True)
         ts = self.started_at.strftime("%Y-%m-%d_%H-%M-%S")
         short_id = session_id[:8] if session_id else uuid.uuid4().hex[:8]
