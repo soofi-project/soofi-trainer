@@ -903,6 +903,88 @@ class SoofiChat extends SignalWatcher(LitElement) {
       color: var(--color-primary, #1a73e8);
     }
 
+    /* ------------------------------------------------------------------ */
+    /* Touch / iPad optimizations (pointer: coarse = no precise mouse)   */
+    /* ------------------------------------------------------------------ */
+    @media (hover: none) and (pointer: coarse) {
+      /* Prevent iOS double-tap zoom on all interactive elements */
+      button, a, input, summary {
+        touch-action: manipulation;
+      }
+
+      /* Input: prevent iOS auto-zoom (font-size < 16px triggers it) */
+      .input-bar input {
+        font-size: 16px;
+        padding: 14px 18px;
+        min-height: 48px;
+      }
+
+      /* Send button */
+      .input-bar button.send-btn {
+        font-size: 16px;
+        padding: 14px 24px;
+        min-height: 48px;
+      }
+
+      /* PTT / microphone button */
+      .ptt-button {
+        width: 56px;
+        height: 56px;
+      }
+
+      /* Reset button */
+      .reset-btn {
+        width: 44px;
+        height: 44px;
+      }
+
+      /* Lang toggle — larger tap targets */
+      .lang-toggle span {
+        padding: 10px 16px;
+      }
+
+      /* RAG source items */
+      a.rag-sources__item {
+        padding: 10px 8px;
+        min-height: 44px;
+      }
+
+      /* Doc viewer close button */
+      .doc-viewer__close {
+        width: 44px;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+      }
+
+      /* Doc viewer jump links */
+      .doc-viewer__jump-link {
+        padding: 8px 14px;
+        font-size: 14px;
+      }
+
+      /* Agent card accordion: larger tap target */
+      .agent-card-accordion summary {
+        padding: 16px;
+        min-height: 48px;
+      }
+
+      /* Dialog buttons */
+      .dialog-actions button {
+        padding: 14px 24px;
+        font-size: 16px;
+        min-height: 48px;
+      }
+
+      /* More breathing room in input bar */
+      .input-bar {
+        padding: 12px 16px;
+        gap: 10px;
+      }
+    }
+
     /* Streaming indicator */
     .streaming-dot::after {
       content: "\u25CF";
