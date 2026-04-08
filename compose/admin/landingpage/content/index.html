@@ -27,14 +27,14 @@
 		<!-- Soofi CI overrides -->
 		<style>
 			:root {
-				--r-background-color: #F5F6F8;
+				--r-background-color: #E6E8EE;
 				--r-main-font: 'Poppins', 'Segoe UI', sans-serif;
 				--r-heading-font: 'Poppins', 'Segoe UI', sans-serif;
 				--r-main-color: #000029;
 				--r-heading-color: #000029;
 				--r-link-color: #5B1EFB;
 				--r-link-color-hover: #7711DD;
-				--r-selection-background-color: #EDE9FE;
+				--r-selection-background-color: #F5F6F8;
 				--r-progress-color: #5B1EFB;
 				--r-controls-color: #5B1EFB;
 				--r-controls-back-arrow-opacity: 0.5;
@@ -85,11 +85,14 @@
 			.reveal .slides > section:first-child p {
 				color: #000029;
 				font-size: 1.1em;
-				opacity: 0.7;
 			}
 
-			/* Navigation controls */
+			/* Navigation controls — always visible, no fade */
 			.reveal .controls {
+				color: #5B1EFB;
+			}
+			.reveal .controls button {
+				opacity: 1 !important;
 				color: #5B1EFB;
 			}
 		</style>
@@ -129,6 +132,8 @@
 
 			Reveal.initialize({
 				hash: true,
+				progress: false,
+				controlsBackArrows: 'visible',
 				plugins: [ RevealMarkdown, RevealHighlight, RevealNotes ]
 			});
 
