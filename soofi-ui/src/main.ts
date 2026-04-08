@@ -1028,7 +1028,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
   #processor = v0_8.Data.createSignalA2uiMessageProcessor();
 
   @state() private language: Language = "de";
-  @state() private messages: ChatMessage[] = [];
+  @state() private messages: ChatMessage[] = [SoofiChat._welcomeMessage("de")];
   @state() private inputValue = "";
   @state() private streaming = false;
   @state() private surfaceEntries: Array<[string, v0_8.Types.Surface]> = [];
@@ -1084,6 +1084,34 @@ class SoofiChat extends SignalWatcher(LitElement) {
   private onFullscreenChange = () => {
     this.isFullscreen = !!(document.fullscreenElement ?? (document as any).webkitFullscreenElement);
   };
+
+  private static _welcomeMessage(lang: Language): ChatMessage {
+    return {
+      role: "assistant",
+      text:
+        lang === "en"
+          ? [
+              "Hi! I'm the **Soofi Trainer** — your AI assistant for application-specific LLM specialization.",
+              "",
+              "I can help you with:",
+              "- **Dataset search** on HuggingFace, Kaggle, or in the Eclipse Dataspace",
+              "- **Expert advice** on choosing an appropriate fine-tuning method",
+              "- **Training jobs** — start, check status, or cancel jobs",
+              "",
+              "What can I help you with?",
+            ].join("\n")
+          : [
+              "Hallo! Ich bin der **Soofi Trainer** — dein KI-Assistent für anwendungsspezifische LLM-Spezialisierung.",
+              "",
+              "Ich helfe dir bei:",
+              "- **Datensatzsuche** auf HuggingFace, Kaggle oder im Eclipse Dataspace",
+              "- **Fachberatung** zur Wahl einer geeigneten Fine-Tuning-Methode",
+              "- **Trainingsaufträgen** — Jobs starten, Status abfragen oder abbrechen",
+              "",
+              "Womit kann ich helfen?",
+            ].join("\n"),
+    };
+  }
 
   // -----------------------------------------------------------------------
   // Lifecycle
@@ -2176,7 +2204,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
     this._fetchController?.abort();
     // Cancel all running jobs and purge the DB
     fetch("/api/training/jobs", { method: "DELETE" }).catch(() => {});
-    this.messages = [];
+    this.messages = [SoofiChat._welcomeMessage(this.language)];
     this.inputValue = "";
     this.streaming = false;
     this.searching = false;
