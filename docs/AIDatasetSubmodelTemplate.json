@@ -1,0 +1,157 @@
+{
+  "modelType": "Submodel",
+  "id": "https://dfki.de/ids/asset/8000_6478_6946_8452",
+  "idShort": "MaterialScienceDataset",
+  "description": [
+        {
+          "language": "de",
+          "text": "Eine Sammlung einschlägiger Dissertationen aus dem Bereich der Materialwissenschaften"
+        },
+        {
+          "language": "en",
+          "text": "A collection of relevant dissertations in the field of materials science"
+        }
+      ],
+  "kind": "Instance",
+  "semanticId": {
+    "type": "ExternalReference",
+    "keys": [
+      {
+        "type": "GlobalReference",
+        "value": "https://admin-shell.io/idta/SubmodelTemplate/AIDataset/1/0"
+      }
+    ]
+  },
+  "submodelElements": [  
+    {
+      "idShort": "Version",
+      "modelType": "Property",
+      "semanticId": {
+        "type": "ExternalReference",
+        "keys": [
+          {
+            "type": "GlobalReference",
+            "value": "0173-1#02-AAS354#002"
+          }
+        ]
+      },
+      "description": [
+        {
+          "language": "de",
+          "text": "Version des Datensatzes"
+        },
+        {
+          "language": "en",
+          "text": "Version of the dataset"
+        }
+      ],
+      "valueType": "xs:string",
+      "value": "1.0.3"
+    },    
+    {
+      "idShort": "Storage",
+      "modelType": "Property",
+      "semanticId": {
+        "type": "ExternalReference",
+        "keys": [
+          {
+            "type": "GlobalReference",
+            "value": "https://admin-shell.io/idta/AIDataset/Storage/1/0"
+          }
+        ]
+      },
+      "description": [
+        {
+          "language": "en",
+          "text": "Path to the dataset (e.g. local path, serverpath,...)"
+        }
+      ],
+      "valueType": "xs:string",
+      "value": "/datasets/pdfs/v1.0.3/"
+    },    
+    {
+      "idShort": "SizeInformation",
+      "modelType": "SubmodelElementCollection",
+      "semanticId": {
+        "type": "ExternalReference",
+        "keys": [
+          {
+            "type": "GlobalReference",
+            "value": "https://admin-shell.io/idta/AIDataset/SizeInformation/1/0"
+          }
+        ]
+      },
+      "description": [
+        {
+          "language": "en",
+          "text": "Collection about the number of dataset elements in the dataset and subsets"
+        }
+      ],
+      "value": [
+        {
+          "idShort": "CompleteSize",
+          "modelType": "Property",
+          "semanticId": {
+            "type": "ExternalReference",
+            "keys": [
+              {
+                "type": "GlobalReference",
+                "value": "https://admin-shell.io/idta/AIDataset//SizeInformation/CompleteSize/1/0"
+              }
+            ]
+          },
+          "description": [
+            {
+              "language": "en",
+              "text": "Number of all samples in the dataset"
+            }
+          ],
+          "valueType": "xs:string",
+          "value": "3000"
+        }        
+      ]
+    },
+    {
+      "idShort": "MetaData",
+      "modelType": "SubmodelElementCollection",
+      "semanticId": {
+        "type": "ExternalReference",
+        "keys": [
+          {
+            "type": "GlobalReference",
+            "value": "https://admin-shell.io/idta/AIDataset/MetaData/1/0"
+          }
+        ]
+      },
+      "description": [
+        {
+          "language": "en",
+          "text": "Collection of meta data information about the dataset"
+        }
+      ],
+      "value": [
+        {
+          "idShort": "FileType",
+          "modelType": "Property",
+          "semanticId": {
+            "type": "ExternalReference",
+            "keys": [
+              {
+                "type": "GlobalReference",
+                "value": "https://admin-shell.io/idta/AIDataset/MetaData/FileType/1/0"
+              }
+            ]
+          },
+          "description": [
+            {
+              "language": "en",
+              "text": "Data type of the dataset elements (e.g. .WAV, .JPEG, ... )"
+            }
+          ],
+          "valueType": "xs:string",
+          "value": ".PDF"
+        }        
+      ]
+    }
+  ]
+}

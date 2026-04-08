@@ -1,7 +1,11 @@
 
-![Logo](media/logo.png)
-
-Sovereign Open Source Foundational Models
+<div style="display:flex; align-items:center; justify-content:center; width:100%; gap:20px;">
+  <div style="padding-left: 30px;">
+    <img src="media/logo.png" style="width:280px; margin-bottom:16px;" />
+    <p>Sovereign Open Source Foundational Models</p>
+  </div>
+  <img src="media/soofi-partner-2.png" style="max-width:50%; max-height:500px; object-fit:contain; padding-right: 30px;" />
+</div>
 
 --
 
@@ -27,6 +31,17 @@ Sovereign Open Source Foundational Models
 
 
 ---
+
+## Goals
+- An open and scalable model ensemble
+  - **Soofi 8B Dense** (Base, Instruct, Think) 
+  - **Soofi 30B MoE, A3B** (Base, Instruct, Think)
+  - **Soofi 120B MoE, A10B** (Base, Instruct, Think)
+- Systemically integrated and learning agents
+- Adaptability to industrial use cases
+
+---
+
 
 <!-- .slide: data-background-color="#0f1115" data-background-iframe="https://${LANDING_PAGE_HOSTNAME}:${SOOFI_UI_PORT}" data-background-interactive data-preload -->
 
