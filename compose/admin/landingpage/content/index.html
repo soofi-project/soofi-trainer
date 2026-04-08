@@ -13,12 +13,86 @@
 
 		<title>Soofi</title>
 
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+
 		<link rel="stylesheet" href="dist/reset.css">
 		<link rel="stylesheet" href="dist/reveal.css">
 		<link rel="stylesheet" href="dist/theme/white.css">
 
 		<!-- Theme used for syntax highlighted code -->
 		<link rel="stylesheet" href="plugin/highlight/monokai.css">
+
+		<!-- Soofi CI overrides -->
+		<style>
+			:root {
+				--r-background-color: #F5F6F8;
+				--r-main-font: 'Poppins', 'Segoe UI', sans-serif;
+				--r-heading-font: 'Poppins', 'Segoe UI', sans-serif;
+				--r-main-color: #000029;
+				--r-heading-color: #000029;
+				--r-link-color: #5B1EFB;
+				--r-link-color-hover: #7711DD;
+				--r-selection-background-color: #EDE9FE;
+				--r-progress-color: #5B1EFB;
+				--r-controls-color: #5B1EFB;
+				--r-controls-back-arrow-opacity: 0.5;
+			}
+
+			/* Text slides: left-aligned */
+			.reveal .slides section {
+				text-align: left;
+			}
+
+			/* H1/H2: indigo→violet gradient */
+			.reveal h1, .reveal h2 {
+				background: linear-gradient(90deg, #5B1EFB, #AA22CC);
+				-webkit-background-clip: text;
+				-webkit-text-fill-color: transparent;
+				background-clip: text;
+			}
+
+			/* H3: single CI accent */
+			.reveal h3 {
+				color: #5B1EFB;
+			}
+
+			/* Bullet markers: Cian */
+			.reveal ul li::marker {
+				color: #16ABFC;
+			}
+
+			/* Strong: Electric Indigo */
+			.reveal strong {
+				color: #5B1EFB;
+			}
+
+			/* Links */
+			.reveal a {
+				font-weight: 500;
+			}
+
+			/* Title slide: centered, logo prominent */
+			.reveal .slides > section:first-child {
+				text-align: center;
+			}
+			.reveal .slides > section:first-child img {
+				width: 320px;
+				max-width: 60%;
+				margin-bottom: 24px;
+			}
+			.reveal .slides > section:first-child p {
+				color: #000029;
+				font-size: 1.1em;
+				opacity: 0.7;
+			}
+
+			/* Navigation controls */
+			.reveal .controls {
+				color: #5B1EFB;
+			}
+		</style>
 	</head>
 	<body>
 		<div class="reveal">
@@ -36,29 +110,34 @@
 		<script src="plugin/markdown/markdown.js"></script>
 		<script src="plugin/highlight/highlight.js"></script>
 		<script>
+			// Reveal.js sets allow="autoplay", appends the iframe, then immediately sets
+			// src — all in one synchronous block. MutationObserver fires too late.
+			// We intercept setAttribute at the prototype level so microphone is added to
+			// the allow attribute in the same call stack, before navigation starts.
+			(function () {
+				const _setAttribute = HTMLIFrameElement.prototype.setAttribute;
+				HTMLIFrameElement.prototype.setAttribute = function (attr, value) {
+					if (attr === 'src' && this.closest && this.closest('.slide-background')) {
+						const current = this.getAttribute('allow') || '';
+						if (!current.includes('microphone')) {
+							_setAttribute.call(this, 'allow', current ? `${current}; microphone` : 'microphone');
+						}
+					}
+					_setAttribute.call(this, attr, value);
+				};
+			})();
+
 			Reveal.initialize({
 				hash: true,
 				plugins: [ RevealMarkdown, RevealHighlight, RevealNotes ]
 			});
 
-			const applyBackgroundIframePermissions = () => {
-				document.querySelectorAll('.slide-background iframe').forEach(iframe => {
-					const current = iframe.getAttribute('allow') || '';
-					if (!current.includes('microphone')) {
-						iframe.setAttribute('allow', current ? `${current}; microphone` : 'microphone');
-					}
-				});
-			};
-
 			Reveal.on('ready', () => {
-				applyBackgroundIframePermissions();
 				document.querySelectorAll('.reveal a[href^="http"]').forEach(a => {
 					a.target = '_blank';
 					a.rel = 'noopener';
 				});
 			});
-			
-			Reveal.on('slidechanged', applyBackgroundIframePermissions);
 		</script>
 	</body>
 </html>
