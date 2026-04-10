@@ -3,6 +3,7 @@
 import asyncio
 import collections
 import contextvars
+import functools
 import json
 import logging
 import os
@@ -51,7 +52,8 @@ from .prompts import get_system_prompt
 
 logger = logging.getLogger(__name__)
 
-_web_search = DuckDuckGoSearchResults(num_results=5)
+_duckduckgo_web_search = DuckDuckGoSearchResults(num_results=5)
+_OPENAI_WEB_SEARCH_TOOL = {"type": "web_search_preview"}
 
 
 # Context variables to pass the A2A context_id into tools per-request
@@ -85,6 +87,93 @@ for pair in _raw_registry.split(","):
         AGENT_REGISTRY[name.strip()] = url.strip()
 
 logger.info("Agent registry: %s", list(AGENT_REGISTRY.keys()))
+
+
+def _get_openai_web_search_config() -> dict[str, str | None]:
+    """Resolve dedicated config for the OpenAI-backed web-search backend."""
+    model = (os.getenv("INTERACTION_WEB_SEARCH_OPENAI_MODEL") or "gpt-4.1-mini").strip()
+    if not model:
+        model = "gpt-4.1-mini"
+
+    return {
+        "model": model,
+        "base_url": os.getenv("INTERACTION_WEB_SEARCH_OPENAI_BASE_URL") or None,
+        "api_key": (
+            os.getenv("INTERACTION_WEB_SEARCH_OPENAI_API_KEY")
+            or os.getenv("OPENAI_API_KEY")
+            or None
+        ),
+    }
+
+
+def _extract_openai_web_search_text(response: Any) -> str:
+    """Normalize an OpenAI Responses API result to plain text."""
+    text = getattr(response, "text", None)
+    if isinstance(text, str) and text.strip():
+        return text.strip()
+
+    content = getattr(response, "content", None)
+    if isinstance(content, str) and content.strip():
+        return content.strip()
+    if isinstance(content, list):
+        parts = [
+            part.get("text", "")
+            for part in content
+            if isinstance(part, dict) and part.get("type") == "text" and part.get("text")
+        ]
+        if parts:
+            return "\n".join(parts).strip()
+
+    # Ignore annotations/citations and keep the wrapper contract as plain text.
+    content_blocks = getattr(response, "content_blocks", None)
+    if isinstance(content_blocks, list):
+        parts = [
+            block.get("text", "")
+            for block in content_blocks
+            if isinstance(block, dict) and block.get("type") == "text" and block.get("text")
+        ]
+        if parts:
+            return "\n".join(parts).strip()
+
+    raise ValueError("OpenAI web search returned no text content.")
+
+
+@functools.lru_cache(maxsize=1)
+def _get_openai_web_search_llm() -> Any:
+    """Build the dedicated ChatOpenAI client for built-in web search."""
+    config = _get_openai_web_search_config()
+    if not config["api_key"]:
+        raise RuntimeError(
+            "OpenAI web search requires INTERACTION_WEB_SEARCH_OPENAI_API_KEY or OPENAI_API_KEY."
+        )
+
+    kwargs: dict[str, Any] = {
+        "model": config["model"],
+        "api_key": config["api_key"],
+        "use_responses_api": True,
+    }
+    if config["base_url"]:
+        kwargs["base_url"] = config["base_url"]
+
+    return ChatOpenAI(**kwargs).bind_tools([_OPENAI_WEB_SEARCH_TOOL])
+
+
+def _web_search_duckduckgo(query: str) -> str:
+    """Search the public web with DuckDuckGo."""
+    return _duckduckgo_web_search.run(query)
+
+
+def _web_search_openai(query: str) -> str:
+    """Search the public web with ChatOpenAI built-in web search."""
+    response = _get_openai_web_search_llm().invoke(query)
+    return _extract_openai_web_search_text(response)
+
+
+# Manual backend selection for web_search_tool. Keep exactly one assignment active.
+# The OpenAI variant uses INTERACTION_WEB_SEARCH_OPENAI_* config and a dedicated
+# Responses API client instead of the main interaction-model endpoint.
+_active_web_search_backend = _web_search_duckduckgo
+# _active_web_search_backend = _web_search_openai
 
 
 async def _fetch_agent_card(
@@ -328,7 +417,7 @@ def web_search_tool(query: str) -> str:
     """
     lang = _language.get()
     try:
-        return _web_search.run(query)
+        return _active_web_search_backend(query)
     except Exception:
         logger.exception("Web search failed for query: %s", query)
         return tr("web_search_failed", lang)
