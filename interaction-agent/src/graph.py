@@ -54,6 +54,7 @@ logger = logging.getLogger(__name__)
 
 _duckduckgo_web_search = DuckDuckGoSearchResults(num_results=5)
 _OPENAI_WEB_SEARCH_TOOL = {"type": "web_search_preview"}
+_OPENAI_API_BASE_URL = "https://api.openai.com/v1"
 
 
 # Context variables to pass the A2A context_id into tools per-request
@@ -97,7 +98,8 @@ def _get_openai_web_search_config() -> dict[str, str | None]:
 
     return {
         "model": model,
-        "base_url": os.getenv("INTERACTION_WEB_SEARCH_OPENAI_BASE_URL") or None,
+        # Force the dedicated search client onto OpenAI unless explicitly overridden.
+        "base_url": os.getenv("INTERACTION_WEB_SEARCH_OPENAI_BASE_URL") or _OPENAI_API_BASE_URL,
         "api_key": (
             os.getenv("INTERACTION_WEB_SEARCH_OPENAI_API_KEY")
             or os.getenv("OPENAI_API_KEY")
@@ -151,15 +153,21 @@ def _get_openai_web_search_llm() -> Any:
         "model": config["model"],
         "api_key": config["api_key"],
         "use_responses_api": True,
+        "base_url": config["base_url"],
     }
-    if config["base_url"]:
-        kwargs["base_url"] = config["base_url"]
+
+    logger.info(
+        "Web search backend=openai model=%s base_url=%s",
+        config["model"],
+        config["base_url"],
+    )
 
     return ChatOpenAI(**kwargs).bind_tools([_OPENAI_WEB_SEARCH_TOOL])
 
 
 def _web_search_duckduckgo(query: str) -> str:
     """Search the public web with DuckDuckGo."""
+    logger.info("Web search backend=duckduckgo")
     return _duckduckgo_web_search.run(query)
 
 
@@ -172,8 +180,8 @@ def _web_search_openai(query: str) -> str:
 # Manual backend selection for web_search_tool. Keep exactly one assignment active.
 # The OpenAI variant uses INTERACTION_WEB_SEARCH_OPENAI_* config and a dedicated
 # Responses API client instead of the main interaction-model endpoint.
-_active_web_search_backend = _web_search_duckduckgo
-# _active_web_search_backend = _web_search_openai
+#_active_web_search_backend = _web_search_duckduckgo
+_active_web_search_backend = _web_search_openai
 
 
 async def _fetch_agent_card(

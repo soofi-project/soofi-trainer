@@ -15,7 +15,10 @@ def get_openai_web_search_config(env: dict[str, str]) -> dict[str, str | None]:
 
     return {
         "model": model,
-        "base_url": env.get("INTERACTION_WEB_SEARCH_OPENAI_BASE_URL") or None,
+        "base_url": (
+            env.get("INTERACTION_WEB_SEARCH_OPENAI_BASE_URL")
+            or "https://api.openai.com/v1"
+        ),
         "api_key": (
             env.get("INTERACTION_WEB_SEARCH_OPENAI_API_KEY")
             or env.get("OPENAI_API_KEY")
@@ -82,12 +85,23 @@ class TestOpenAIWebSearchConfig:
         config = get_openai_web_search_config(env)
 
         assert config["model"] == "gpt-4.1-mini"
-        assert config["base_url"] is None
+        assert config["base_url"] == "https://api.openai.com/v1"
         assert config["api_key"] == "fallback-key"
 
     def test_empty_dedicated_model_falls_back_to_default(self) -> None:
         config = get_openai_web_search_config({"INTERACTION_WEB_SEARCH_OPENAI_MODEL": "   "})
         assert config["model"] == "gpt-4.1-mini"
+
+    def test_explicit_openai_search_base_url_override_wins(self) -> None:
+        env = {
+            "OPENAI_BASE_URL": "http://local-llm.invalid/v1",
+            "INTERACTION_WEB_SEARCH_OPENAI_BASE_URL": "https://proxy.example/v1",
+            "OPENAI_API_KEY": "fallback-key",
+        }
+
+        config = get_openai_web_search_config(env)
+
+        assert config["base_url"] == "https://proxy.example/v1"
 
 
 class TestExtractOpenAIWebSearchText:
