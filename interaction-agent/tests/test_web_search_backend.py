@@ -15,15 +15,27 @@ def get_openai_web_search_config(env: dict[str, str]) -> dict[str, str | None]:
 
     return {
         "model": model,
-        "base_url": (
-            env.get("INTERACTION_WEB_SEARCH_OPENAI_BASE_URL")
-            or "https://api.openai.com/v1"
-        ),
+        "base_url": "https://api.openai.com/v1",
         "api_key": (
             env.get("INTERACTION_WEB_SEARCH_OPENAI_API_KEY")
             or env.get("OPENAI_API_KEY")
             or None
         ),
+    }
+
+
+def get_openai_web_search_llm_kwargs(env: dict[str, str]) -> dict[str, str | bool]:
+    """Inline copy of the kwargs assembled in graph._get_openai_web_search_llm."""
+    config = get_openai_web_search_config(env)
+    if not config["api_key"]:
+        raise RuntimeError("OpenAI web search requires an API key.")
+
+    return {
+        "model": config["model"],
+        "api_key": config["api_key"],
+        "disable_streaming": True,
+        "use_responses_api": True,
+        "base_url": config["base_url"],
     }
 
 
@@ -72,7 +84,7 @@ class TestOpenAIWebSearchConfig:
 
         assert config == {
             "model": "gpt-5-mini",
-            "base_url": "https://api.openai.example/v1",
+            "base_url": "https://api.openai.com/v1",
             "api_key": "dedicated-key",
         }
 
@@ -92,7 +104,7 @@ class TestOpenAIWebSearchConfig:
         config = get_openai_web_search_config({"INTERACTION_WEB_SEARCH_OPENAI_MODEL": "   "})
         assert config["model"] == "gpt-4.1-mini"
 
-    def test_explicit_openai_search_base_url_override_wins(self) -> None:
+    def test_ignores_dedicated_search_base_url_override(self) -> None:
         env = {
             "OPENAI_BASE_URL": "http://local-llm.invalid/v1",
             "INTERACTION_WEB_SEARCH_OPENAI_BASE_URL": "https://proxy.example/v1",
@@ -101,7 +113,20 @@ class TestOpenAIWebSearchConfig:
 
         config = get_openai_web_search_config(env)
 
-        assert config["base_url"] == "https://proxy.example/v1"
+        assert config["base_url"] == "https://api.openai.com/v1"
+
+
+class TestOpenAIWebSearchClientKwargs:
+    def test_disables_streaming_and_uses_responses_api(self) -> None:
+        kwargs = get_openai_web_search_llm_kwargs({"OPENAI_API_KEY": "fallback-key"})
+
+        assert kwargs == {
+            "model": "gpt-4.1-mini",
+            "api_key": "fallback-key",
+            "disable_streaming": True,
+            "use_responses_api": True,
+            "base_url": "https://api.openai.com/v1",
+        }
 
 
 class TestExtractOpenAIWebSearchText:

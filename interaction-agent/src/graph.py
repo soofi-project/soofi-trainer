@@ -54,7 +54,7 @@ logger = logging.getLogger(__name__)
 
 _duckduckgo_web_search = DuckDuckGoSearchResults(num_results=5)
 _OPENAI_WEB_SEARCH_TOOL = {"type": "web_search_preview"}
-_OPENAI_API_BASE_URL = "https://api.openai.com/v1"
+_OPENAI_API_SEARCH_URL = "https://api.openai.com/v1"
 
 
 # Context variables to pass the A2A context_id into tools per-request
@@ -99,7 +99,7 @@ def _get_openai_web_search_config() -> dict[str, str | None]:
     return {
         "model": model,
         # Force the dedicated search client onto OpenAI unless explicitly overridden.
-        "base_url": os.getenv("INTERACTION_WEB_SEARCH_OPENAI_BASE_URL") or _OPENAI_API_BASE_URL,
+        "base_url": _OPENAI_API_SEARCH_URL,
         "api_key": (
             os.getenv("INTERACTION_WEB_SEARCH_OPENAI_API_KEY")
             or os.getenv("OPENAI_API_KEY")
@@ -152,6 +152,9 @@ def _get_openai_web_search_llm() -> Any:
     kwargs: dict[str, Any] = {
         "model": config["model"],
         "api_key": config["api_key"],
+        # Keep the internal Responses API call from emitting structured streaming
+        # chunks into the outer AG-UI SSE stream.
+        "disable_streaming": True,
         "use_responses_api": True,
         "base_url": config["base_url"],
     }
