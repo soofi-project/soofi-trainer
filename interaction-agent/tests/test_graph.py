@@ -58,6 +58,11 @@ class TestAfterTools:
         ai_msg = SimpleNamespace(tool_calls=[{"name": "control_doc_viewer"}])
         assert after_tools({"messages": [ai_msg, tool_msg]}) == "agent"
 
+    def test_web_search_tool_continues(self) -> None:
+        tool_msg = SimpleNamespace(name="web_search_tool")
+        ai_msg = SimpleNamespace(tool_calls=[{"name": "web_search_tool"}])
+        assert after_tools({"messages": [ai_msg, tool_msg]}) == "agent"
+
     def test_empty_messages(self) -> None:
         assert after_tools({"messages": []}) == "agent"
 

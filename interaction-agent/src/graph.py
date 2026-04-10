@@ -11,6 +11,7 @@ from typing import Any, Literal
 import httpx
 from langchain_core.callbacks import adispatch_custom_event
 from langchain_core.tools import tool
+from langchain_community.tools import DuckDuckGoSearchResults
 from langchain_openai import ChatOpenAI
 from langgraph.graph import MessagesState, StateGraph
 from langgraph.graph.state import CompiledStateGraph
@@ -49,6 +50,8 @@ from .i18n import Language, tr
 from .prompts import get_system_prompt
 
 logger = logging.getLogger(__name__)
+
+_web_search = DuckDuckGoSearchResults(num_results=5)
 
 
 # Context variables to pass the A2A context_id into tools per-request
@@ -314,6 +317,24 @@ async def ask_dataset_agent_tool(question: str) -> str:
 
 
 @tool
+def web_search_tool(query: str) -> str:
+    """Search the public web for explicit lookup requests or current public information.
+
+    Use this tool when the user explicitly asks to search or browse the web, or asks for
+    current/latest/recent public-web information outside the dataset and training flows.
+
+    Args:
+        query: The search query to look up on the public web.
+    """
+    lang = _language.get()
+    try:
+        return _web_search.run(query)
+    except Exception:
+        logger.exception("Web search failed for query: %s", query)
+        return tr("web_search_failed", lang)
+
+
+@tool
 async def control_training_view(action: Literal["open", "close"]) -> str:
     """Open or close the training jobs panel. YOU MUST call this tool — never respond with text only.
 
@@ -373,6 +394,7 @@ def build_graph() -> CompiledStateGraph:
         ask_advisor_tool,
         ask_training_agent_tool,
         ask_dataset_agent_tool,
+        web_search_tool,
         show_agent_card,
         control_doc_viewer,
         control_training_view,

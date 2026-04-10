@@ -58,6 +58,10 @@ _STRINGS: dict[str, dict[Language, str]] = {
         "de": "Trainingsübersicht geschlossen.",
         "en": "Training overview closed.",
     },
+    "web_search_failed": {
+        "de": "Die Websuche ist fehlgeschlagen. Bitte versuche es erneut oder formuliere die Anfrage genauer.",
+        "en": "Web search failed. Please try again or rephrase the request more specifically.",
+    },
     # SSE error
     "sse_error": {
         "de": "\n\n[Fehler bei der Verarbeitung]",
