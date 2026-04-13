@@ -36,7 +36,7 @@ def load_config() -> BackendConfig:
             "TRAINING_IMAGE_NAME", "soofi/training-container"
         ),
         training_image_version=os.getenv(
-            "TRAINING_IMAGE_VERSION", "latest"
+            "SOOFI_TRAINER_VERSION"
         ),
         gpu_device=os.getenv("TRAINING_GPU_DEVICE", "all"),
         container_network="soofi-training-network",  #os.getenv(
