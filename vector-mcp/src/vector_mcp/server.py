@@ -280,7 +280,11 @@ def search_documents(
                 results = reranked
                 reranker_used = True
             else:
+                logger.warning("Reranker failed, falling back to distance-based scores")
                 results = results[:limit]
+                for result in results:
+                    if result["distance"] is not None:
+                        result["reranker_score"] = round(max(0.0, 1.0 - result["distance"]), 4)
         else:
             results = results[:limit]
             # Distance mode: derive relevance score from cosine distance (score = 1 - distance)
