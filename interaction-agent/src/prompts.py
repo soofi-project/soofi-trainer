@@ -18,7 +18,7 @@ in der Anfrage zusammenfassen — nicht erneut beim Nutzer nachfragen, was berei
 - **ask_dataset_agent_tool**: Für alles rund um Datensätze — suchen, finden, vergleichen, auflisten. \
 Quellen: HuggingFace, Eclipse Dataspace/EDC, oder allgemein. Nutze dieses Tool IMMER, wenn der \
 Nutzer nach Datensätzen, Trainingsdaten oder Datenangeboten fragt.
-- **web_search_tool**: Für öffentliche Websuche und aktuelle Informationen aus dem offenen Web. \
+- **web_search_tool**: Für öffentliche Websuche und aktuellen, neuesten oder kürzlichen Informationen aus dem offenen Web. \
 Nutze dieses Tool, wenn der Nutzer ausdrücklich um Websuche, Browsing oder Online-Recherche bittet, \
 oder wenn er nach aktuellen, neuesten oder kürzlichen öffentlichen Informationen fragt. \
 NICHT für Datensätze/EDC/HuggingFace oder Trainingsjobs verwenden.
@@ -53,7 +53,7 @@ einen Job abbrechen (z.B. "Starte ein LoRA-Training", "Was ist der Status von Jo
 "Welche Assets gibt es bei diesem Provider?"). \
 JEDE Frage nach Datensätzen, Trainingsdaten, Datenangeboten, Katalogen oder Assets \
 gehört IMMER hierhin — nicht zu ask_advisor_tool.
-- **web_search_tool**: Explizite Websuche und aktuelle öffentliche Informationen \
+- **web_search_tool**: Explizite Websuche und aktuellen, neuesten oder kürzlichen öffentliche Informationen \
 (z.B. "Such das im Web", "Schau online nach", "Was ist die neueste Version von X?", \
 "Gibt es aktuelle Nachrichten zu Y?"). \
 Für aktuelle/neueste/letzte/rezente öffentliche Web-Informationen SOFORT web_search_tool. \
@@ -108,9 +108,9 @@ in the request — do not ask the user again for what is already known.
 - **ask_dataset_agent_tool**: For everything related to datasets — searching, finding, comparing, listing. \
 Sources: HuggingFace, Eclipse Dataspace/EDC, or general. ALWAYS use this tool when the user asks \
 about datasets, training data, or data offerings.
-- **web_search_tool**: For public web search and current information from the open web. \
+- **web_search_tool**: For public web search and when requesting current/latest/recent/uptodate public information from the open web. \
 Use this tool when the user explicitly asks to search the web, browse, or look something up online, \
-or when they ask for current, latest, or recent public information. \
+or when they ask for current, latest, or recent or uptodate public information. \
 Do NOT use it for datasets/EDC/HuggingFace or training jobs.
 - **control_training_view**: Opens or closes the training overview (job view) in the side panel. \
 Actions: "open" or "close". \
@@ -143,7 +143,7 @@ cancel a job (e.g. "Start a LoRA training", "What is the status of job xyz?").
 "Which assets are available from this provider?"). \
 ANY question about datasets, training data, data offerings, catalogs, or assets \
 ALWAYS belongs here — not to ask_advisor_tool.
-- **web_search_tool**: Explicit web lookup and current public information \
+- **web_search_tool**: Explicit web lookup and current, latest, or recent public information \
 (e.g. "Search the web for this", "Look this up online", "What is the latest version of X?", \
 "Is there any recent news about Y?"). \
 For current/latest/recent public-web information, IMMEDIATELY call web_search_tool. \
