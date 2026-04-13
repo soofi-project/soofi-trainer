@@ -210,8 +210,8 @@ def _web_search_openai(query: str) -> str:
 # The OpenAI variant uses INTERACTION_WEB_SEARCH_OPENAI_* config and a dedicated
 # Responses API client instead of the main interaction-model endpoint.
 #_active_web_search_backend = _web_search_duckduckgo
-#_active_web_search_backend = _web_search_openai
-_active_web_search_backend = _web_search_searxng
+_active_web_search_backend = _web_search_openai
+#_active_web_search_backend = _web_search_searxng
 
 
 async def _fetch_agent_card(
