@@ -1,5 +1,26 @@
 services:
   # ===========================================
+  # SearXNG - Self-Hosted Web Search
+  # ===========================================
+  searxng:
+    image: docker.io/searxng/searxng:${SEARXNG_VERSION}
+    container_name: searxng
+    restart: unless-stopped
+    environment:
+      - SEARXNG_BASE_URL=${INTERACTION_WEB_SEARCH_SEARXNG_HOST}
+      - SEARXNG_SECRET=${SEARXNG_SECRET}
+    volumes:
+      - ./compose/interaction/searxng/core-config/:/etc/searxng/:ro
+      - searxng_cache:/var/cache/searxng/
+    networks:
+      - soofi-network
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import json, urllib.request; response = urllib.request.urlopen('http://127.0.0.1:8080/search?q=healthcheck&format=json', timeout=5); data = json.load(response); assert isinstance(data.get('results'), list)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===========================================
   # Interaction Agent - LangGraph + AG-UI SSE
   # ===========================================
   interaction-agent:
@@ -20,6 +41,8 @@ services:
     networks:
       - soofi-network
     depends_on:
+      searxng:
+        condition: service_healthy
       advisor:
         condition: service_healthy
       training-agent:
@@ -106,3 +129,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+volumes:
+  searxng_cache:
