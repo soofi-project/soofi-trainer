@@ -19,9 +19,9 @@ def get_searxng_web_search_config(env: dict[str, str]) -> dict[str, str]:
 
 def get_openai_web_search_config(env: dict[str, str]) -> dict[str, str | None]:
     """Inline copy of graph._get_openai_web_search_config."""
-    model = (env.get("INTERACTION_WEB_SEARCH_OPENAI_MODEL") or "gpt-4.1-mini").strip()
+    model = (env.get("INTERACTION_WEB_SEARCH_OPENAI_MODEL") or "gpt-5.4-mini-2026-03-17").strip()
     if not model:
-        model = "gpt-4.1-mini"
+        model = "gpt-5.4-mini-2026-03-17"
 
     return {
         "model": model,
@@ -31,6 +31,17 @@ def get_openai_web_search_config(env: dict[str, str]) -> dict[str, str | None]:
             or env.get("OPENAI_API_KEY")
             or None
         ),
+    }
+
+
+def get_openai_web_search_tool() -> dict[str, object]:
+    """Inline copy of graph._get_openai_web_search_tool."""
+    return {
+        "type": "web_search",
+        "user_location": {
+            "type": "approximate",
+            "country": "DE",
+        },
     }
 
 
@@ -135,13 +146,13 @@ class TestOpenAIWebSearchConfig:
 
         config = get_openai_web_search_config(env)
 
-        assert config["model"] == "gpt-4.1-mini"
+        assert config["model"] == "gpt-5.4-mini-2026-03-17"
         assert config["base_url"] == "https://api.openai.com/v1"
         assert config["api_key"] == "fallback-key"
 
     def test_empty_dedicated_model_falls_back_to_default(self) -> None:
         config = get_openai_web_search_config({"INTERACTION_WEB_SEARCH_OPENAI_MODEL": "   "})
-        assert config["model"] == "gpt-4.1-mini"
+        assert config["model"] == "gpt-5.4-mini-2026-03-17"
 
     def test_ignores_dedicated_search_base_url_override(self) -> None:
         env = {
@@ -160,11 +171,24 @@ class TestOpenAIWebSearchClientKwargs:
         kwargs = get_openai_web_search_llm_kwargs({"OPENAI_API_KEY": "fallback-key"})
 
         assert kwargs == {
-            "model": "gpt-4.1-mini",
+            "model": "gpt-5.4-mini-2026-03-17",
             "api_key": "fallback-key",
             "disable_streaming": True,
             "use_responses_api": True,
             "base_url": "https://api.openai.com/v1",
+        }
+
+
+class TestOpenAIWebSearchTool:
+    def test_uses_ga_web_search_with_germany_location(self) -> None:
+        tool = get_openai_web_search_tool()
+
+        assert tool == {
+            "type": "web_search",
+            "user_location": {
+                "type": "approximate",
+                "country": "DE",
+            },
         }
 
 
