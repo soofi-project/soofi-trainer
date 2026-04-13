@@ -12,6 +12,7 @@ An agentic system that guides users through the LLM specialization process — f
 | Soofi UI | https://localhost:3001 | A2UI chat frontend (Lit Web Components) |
 | Portainer | https://localhost:9090 | Docker management UI |
 | Interaction Agent | docker-internal (interaction-agent:8000) | LangGraph ReAct agent, AG-UI SSE, A2A orchestrator |
+| SearXNG | docker-internal (searxng:8080) | Self-hosted public web search backend for the interaction agent |
 | Advisor | docker-internal (advisor:8000) | LangGraph LLM specialization advisor (A2A) |
 | Training Agent | docker-internal (training-agent:8000) | LangGraph training job manager (A2A) |
 | Training Gateway | https://localhost:8099 | Training job management (MCP) |
@@ -78,7 +79,7 @@ EOF
 
 ### 4. Try the Soofi UI
 
-Open https://localhost:3001 and ask the agent about LLM specialization methods (RAG, LoRA, QLoRA, SFT, DPO, …). Push-to-talk: hold **Space** to record, release to send. The agent searches the knowledge base and streams a spoken response.
+Open https://localhost:3001 and ask the agent about LLM specialization methods (RAG, LoRA, QLoRA, SFT, DPO, …). Push-to-talk: hold **Space** to record, release to send. The agent searches the knowledge base, can search the public web via the self-hosted SearXNG backend for current information, and streams a spoken response.
 
 ### Stop the stack
 
@@ -98,6 +99,7 @@ The stack uses named Docker volumes (prefixed with `soofi-trainer_`):
 | `soofi-trainer_prometheus_data` | Prometheus database |
 | `soofi-trainer_grafana_data` | Grafana config |
 | `soofi-trainer_training_gateway_data` | Training Gateway job state |
+| `soofi-trainer_searxng_cache` | SearXNG cache |
 | `soofi-trainer_mnestix-database` | Mnestix database |
 
 To delete a single volume (containers must be stopped):
@@ -153,6 +155,24 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 | `INTERACTION_MODEL` | `gpt-4o-mini` | LLM model for the interaction agent |
 | `TRAINING_AGENT_MODEL` | `gpt-4o-mini` | LLM model for the training agent |
 | `DATASET_AGENT_MODEL` | `gpt-4o-mini` | LLM model for the dataset agent |
+
+### Web Search
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SEARXNG_VERSION` | `latest` | SearXNG image tag for the self-hosted web-search service |
+| `INTERACTION_WEB_SEARCH_SEARXNG_HOST` | `http://searxng:8080` | Internal SearXNG endpoint used by the interaction agent |
+| `SEARXNG_SECRET` | `dev-stack-searxng-secret` | Secret key for the SearXNG container instance |
+
+The public `web_search_tool` keeps the existing manual backend-switching pattern in `interaction-agent/src/graph.py`. The current default is SearXNG:
+
+```python
+#_active_web_search_backend = _web_search_duckduckgo
+#_active_web_search_backend = _web_search_openai
+_active_web_search_backend = _web_search_searxng
+```
+
+DuckDuckGo and OpenAI remain available as comment-toggle alternatives behind the same `web_search_tool`.
 
 ### Training
 
@@ -276,13 +296,15 @@ soofi-trainer/
 │   ├── admin.yml           # Portainer, Landing Page
 │   ├── knowledge.yml       # Weaviate, Vector MCP, MinIO, Ingestion, Advisor
 │   ├── training.yml        # Training Agent, Gateway, Container
-│   ├── interaction.yml     # Interaction Agent, Soofi UI, STT, TTS
+│   ├── interaction.yml     # Interaction Agent, Soofi UI, STT, TTS, SearXNG
 │   ├── tools.yml           # MCP Inspector
 │   ├── aas.yml             # BaSyx AAS stack (82xx ports)
 │   ├── edc.yml             # Eclipse Dataspace Connector stack (83xx ports)
 │   ├── monitoring.yml      # Grafana, Prometheus
 │   ├── admin/
 │   │   └── landingpage/content/   # index.html, media/, slides/slides.md
+│   ├── interaction/
+│   │   └── searxng/core-config/   # Self-hosted SearXNG settings.yml
 │   └── aas/
 │       ├── aasx/           # AASX files loaded by aas-environment on startup
 │       └── config/         # BaSyx application.yml configs
