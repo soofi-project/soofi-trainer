@@ -56,6 +56,7 @@ def get_openai_web_search_llm_kwargs(env: dict[str, str]) -> dict[str, str | boo
         "api_key": config["api_key"],
         "disable_streaming": True,
         "use_responses_api": True,
+        "reasoning_effort": "high",
         "base_url": config["base_url"],
     }
 
@@ -167,7 +168,7 @@ class TestOpenAIWebSearchConfig:
 
 
 class TestOpenAIWebSearchClientKwargs:
-    def test_disables_streaming_and_uses_responses_api(self) -> None:
+    def test_disables_streaming_uses_responses_api_and_sets_high_reasoning_effort(self) -> None:
         kwargs = get_openai_web_search_llm_kwargs({"OPENAI_API_KEY": "fallback-key"})
 
         assert kwargs == {
@@ -175,6 +176,7 @@ class TestOpenAIWebSearchClientKwargs:
             "api_key": "fallback-key",
             "disable_streaming": True,
             "use_responses_api": True,
+            "reasoning_effort": "high",
             "base_url": "https://api.openai.com/v1",
         }
 
