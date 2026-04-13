@@ -179,6 +179,7 @@ def _get_openai_web_search_llm() -> Any:
         # chunks into the outer AG-UI SSE stream.
         "disable_streaming": True,
         "use_responses_api": True,
+        "reasoning_effort": "low",
         "base_url": config["base_url"],
     }
 
