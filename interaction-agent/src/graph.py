@@ -53,7 +53,7 @@ from .prompts import get_system_prompt
 
 logger = logging.getLogger(__name__)
 
-_duckduckgo_web_search = DuckDuckGoSearchResults(num_results=5)
+_duckduckgo_web_search = DuckDuckGoSearchResults(output_format="list", num_results=5, region="de-de", time="d")
 _OPENAI_API_SEARCH_URL = "https://api.openai.com/v1"
 _DEFAULT_SEARXNG_HOST = "http://searxng:8080"
 
@@ -222,8 +222,8 @@ def _web_search_openai(query: str) -> str:
 # self-hosted SearXNG container from the Docker stack.
 # The OpenAI variant uses INTERACTION_WEB_SEARCH_OPENAI_* config and a dedicated
 # Responses API client instead of the main interaction-model endpoint.
-#_active_web_search_backend = _web_search_duckduckgo
-_active_web_search_backend = _web_search_openai
+_active_web_search_backend = _web_search_duckduckgo
+#_active_web_search_backend = _web_search_openai
 #_active_web_search_backend = _web_search_searxng
 
 
