@@ -92,9 +92,9 @@ logger.info("Agent registry: %s", list(AGENT_REGISTRY.keys()))
 
 def _get_openai_web_search_config() -> dict[str, str | None]:
     """Resolve dedicated config for the OpenAI-backed web-search backend."""
-    model = (os.getenv("INTERACTION_WEB_SEARCH_OPENAI_MODEL") or "gpt-4.1-mini").strip()
+    model = ("gpt-5.4-mini-2026-03-17").strip()
     if not model:
-        model = "gpt-4.1-mini"
+        model = "gpt-5.4-mini-2026-03-17"
 
     return {
         "model": model,
