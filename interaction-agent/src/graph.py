@@ -54,7 +54,6 @@ from .prompts import get_system_prompt
 logger = logging.getLogger(__name__)
 
 _duckduckgo_web_search = DuckDuckGoSearchResults(num_results=5)
-_OPENAI_WEB_SEARCH_TOOL = {"type": "web_search_preview"}
 _OPENAI_API_SEARCH_URL = "https://api.openai.com/v1"
 _DEFAULT_SEARXNG_HOST = "http://searxng:8080"
 
@@ -94,7 +93,9 @@ logger.info("Agent registry: %s", list(AGENT_REGISTRY.keys()))
 
 def _get_openai_web_search_config() -> dict[str, str | None]:
     """Resolve dedicated config for the OpenAI-backed web-search backend."""
-    model = ("gpt-5.4-mini-2026-03-17").strip()
+    model = (
+        os.getenv("INTERACTION_WEB_SEARCH_OPENAI_MODEL") or "gpt-5.4-mini-2026-03-17"
+    ).strip()
     if not model:
         model = "gpt-5.4-mini-2026-03-17"
 
@@ -117,6 +118,17 @@ def _get_searxng_web_search_config() -> dict[str, str]:
         host = _DEFAULT_SEARXNG_HOST
 
     return {"host": host}
+
+
+def _get_openai_web_search_tool() -> dict[str, Any]:
+    """Build the GA OpenAI web-search tool config with an approximate Germany location."""
+    return {
+        "type": "web_search",
+        "user_location": {
+            "type": "approximate",
+            "country": "DE",
+        },
+    }
 
 
 def _extract_openai_web_search_text(response: Any) -> str:
@@ -176,7 +188,7 @@ def _get_openai_web_search_llm() -> Any:
         config["base_url"],
     )
 
-    return ChatOpenAI(**kwargs).bind_tools([_OPENAI_WEB_SEARCH_TOOL])
+    return ChatOpenAI(**kwargs).bind_tools([_get_openai_web_search_tool()])
 
 
 @functools.lru_cache(maxsize=1)
