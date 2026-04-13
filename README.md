@@ -79,7 +79,7 @@ EOF
 
 ### 4. Try the Soofi UI
 
-Open https://localhost:3001 and ask the agent about LLM specialization methods (RAG, LoRA, QLoRA, SFT, DPO, …). Push-to-talk: hold **Space** to record, release to send. The agent searches the knowledge base, can search the public web via the self-hosted SearXNG backend for current information, and streams a spoken response.
+Open https://localhost:3001 and ask the agent about LLM specialization methods (RAG, LoRA, QLoRA, SFT, DPO, …). Push-to-talk: hold **Space** to record, release to send. The agent searches the knowledge base, can search the public web for current information via the switchable `web_search_tool` backends, and streams a spoken response.
 
 ### Stop the stack
 
@@ -172,7 +172,12 @@ The public `web_search_tool` keeps the existing manual backend-switching pattern
 _active_web_search_backend = _web_search_searxng
 ```
 
-DuckDuckGo and OpenAI remain available as comment-toggle alternatives behind the same `web_search_tool`.
+Two additional backends were added to the interaction agent behind the same public `web_search_tool`:
+
+- DuckDuckGo (`_web_search_duckduckgo`) for public-web search without a stack-local search service.
+- OpenAI (`_web_search_openai`) via ChatOpenAI built-in web search on a dedicated OpenAI client. It does not use the main interaction-model `OPENAI_BASE_URL`; it uses the dedicated `_OPENAI_API_SEARCH_URL`, which is independent of backend flags such as `./up.sh --vllm`. With `--vllm`, the main interaction model switches to the profile-specific `OPENAI_BASE_URL`, but `_web_search_openai` still talks directly to the OpenAI Responses API and requires `OPENAI_API_KEY` or `INTERACTION_WEB_SEARCH_OPENAI_API_KEY`.
+
+SearXNG remains the current default, while DuckDuckGo and OpenAI stay available as comment-toggle alternatives.
 
 ### Training
 
