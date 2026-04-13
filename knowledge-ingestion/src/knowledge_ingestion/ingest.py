@@ -19,6 +19,7 @@ from langchain_core.documents import Document
 from minio import Minio
 from langchain.embeddings.base import init_embeddings
 from langchain_openai import OpenAIEmbeddings
+from openai import APIConnectionError, APITimeoutError, RateLimitError
 from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
 from weaviate.classes.config import DataType, Property
 from weaviate.classes.query import Filter
@@ -370,8 +371,23 @@ def ingest() -> None:
             else:
                 logger.info("Adding: %s", source)
 
-            # Embed
-            vectors = embeddings.embed_documents([doc.page_content for doc in docs])
+            # Embed (retry on transient connection errors during startup)
+            texts = [doc.page_content for doc in docs]
+            for attempt in range(1, 6):
+                try:
+                    vectors = embeddings.embed_documents(texts)
+                    break
+                except (APIConnectionError, APITimeoutError, RateLimitError) as embed_err:
+                    if attempt == 5:
+                        raise
+                    wait = 2 ** attempt
+                    logger.warning(
+                        "Embedding attempt %d/5 failed (%s), retrying in %ds…",
+                        attempt,
+                        embed_err,
+                        wait,
+                    )
+                    time.sleep(wait)
 
             # Batch insert
             with collection.batch.dynamic() as batch:
