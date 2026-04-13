@@ -164,20 +164,20 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 | `INTERACTION_WEB_SEARCH_SEARXNG_HOST` | `http://searxng:8080` | Internal SearXNG endpoint used by the interaction agent |
 | `SEARXNG_SECRET` | `dev-stack-searxng-secret` | Secret key for the SearXNG container instance |
 
-The public `web_search_tool` keeps the existing manual backend-switching pattern in `interaction-agent/src/graph.py`. The current default is SearXNG:
+The public `web_search_tool` keeps the existing manual backend-switching pattern in `interaction-agent/src/graph.py`. The current default is OpenAI:
 
 ```python
 #_active_web_search_backend = _web_search_duckduckgo
-#_active_web_search_backend = _web_search_openai
-_active_web_search_backend = _web_search_searxng
+_active_web_search_backend = _web_search_openai
+#_active_web_search_backend = _web_search_searxng
 ```
 
 Two additional backends were added to the interaction agent behind the same public `web_search_tool`:
 
 - DuckDuckGo (`_web_search_duckduckgo`) for public-web search without a stack-local search service.
-- OpenAI (`_web_search_openai`) via ChatOpenAI built-in web search on a dedicated OpenAI client. It does not use the main interaction-model `OPENAI_BASE_URL`; it uses the dedicated `_OPENAI_API_SEARCH_URL`, which is independent of backend flags such as `./up.sh --vllm`. With `--vllm`, the main interaction model switches to the profile-specific `OPENAI_BASE_URL`, but `_web_search_openai` still talks directly to the OpenAI Responses API and requires `OPENAI_API_KEY` or `INTERACTION_WEB_SEARCH_OPENAI_API_KEY`.
+- OpenAI (`_web_search_openai`) via ChatOpenAI built-in web search on a dedicated OpenAI client. It does not use the main interaction-model `OPENAI_BASE_URL`; it uses the dedicated `_OPENAI_API_SEARCH_URL`, which is independent of backend flags such as `./up.sh --vllm`. With `--vllm`, the main interaction model switches to the profile-specific `OPENAI_BASE_URL`, but `_web_search_openai` still talks directly to the OpenAI Responses API and requires `OPENAI_API_KEY` or `INTERACTION_WEB_SEARCH_OPENAI_API_KEY`. The tool binding uses the GA Responses API `web_search` tool and sends Germany (`country: "DE"`) as the approximate user location.
 
-SearXNG remains the current default, while DuckDuckGo and OpenAI stay available as comment-toggle alternatives.
+OpenAI remains the current default, while DuckDuckGo and SearXNG stay available as comment-toggle alternatives.
 
 ### Training
 
