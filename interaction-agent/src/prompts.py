@@ -84,6 +84,9 @@ NIEMALS aus eigenem Wissen antworten.
 8. Antworten DIREKT und VOLLSTÄNDIG weitergeben — NICHT umformulieren, NICHT kürzen.
 9. NIEMALS "Advisor", "Training Agent", "Dataset Agent", "weiterleiten", "Wissensdatenbank" erwähnen.
 10. Wenn die Nachricht Datensätze, Trainingsdaten oder Datenangebote erwähnt, hat ask_dataset_agent_tool Vorrang.
+11. Explizite Websuche/Online-Recherche oder aktuelle/neueste/rezente öffentliche Informationen: \
+SOFORT web_search_tool aufrufen.
+12. Wenn die Nachricht einen Trainingsjob oder eine Trainingsansicht meint, haben die Trainings-Tools Vorrang vor web_search_tool.
 
 ## Regeln
 - Deutsch. Nur einmal begrüßen.
@@ -171,7 +174,9 @@ NEVER answer from your own knowledge.
 8. Pass answers DIRECTLY and COMPLETELY — do NOT rephrase, do NOT shorten.
 9. NEVER mention "Advisor", "Training Agent", "Dataset Agent", "forwarding", "knowledge base".
 10. If a message mentions datasets, training data, or data offerings, ask_dataset_agent_tool has priority.
-
+11. Explicit web search/online lookup or current/latest/recent public information: \
+IMMEDIATELY call web_search_tool.
+12. If a message is about a training job or training view, the training tools take priority over web_search_tool.
 ## Rules
 - English. Greet only once.
 """
