@@ -10,21 +10,21 @@ services:
   advisor:
     environment:
       SOOFI_LLM_BACKEND: vllm
-      # Active: Nemotron-Cascade-2-30B-A3B-fp8 (thinking)
-      ADVISOR_MODEL: Nemotron-Cascade-2-30B-A3B-fp8
-      ADVISOR_TEMPERATURE: 0.6
-      ADVISOR_TOP_P: 0.95
-      ADVISOR_MIN_P: 0.01
-      ADVISOR_ENABLE_THINKING: true
-      # Alt: qwen35-122b-fp8 (non-thinking)
-      # ADVISOR_MODEL: qwen35-122b-fp8
-      # ADVISOR_TEMPERATURE: 1.0
+      # alt: Nemotron-Cascade-2-30B-A3B-fp8 (thinking)
+      # ADVISOR_MODEL: Nemotron-Cascade-2-30B-A3B-fp8
+      # ADVISOR_TEMPERATURE: 0.6
       # ADVISOR_TOP_P: 0.95
-      # ADVISOR_TOP_K: 20
-      # ADVISOR_MIN_P: 0.0
-      # ADVISOR_PRESENCE_PENALTY: 1.5
-      # ADVISOR_REPEAT_PENALTY: 1.0
-      # ADVISOR_ENABLE_THINKING: false
+      # ADVISOR_MIN_P: 0.01
+      # ADVISOR_ENABLE_THINKING: true
+      # Active: qwen35-122b-fp8 (non-thinking)
+      ADVISOR_MODEL: qwen35-122b-fp8
+      ADVISOR_TEMPERATURE: 1.0
+      ADVISOR_TOP_P: 0.95
+      ADVISOR_TOP_K: 20
+      ADVISOR_MIN_P: 0.0
+      ADVISOR_PRESENCE_PENALTY: 1.5
+      ADVISOR_REPEAT_PENALTY: 1.0
+      ADVISOR_ENABLE_THINKING: false
       # Alt: Nemotron-Cascade-2-30B-A3B-fp8 (thinking)
       # ADVISOR_MODEL: Nemotron-Cascade-2-30B-A3B-fp8
       # ADVISOR_TEMPERATURE: 0.6
@@ -105,20 +105,20 @@ services:
     environment:
       SOOFI_LLM_BACKEND: vllm
       # Active: Nemotron-Cascade-2-30B-A3B-fp8 (thinking)
-      TRAINING_AGENT_MODEL: Nemotron-Cascade-2-30B-A3B-fp8
-      TRAINING_AGENT_TEMPERATURE: 0.6
-      TRAINING_AGENT_TOP_P: 0.95
-      TRAINING_AGENT_MIN_P: 0.01
-      TRAINING_AGENT_ENABLE_THINKING: true
-      # Alt: qwen35-122b-fp8 (non-thinking)
-      # TRAINING_AGENT_MODEL: qwen35-122b-fp8
-      # TRAINING_AGENT_TEMPERATURE: 1.0
+      # TRAINING_AGENT_MODEL: Nemotron-Cascade-2-30B-A3B-fp8
+      # TRAINING_AGENT_TEMPERATURE: 0.6
       # TRAINING_AGENT_TOP_P: 0.95
-      # TRAINING_AGENT_TOP_K: 20
-      # TRAINING_AGENT_MIN_P: 0.0
-      # TRAINING_AGENT_PRESENCE_PENALTY: 1.5
-      # TRAINING_AGENT_REPEAT_PENALTY: 1.0
-      # TRAINING_AGENT_ENABLE_THINKING: false
+      # TRAINING_AGENT_MIN_P: 0.01
+      # TRAINING_AGENT_ENABLE_THINKING: true
+      # Active: qwen35-122b-fp8 (non-thinking)
+      TRAINING_AGENT_MODEL: qwen35-122b-fp8
+      TRAINING_AGENT_TEMPERATURE: 1.0
+      TRAINING_AGENT_TOP_P: 0.95
+      TRAINING_AGENT_TOP_K: 20
+      TRAINING_AGENT_MIN_P: 0.0
+      TRAINING_AGENT_PRESENCE_PENALTY: 1.5
+      TRAINING_AGENT_REPEAT_PENALTY: 1.0
+      TRAINING_AGENT_ENABLE_THINKING: false
       # Alt: Nemotron-Cascade-2-30B-A3B-fp8 (thinking)
       # TRAINING_AGENT_MODEL: Nemotron-Cascade-2-30B-A3B-fp8
       # TRAINING_AGENT_TEMPERATURE: 0.6
@@ -157,21 +157,21 @@ services:
   dataset-agent:
     environment:
       SOOFI_LLM_BACKEND: vllm
-      # Active: Nemotron-Cascade-2-30B-A3B-fp8 (thinking)
-      DATASET_AGENT_MODEL: Nemotron-Cascade-2-30B-A3B-fp8
-      DATASET_AGENT_TEMPERATURE: 0.6
-      DATASET_AGENT_TOP_P: 0.95
-      DATASET_AGENT_MIN_P: 0.01
-      DATASET_AGENT_ENABLE_THINKING: true
-      # Alt: qwen35-122b-fp8 (non-thinking)
-      # DATASET_AGENT_MODEL: qwen35-122b-fp8
-      # DATASET_AGENT_TEMPERATURE: 1.0
+      # alt: Nemotron-Cascade-2-30B-A3B-fp8 (thinking)
+      # DATASET_AGENT_MODEL: Nemotron-Cascade-2-30B-A3B-fp8
+      # DATASET_AGENT_TEMPERATURE: 0.6
       # DATASET_AGENT_TOP_P: 0.95
-      # DATASET_AGENT_TOP_K: 20
-      # DATASET_AGENT_MIN_P: 0.0
-      # DATASET_AGENT_PRESENCE_PENALTY: 1.5
-      # DATASET_AGENT_REPEAT_PENALTY: 1.0
-      # DATASET_AGENT_ENABLE_THINKING: false
+      # DATASET_AGENT_MIN_P: 0.01
+      # DATASET_AGENT_ENABLE_THINKING: true
+      # Active: qwen35-122b-fp8 (non-thinking)
+      DATASET_AGENT_MODEL: qwen35-122b-fp8
+      DATASET_AGENT_TEMPERATURE: 1.0
+      DATASET_AGENT_TOP_P: 0.95
+      DATASET_AGENT_TOP_K: 20
+      DATASET_AGENT_MIN_P: 0.0
+      DATASET_AGENT_PRESENCE_PENALTY: 1.5
+      DATASET_AGENT_REPEAT_PENALTY: 1.0
+      DATASET_AGENT_ENABLE_THINKING: false
       # Alt: Nemotron-Cascade-2-30B-A3B-fp8 (thinking)
       # DATASET_AGENT_MODEL: Nemotron-Cascade-2-30B-A3B-fp8
       # DATASET_AGENT_TEMPERATURE: 0.6
