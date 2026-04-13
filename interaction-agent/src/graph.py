@@ -13,6 +13,7 @@ import httpx
 from langchain_core.callbacks import adispatch_custom_event
 from langchain_core.tools import tool
 from langchain_community.tools import DuckDuckGoSearchResults
+from langchain_community.utilities import SearxSearchWrapper
 from langchain_openai import ChatOpenAI
 from langgraph.graph import MessagesState, StateGraph
 from langgraph.graph.state import CompiledStateGraph
@@ -55,6 +56,7 @@ logger = logging.getLogger(__name__)
 _duckduckgo_web_search = DuckDuckGoSearchResults(num_results=5)
 _OPENAI_WEB_SEARCH_TOOL = {"type": "web_search_preview"}
 _OPENAI_API_SEARCH_URL = "https://api.openai.com/v1"
+_DEFAULT_SEARXNG_HOST = "http://searxng:8080"
 
 
 # Context variables to pass the A2A context_id into tools per-request
@@ -106,6 +108,15 @@ def _get_openai_web_search_config() -> dict[str, str | None]:
             or None
         ),
     }
+
+
+def _get_searxng_web_search_config() -> dict[str, str]:
+    """Resolve config for the self-hosted SearXNG-backed web-search backend."""
+    host = (os.getenv("INTERACTION_WEB_SEARCH_SEARXNG_HOST") or _DEFAULT_SEARXNG_HOST).strip()
+    if not host:
+        host = _DEFAULT_SEARXNG_HOST
+
+    return {"host": host}
 
 
 def _extract_openai_web_search_text(response: Any) -> str:
@@ -168,10 +179,23 @@ def _get_openai_web_search_llm() -> Any:
     return ChatOpenAI(**kwargs).bind_tools([_OPENAI_WEB_SEARCH_TOOL])
 
 
+@functools.lru_cache(maxsize=1)
+def _get_searxng_web_search_wrapper() -> SearxSearchWrapper:
+    """Build the dedicated SearXNG client for self-hosted web search."""
+    config = _get_searxng_web_search_config()
+    logger.info("Web search backend=searxng host=%s", config["host"])
+    return SearxSearchWrapper(searx_host=config["host"], k=5)
+
+
 def _web_search_duckduckgo(query: str) -> str:
     """Search the public web with DuckDuckGo."""
     logger.info("Web search backend=duckduckgo")
     return _duckduckgo_web_search.run(query)
+
+
+def _web_search_searxng(query: str) -> str:
+    """Search the public web with a self-hosted SearXNG instance."""
+    return _get_searxng_web_search_wrapper().run(query)
 
 
 def _web_search_openai(query: str) -> str:
@@ -181,10 +205,13 @@ def _web_search_openai(query: str) -> str:
 
 
 # Manual backend selection for web_search_tool. Keep exactly one assignment active.
+# The SearXNG variant uses INTERACTION_WEB_SEARCH_SEARXNG_HOST and the dedicated
+# self-hosted SearXNG container from the Docker stack.
 # The OpenAI variant uses INTERACTION_WEB_SEARCH_OPENAI_* config and a dedicated
 # Responses API client instead of the main interaction-model endpoint.
 #_active_web_search_backend = _web_search_duckduckgo
-_active_web_search_backend = _web_search_openai
+#_active_web_search_backend = _web_search_openai
+_active_web_search_backend = _web_search_searxng
 
 
 async def _fetch_agent_card(
