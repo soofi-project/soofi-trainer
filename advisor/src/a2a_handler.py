@@ -133,10 +133,12 @@ class AdvisorAgentExecutor(AgentExecutor):
                     if hasattr(raw_output, "content"):
                         raw_output = raw_output.content
                     if isinstance(raw_output, list):
-                        text_parts = [
-                            p["text"] for p in raw_output
-                            if isinstance(p, dict) and p.get("type") == "text"
-                        ]
+                        text_parts = []
+                        for p in raw_output:
+                            if isinstance(p, dict) and p.get("type") == "text":
+                                text_parts.append(p["text"])
+                            elif hasattr(p, "text"):
+                                text_parts.append(p.text)
                         raw_output = text_parts[0] if text_parts else ""
                     try:
                         tool_result = (
