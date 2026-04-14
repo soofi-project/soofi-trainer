@@ -300,7 +300,7 @@ def _web_search_duckduckgo(query: str) -> str:
 
 def _web_search_searxng(query: str) -> str:
     """Search the public web with a self-hosted SearXNG instance."""
-    return _get_searxng_web_search_wrapper().results(query, num_results=5, categories="it", language="de")
+    return _get_searxng_web_search_wrapper().results(query, num_results=5, categories=["it", "science", "news"], language="de", engines=["google", "bing", "duckduckgo", "brave", "wiki"])
 
 
 def _web_search_openai(query: str) -> str:
