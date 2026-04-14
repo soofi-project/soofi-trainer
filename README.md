@@ -172,10 +172,11 @@ _active_web_search_backend = _web_search_openai
 #_active_web_search_backend = _web_search_searxng
 ```
 
-Two additional backends were added to the interaction agent behind the same public `web_search_tool`:
+The interaction agent exposes three switchable implementations behind the same public `web_search_tool`:
 
 - DuckDuckGo (`_web_search_duckduckgo`) for public-web search without a stack-local search service.
 - OpenAI (`_web_search_openai`) via ChatOpenAI built-in web search on a dedicated OpenAI client. It does not use the main interaction-model `OPENAI_BASE_URL`; it uses the dedicated `_OPENAI_API_SEARCH_URL`, which is independent of backend flags such as `./up.sh --vllm`. With `--vllm`, the main interaction model switches to the profile-specific `OPENAI_BASE_URL`, but `_web_search_openai` still talks directly to the OpenAI Responses API and requires `OPENAI_API_KEY` or `INTERACTION_WEB_SEARCH_OPENAI_API_KEY`. The dedicated search client is pinned to `reasoning_effort="high"`, the tool binding uses the GA Responses API `web_search` tool, and it sends Germany (`country: "DE"`) as the approximate user location.
+- SearXNG (`_web_search_searxng`) via the stack-local `searxng` service. The current query profile requests 5 German-language results across the `it`, `science`, and `news` categories and fans out across the `google`, `bing`, `duckduckgo`, `brave`, and `wiki` engines.
 
 OpenAI remains the current default, while DuckDuckGo and SearXNG stay available as comment-toggle alternatives.
 
