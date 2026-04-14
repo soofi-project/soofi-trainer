@@ -300,7 +300,7 @@ def _web_search_duckduckgo(query: str) -> str:
 
 def _web_search_searxng(query: str) -> str:
     """Search the public web with a self-hosted SearXNG instance."""
-    return _get_searxng_web_search_wrapper().run(query)
+    return _get_searxng_web_search_wrapper().results(query, num_results=5, categories="it", language="de")
 
 
 def _web_search_openai(query: str) -> str:
@@ -314,9 +314,9 @@ def _web_search_openai(query: str) -> str:
 # self-hosted SearXNG container from the Docker stack.
 # The OpenAI variant uses INTERACTION_WEB_SEARCH_OPENAI_* config and a dedicated
 # Responses API client instead of the main interaction-model endpoint.
-_active_web_search_backend = _web_search_duckduckgo
+#_active_web_search_backend = _web_search_duckduckgo
 #_active_web_search_backend = _web_search_openai
-#_active_web_search_backend = _web_search_searxng
+_active_web_search_backend = _web_search_searxng
 
 
 async def _fetch_agent_card(
