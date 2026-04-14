@@ -57,7 +57,7 @@ if [ -z "$PROFILE_FLAGS" ]; then
 fi
 
 # Build compose file args
-COMPOSE_FILES="-f docker-compose.yml"
+COMPOSE_FILES=(-f docker-compose.yml)
 if [ "$BACKEND_OVERRIDE" != "chatgpt" ]; then
     OVERRIDE_FILE="docker-compose.${BACKEND_OVERRIDE}.yml"
     if [ ! -f "$OVERRIDE_FILE" ]; then
@@ -66,7 +66,7 @@ if [ "$BACKEND_OVERRIDE" != "chatgpt" ]; then
         exit 1
     fi
     echo "[INFO] Backend profile: $BACKEND_OVERRIDE"
-    COMPOSE_FILES="$COMPOSE_FILES -f $OVERRIDE_FILE"
+    COMPOSE_FILES+=(-f "$OVERRIDE_FILE")
 fi
 
 # Log active Docker profiles
@@ -80,12 +80,12 @@ if [ -n "$BUILD_FLAG" ]; then
 else
     echo "[INFO] Starting containers..."
 fi
-docker compose $COMPOSE_FILES $PROFILE_FLAGS up -d --wait --remove-orphans $BUILD_FLAG
+docker compose "${COMPOSE_FILES[@]}" $PROFILE_FLAGS up -d --wait --remove-orphans $BUILD_FLAG
 
 # Check container status
 echo ""
 echo "[INFO] Container Status:"
-docker compose $COMPOSE_FILES $PROFILE_FLAGS ps
+docker compose "${COMPOSE_FILES[@]}" $PROFILE_FLAGS ps
 
 # Print URLs
 echo ""
