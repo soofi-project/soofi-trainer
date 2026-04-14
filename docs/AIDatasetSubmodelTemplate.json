@@ -1,15 +1,15 @@
 {
   "modelType": "Submodel",
-  "id": "https://dfki.de/ids/asset/8000_6478_6946_8452",
-  "idShort": "MaterialScienceDataset",
+  "id": "https://dfki.de/ids/asset/<to be defined generate in the form XXXX_XXXX_XXXX_XXXX>",
+  "idShort": "<to be defined>",
   "description": [
         {
           "language": "de",
-          "text": "Eine Sammlung einschlägiger Dissertationen aus dem Bereich der Materialwissenschaften"
+          "text": "<to be defined>"
         },
         {
           "language": "en",
-          "text": "A collection of relevant dissertations in the field of materials science"
+          "text": "<to be defined>"
         }
       ],
   "kind": "Instance",
@@ -46,7 +46,7 @@
         }
       ],
       "valueType": "xs:string",
-      "value": "1.0.3"
+      "value": "<to be defined>"
     },    
     {
       "idShort": "Storage",
@@ -67,7 +67,7 @@
         }
       ],
       "valueType": "xs:string",
-      "value": "/datasets/pdfs/v1.0.3/"
+      "value": "<to be defined>"
     },    
     {
       "idShort": "SizeInformation",
@@ -107,7 +107,7 @@
             }
           ],
           "valueType": "xs:string",
-          "value": "3000"
+          "value": "<to be defined>"
         }        
       ]
     },
@@ -149,7 +149,7 @@
             }
           ],
           "valueType": "xs:string",
-          "value": ".PDF"
+          "value": "[to be defined]"
         }        
       ]
     }

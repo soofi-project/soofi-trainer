@@ -242,7 +242,9 @@ The UI sends the voice from `VITE_TTS_VOICE_DE` (German) or `VITE_TTS_VOICE_EN` 
 | `--triton` | Triton (`10.2.10.33:9000`) | OpenAI | OpenAI cloud | Triton running + model loaded, `OPENAI_API_KEY` for embeddings |
 | `--vllm` | vLLM via LiteLLM (`10.2.10.33:4000`) | Qwen3-Embedding-8B | H200 local (Piper + Whisper) | H200 inference stack deployed |
 
-To change the model, edit the override file and restart with `./up.sh --ollama` (no `--build` needed).
+The base stack uses the checked-in OpenAI-compatible model defaults from `.env`. Backend-specific endpoints and model overrides are configured in the backend compose files.
+
+For `--vllm`, edit `docker-compose.vllm.yml` directly to switch the active model block or adjust the vLLM-specific sampling parameters. Those settings are only consumed when the vLLM override sets `SOOFI_LLM_BACKEND=vllm`; the default stack and the other backend overrides continue to rely on their provider defaults. Alternative configurations are kept there as commented blocks.
 
 > **Note:** When switching the embedding model (e.g. from OpenAI to Ollama), the vector dimensions change and existing Weaviate data becomes incompatible. Wipe the volume before restarting:
 > ```bash

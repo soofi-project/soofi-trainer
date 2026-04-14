@@ -6,6 +6,8 @@
   - [T-08-3](T-08-3-agent-training-flow.md)
   - [T-08-4](T-08-4-remote-deployment.md)
   - [T-08-5](T-08-5-training-progress-ui.md)
+  - [T-08-6](T-08-6-aas-submodel-push.md)
+  - [T-08-7](T-08-7-aas-base-model-nameplates.md)
 
 /label ~UserStory
 /milestone %ProductBacklog
