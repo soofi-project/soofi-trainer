@@ -119,6 +119,7 @@ class ToolStreamTracker:
     # Mutable per invocation — reset before each stream
     searching: bool = field(default=False, init=False)
     streamed: bool = field(default=False, init=False)
+    finished: bool = field(default=False, init=False)  # True once on_tool_end fired
     tool_output: str = field(default="", init=False)
     streamed_text: str = field(default="", init=False)
     captured: dict[str, Any] = field(default_factory=dict, init=False)
@@ -126,6 +127,7 @@ class ToolStreamTracker:
     def reset(self) -> None:
         self.searching = False
         self.streamed = False
+        self.finished = False
         self.tool_output = ""
         self.streamed_text = ""
         self.captured = {}
@@ -373,6 +375,7 @@ class SSEStream:
             return
         # Capture full tool output for tail compensation
         tracker.tool_output = _extract_tool_text(event.get("data", {}).get("output", ""))
+        tracker.finished = True
         logger.info("on_tool_end %s output: %d chars", tracker.tool_name, len(tracker.tool_output))
         # Fallback: if streaming yielded nothing, emit TOOL_CALL_END here
         if tracker.searching:
@@ -388,8 +391,10 @@ class SSEStream:
             and not chunk.tool_call_chunks
         ):
             return
-        # Suppress direct-LLM output if any tracker already streamed
-        if any(t.streamed for t in self._trackers.values()):
+        # Suppress direct-LLM output while a tool is actively streaming (not yet finished).
+        # Once all tools are finished, allow through — e.g. for transition questions
+        # appended by the interaction agent after advisor/dataset responses.
+        if any(t.streamed and not t.finished for t in self._trackers.values()):
             return
         async for sse in self._emit_text(chunk.content):
             yield sse

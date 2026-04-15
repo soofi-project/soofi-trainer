@@ -1753,11 +1753,8 @@ class SoofiChat extends SignalWatcher(LitElement) {
       case "TOOL_CALL_END":
         this.searching = false;
         this.searchStatusLabel = "";
-        // End streaming — the second LLM call is suppressed anyway,
-        // so don't make the user wait for it.
-        if (event.tool === "ask_advisor_tool" || event.tool === "ask_training_agent_tool" || event.tool === "ask_dataset_agent_tool") {
-          this.streaming = false;
-        }
+        // All streaming sub-agents allow a second LLM call for transition questions/guidance.
+        // streaming ends at RUN_FINISHED — not here — so the user can't type before it appears.
         if (this._flowTimer) clearTimeout(this._flowTimer);
         if (this.flowState === "asking-training-agent" || this.flowState === "training-searching"
             || this.flowState === "training-mcp-returning" || this.flowState === "ta-returning") {

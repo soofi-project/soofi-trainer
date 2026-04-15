@@ -54,15 +54,9 @@ _TRUE_VALUES = {"1", "true", "yes", "on"}
 _FALSE_VALUES = {"0", "false", "no", "off"}
 
 
-# Context variables to pass the A2A context_id into tools per-request
+# Context variable to pass the advisor context_id per-request (used for RAG URL store)
 _advisor_context_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "_advisor_context_id", default=None
-)
-_training_context_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
-    "_training_context_id", default=None
-)
-_dataset_context_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
-    "_dataset_context_id", default=None
 )
 _language: contextvars.ContextVar[Language] = contextvars.ContextVar("_language", default="de")
 # RAG source URLs per conversation — persisted across requests via advisor context_id.
@@ -256,13 +250,12 @@ async def ask_advisor_tool(question: str) -> str:
     Args:
         question: The domain question to send to the Advisor.
     """
-    ctx_id = _advisor_context_id.get()
     lang = _language.get()
     full_text = ""
     lang_tag = f" [LANG:{lang}]"
 
     try:
-        async for chunk in _stream_advisor(question + lang_tag, context_id=ctx_id):
+        async for chunk in _stream_advisor(question + lang_tag, context_id=None):
             # Detect special event envelopes from the advisor
             try:
                 parsed = json.loads(chunk)
@@ -297,13 +290,13 @@ async def ask_advisor_tool(question: str) -> str:
         logger.exception("Advisor streaming failed after %d chars", len(full_text))
         if not full_text:
             logger.warning("Falling back to blocking ask_advisor call")
-            full_text = await _ask_advisor(question, context_id=ctx_id)
+            full_text = await _ask_advisor(question, context_id=None)
         # Partial content already streamed — return what we have to avoid duplicates
 
     # Fallback if streaming completed but yielded no text (e.g. only status events)
     if not full_text:
         logger.warning("Advisor streaming yielded no content, falling back to blocking call")
-        full_text = await _ask_advisor(question, context_id=ctx_id)
+        full_text = await _ask_advisor(question, context_id=None)
 
     return full_text
 
@@ -318,13 +311,12 @@ async def ask_training_agent_tool(question: str) -> str:
     Args:
         question: The training request to send to the Training Agent.
     """
-    ctx_id = _training_context_id.get()
     lang = _language.get()
     full_text = ""
     lang_tag = f" [LANG:{lang}]"
 
     try:
-        async for chunk in _stream_training_agent(question + lang_tag, context_id=ctx_id):
+        async for chunk in _stream_training_agent(question + lang_tag, context_id=None):
             # Detect special event envelopes from the training agent
             try:
                 parsed = json.loads(chunk)
@@ -349,11 +341,11 @@ async def ask_training_agent_tool(question: str) -> str:
         logger.exception("Training agent streaming failed after %d chars", len(full_text))
         if not full_text:
             logger.warning("Falling back to blocking ask_training_agent call")
-            full_text = await _ask_training_agent(question, context_id=ctx_id)
+            full_text = await _ask_training_agent(question, context_id=None)
 
     if not full_text:
         logger.warning("Training agent streaming yielded no content, falling back to blocking call")
-        full_text = await _ask_training_agent(question, context_id=ctx_id)
+        full_text = await _ask_training_agent(question, context_id=None)
 
     return full_text
 
@@ -368,13 +360,12 @@ async def ask_dataset_agent_tool(question: str) -> str:
     Args:
         question: The dataset search request to send to the Dataset Agent.
     """
-    ctx_id = _dataset_context_id.get()
     lang = _language.get()
     full_text = ""
     lang_tag = f" [LANG:{lang}]"
 
     try:
-        async for chunk in _stream_dataset_agent(question + lang_tag, context_id=ctx_id):
+        async for chunk in _stream_dataset_agent(question + lang_tag, context_id=None):
             try:
                 parsed = json.loads(chunk)
                 event_type = parsed.get(SOOFI_EVENT_KEY) if isinstance(parsed, dict) else None
@@ -396,11 +387,11 @@ async def ask_dataset_agent_tool(question: str) -> str:
         logger.exception("Dataset agent streaming failed after %d chars", len(full_text))
         if not full_text:
             logger.warning("Falling back to blocking ask_dataset_agent call")
-            full_text = await _ask_dataset_agent(question, context_id=ctx_id)
+            full_text = await _ask_dataset_agent(question, context_id=None)
 
     if not full_text:
         logger.warning("Dataset agent streaming yielded no content, falling back to blocking call")
-        full_text = await _ask_dataset_agent(question, context_id=ctx_id)
+        full_text = await _ask_dataset_agent(question, context_id=None)
 
     return full_text
 
@@ -492,8 +483,9 @@ def build_graph() -> CompiledStateGraph:
             logger.info("Tool result (%s): %s", msg.name, str(msg.content)[:500])
         return result
 
-    # Tools whose responses are already streamed to the user — no second LLM call needed
-    _STREAMING_TOOLS = {"ask_advisor_tool", "ask_training_agent_tool", "ask_dataset_agent_tool"}
+    # All streaming sub-agent tools allow a second LLM call so the interaction agent
+    # can append transition questions or guidance after any sub-agent response.
+    _STREAMING_TOOLS: set[str] = set()
 
     def should_continue(state: MessagesState) -> str:
         if not state["messages"]:
@@ -528,18 +520,8 @@ def build_graph() -> CompiledStateGraph:
 
 
 def set_advisor_context_id(context_id: str | None) -> None:
-    """Set the A2A context_id for the current request (used by ask_advisor_tool)."""
+    """Set the advisor context_id for the current request (used for RAG URL store keying)."""
     _advisor_context_id.set(context_id)
-
-
-def set_training_context_id(context_id: str | None) -> None:
-    """Set the A2A context_id for the current request (used by ask_training_agent_tool)."""
-    _training_context_id.set(context_id)
-
-
-def set_dataset_context_id(context_id: str | None) -> None:
-    """Set the A2A context_id for the current request (used by ask_dataset_agent_tool)."""
-    _dataset_context_id.set(context_id)
 
 
 def set_language(lang: Language) -> None:
