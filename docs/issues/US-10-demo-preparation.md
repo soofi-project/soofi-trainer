@@ -7,6 +7,8 @@
   - [T-10-4](T-10-4-caddy-letsencrypt-domain.md)
   - [T-10-5](T-10-5-session-logs.md)
   - [T-10-6](T-10-6-session-log-analysis-agent.md)
+  - [T-10-8](T-10-8-onboarding-guide.md)
+  - [T-10-9](T-10-9-demo-workflow.md)
 
 /label ~UserStory_US-10
 /label ~UserStory
@@ -53,6 +55,18 @@ Session-ID. Logs erfassen Gesprächsverlauf, Tool-Aufrufe, RAG-Quellen und Metad
 Nachrichtenanzahl) — ohne externe Observability-Infrastruktur. Ziel: Demo-Abläufe
 nachvollziehen und gezielt optimieren.
 
+### T-10-8 — Onboarding Guide für Präsentierende
+Kompakter Leitfaden (Markdown + PDF) für Kolleginnen und Kollegen, die den Demonstrator
+vorstellen. Enthält die zentralen Key Messages, einen 2-Minuten-Pitch zum Systemüberblick,
+eine vollständig ausformulierte Beispielinteraktion (CNC-Wartungsassistent, ~4 min),
+FAQ für typische Publikumsfragen sowie eine Setup-Checkliste vor der Demo.
+
+### T-10-9 — Demo-Workflow
+Advisor-Agent und Interaction-Agent-Prompt erweitern, damit Fragen zu souveräner KI,
+offenen/Open-Weight-Modellen und relevanten Unternehmens-Anwendungsfällen korrekt
+beantwortet werden. Dazu werden Wissensdokumente zu den neuen Themen in Weaviate geladen
+und die System-Prompts beider Agenten (DE + EN) angepasst.
+
 ### T-10-4 — HTTPS mit registrierter Domain & Let's Encrypt (Cloudflare)
 Zweite Caddy-Variante für den Betrieb auf einem öffentlichen Server mit registrierter Domain.
 Nutzt `ghcr.io/caddybuilds/caddy-cloudflare:v2.11.2` und Let's Encrypt per Cloudflare
@@ -71,3 +85,6 @@ DNS-Challenge. Beide Caddy-Dienste bleiben im Stack und werden per Docker Compos
 - [ ] Session logs are written to `session-logs/` after each conversation
 - [ ] Log files contain full conversation, tool calls, RAG sources, and metadata
 - [ ] `/analyse-sessions` extracts weighted refinements from session logs and creates tasks automatically
+- [ ] Onboarding Guide (Markdown + PDF) für Präsentierende erstellt und verteilt
+- [ ] Key Messages (≥ 5) vom Team abgenommen
+- [ ] Beispielinteraktion vollständig ausformuliert und gegen realen Stack verifiziert

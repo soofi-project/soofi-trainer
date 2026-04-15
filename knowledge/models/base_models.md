@@ -20,121 +20,10 @@ Deployment-Ziel, Anwendungsfälle, Lizenz, Herkunft und Souveränitätseigenscha
 
 > **Hinweis zur Offenheit:** Die Soofi/8ra-Modelle sind als einzige Modelle dieser Liste vollständig open source im OSI-Sinne — Gewichte, Trainingscode und Trainingsdaten werden vollständig offengelegt. Bei allen anderen Anbietern sind Trainingsdaten und -methodik nicht oder nur teilweise bekannt. Bei chinesischen Modellen (Qwen, DeepSeek) ist insbesondere unklar, welche Daten im Training enthalten waren, wie diese gesammelt wurden und ob Verzerrungen oder unerwünschte Inhalte eingebettet sind.
 
----
 
-## Strategische Risiken und Souveränitätsbetrachtung
-
-### Lizenz-Instabilität als Kernrisiko
-
-Eine zentrale Erfahrung aus der Entwicklung 2024/2025: Anbieter — insbesondere chinesische Labs —
-können Lizenzmodelle jederzeit und ohne Vorankündigung von offen auf geschlossen umstellen:
-
-- **MiniMax M2.7**: Von MIT auf „Modified MIT" geändert — kommerzielle Nutzung erfordert
-  nun schriftliche Genehmigung von MiniMax. Die Open-Source-Community kritisiert dies als
-  Missbrauch des MIT-Labels; faktisch handelt es sich um ein „source-available"-Modell.
-- **Qwen 3.6 Plus**: Als Closed-Source veröffentlicht — keine öffentlichen Gewichte,
-  Zugang nur über API. Dies ist ein direkter Bruch mit der Apache-2.0-Tradition der
-  Qwen-2.5- und Qwen-3.5-Familie. Wer auf Qwen aufgebaut hat, verliert bei neuen
-  Generationen die Möglichkeit zur lokalen Nutzung und zum Fine-Tuning.
-
-**Konsequenz für industrielle Planung:** Wer Foundation Models in Produktionsprozesse
-integriert, trägt ein Vendor-Lock-in-Risiko, solange keine dauerhafte Lizenzgarantie
-durch Governance-Strukturen (z.B. Foundation, Konsortium) abgesichert ist. Selbst
-Apache-2.0-Veröffentlichungen älterer Modellversionen schützen nicht vor Lizenzänderungen
-bei Folgeversionen.
-
-### Geopolitischer Zugang zu Spitzenfähigkeiten
-
-US-amerikanische Anbieter geraten zunehmend unter politischen Druck, leistungsfähige
-Modelle nur eingeschränkt verfügbar zu machen:
-
-- Anthropics Modell „Claude Mythos Preview" wurde wegen seines Potenzials zur Entdeckung
-  kritischer Sicherheitslücken nicht öffentlich freigegeben. Der Zugang erfolgt exklusiv
-  über „Project Glasswing" — ausschließlich an US-Unternehmen (Microsoft, NVIDIA, Apple,
-  Cisco) sowie die Linux Foundation. **Kein europäischer Partner ist beteiligt.**
-- Bei sicherheitskritischen KI-Fähigkeiten ist Europa damit strukturell außen vor.
-- US-Finanzministerium und Fed haben Notfallgespräche mit der Finanzbranche über
-  KI-induzierte Cyberrisiken geführt — ein Hinweis auf die strategische Brisanz
-  dieser Modellklasse.
-
-### Compliance-Konflikt für EU-Anwender
-
-US-Anbieter stehen zwischen widersprüchlichen Anforderungen:
-
-- **US-Seite**: Druck des Pentagons und der Geheimdienste zur Freigabe für militärische
-  und Überwachungsanwendungen. Das Pentagon hat Anthropic teilweise als „supply chain risk"
-  eingestuft, weil das Unternehmen die Nutzung für autonome Waffensysteme ablehnt.
-- **EU-Seite**: EU AI Act und DSGVO verlangen Transparenz, Nachvollziehbarkeit und
-  Datenschutz — unvereinbar mit militärischer Dual-Use-Nutzung.
-
-Für europäische Industriekunden bedeutet das: US-Modelle, deren Anbieter zwischen
-US-Regierungsanforderungen und EU-Compliance zerrissen werden, sind kein stabiles
-Fundament für langfristige Produktionssysteme.
-
-### Strategische Implikation: Souveräne KI-Supply-Chain braucht mindestens zwei Zulieferer
-
-Analog zur Automobilindustrie — wo kein Tier-1-Hersteller einen sicherheitskritischen Bauteil
-von einem einzigen Lieferanten bezieht — braucht eine souveräne KI-Infrastruktur mindestens
-zwei qualifizierte, unabhängige Anbieter. Ein einzelner Anbieter, sei er auch europäisch,
-schafft eine neue Form von Abhängigkeit.
-
-**Das Qualifikationskriterium für einen souveränen KI-Zulieferer ist nicht "europäische Herkunft",
-sondern vollständige Auditierbarkeit:** Trainingsdaten, Trainingspipeline und Gewichte müssen
-vollständig offengelegt und unabhängig überprüfbar sein. Nur dann weiß man, was im Modell
-steckt und wie es dahin gekommen ist.
-
-Aktuelle Bewertung der Zulieferer nach diesem Kriterium:
-
-| Anbieter | Auditierbar | Europäisch | Qualifiziert als souveräner Zulieferer |
-|----------|------------|-----------|----------------------------------------|
-| Soofi / 8ra | ✅ Vollständig | ✅ Ja | ✅ Ja — einziger vollständig qualifizierter EU-Zulieferer |
-| OLMo (Ai2) | ✅ Vollständig | ❌ USA | ⚠️ Teilweise — auditierbar, aber US-Jurisdiktion |
-| Mistral AI | ❌ Nicht vollständig | ✅ Ja | ⚠️ Teilweise — europäisch, aber Trainingsdaten unbekannt |
-| Alle anderen | ❌ Nein | ❌ Nein | ❌ Nein |
-
-**Das strukturelle Problem:** Europa hat aktuell nur einen vollständig qualifizierten
-Zulieferer (Soofi/8ra). Das ist das eigentliche Risiko — nicht die Lizenzstrategie
-einzelner Anbieter. OLMo ist als zweiter Zulieferer für Auditierbarkeit wertvoll,
-löst aber die Frage der Jurisdiktion nicht. Die Argumentation für weitere europäische
-Initiativen wie 8ra und IPCEI-AI wird dadurch gestärkt, nicht geschwächt.
-
-### Unbekannter Trainingsinhalt als technisches Risiko
-
-Über die lizenz- und geopolitischen Aspekte hinaus besteht bei nicht-transparenten Modellen
-ein inhärentes **technisches Risiko durch unbekannte Trainingsdaten**:
-
-- **Unbekannte Datenquellen**: Bei Modellen wie Qwen oder DeepSeek ist nicht nachvollziehbar,
-  welche Texte, Dokumente und Webseiten im Training verwendet wurden. Copyright-Verletzungen,
-  urheberrechtlich geschützte Industriedaten oder problematische Inhalte können ohne Wissen
-  der Nutzer eingeflossen sein.
-- **Unbekannte Verzerrungen (Biases)**: Ohne Kenntnis der Trainingsdaten lassen sich
-  systematische Verzerrungen — politischer, kultureller oder wirtschaftlicher Natur — nicht
-  identifizieren oder ausschließen. Für regulierte Branchen (Medizin, Recht, Finanzen) ist
-  das ein Compliance-Risiko.
-- **Backdoors und Datenvergiftung**: Es kann nicht ausgeschlossen werden, dass Modelle
-  unbekannter Herkunft gezielt auf bestimmte Eingaben trainiert wurden, die ein
-  vorhersehbares, unerwünschtes Verhalten auslösen (sog. Training-Backdoors).
-  Bei Modellen aus geopolitisch sensiblen Ländern ist dieses Risiko besonders relevant.
-- **Keine Auditierbarkeit**: Da weder Trainingsdaten noch -code offenliegen, ist eine
-  unabhängige Überprüfung nicht möglich — eine Grundvoraussetzung für den EU AI Act
-  (Hochrisiko-KI-Systeme) und für vertrauenswürdige industrielle Anwendungen.
-
-Die Soofi-Modelle sind als einzige Modelle dieser Liste vollständig auditierbar:
-Gewichte, Trainingscode und Trainingsdaten sind öffentlich zugänglich und können
-unabhängig überprüft werden.
-
-### Europäische Souveränitäts-Empfehlung
-
-Für Anwendungen mit Anforderungen an digitale Souveränität, DSGVO-Konformität oder
-langfristige Planungssicherheit gilt folgende Priorisierung:
-
-1. **Mistral AI** (🇫🇷 EU, Apache 2.0) — einzige europäische Familie, bislang keine
-   Lizenzänderungen, DSGVO-nahe Unternehmenskultur
-2. **Microsoft Phi / Meta Llama** (🇺🇸 USA, MIT/Llama CL) — US-rechtliche Abhängigkeit,
-   aber etablierte Ökosysteme; akzeptabel für nicht-sicherheitskritische Anwendungen
-3. **Alibaba Qwen / DeepSeek** (🇨🇳 China) — technisch leistungsfähig, aber hohes
-   Lizenz-Instabilitätsrisiko und geopolitische Abhängigkeit; für sensitive Anwendungen
-   nicht empfohlen
+> **Souveränitätsbetrachtung:** Strategische Risiken, Auditierbarkeits-Kriterien und der
+> Vergleich der Anbieter hinsichtlich digitaler Souveränität sind in
+> [`sovereignty.md`](sovereignty.md) dokumentiert.
 
 ---
 
@@ -409,23 +298,6 @@ langfristige Planungssicherheit gilt folgende Priorisierung:
 |--------|-------|-----------|-----------------|
 | DeepSeek-V3 (MoE) | 671B gesamt, 37B aktiv | Cloud (Multi-Node) | High-Quality-Generierung, komplexe Analyse, Forschung |
 | DeepSeek-R1 (MoE) | 671B gesamt, 37B aktiv | Cloud (Multi-Node) | State-of-the-Art Reasoning, Mathematik, wissenschaftliche Aufgaben |
-
----
-
-## Souveränitäts-Übersicht
-
-| Anbieter | Land | Lizenz | Lizenz-Stabilität | Für sensitive EU-Anwendungen |
-|----------|------|--------|-------------------|------------------------------|
-| **Soofi / 8ra** | 🇩🇪 Deutschland / EU | Vollständig Open Source | ✅ Stabil — Konsortiumsstruktur | ✅✅ Erste Wahl — vollständig europäisch, maximale Souveränität |
-| **OLMo (Ai2)** | 🇺🇸 USA | Apache 2.0 | ✅ Stabil | ⚠️ Vollständig auditierbar, aber US-Jurisdiktion — zweiter Zulieferer für Auditierbarkeit |
-| Mistral AI | 🇫🇷 EU | Apache 2.0 | ✅ Stabil | ✅ Europäisch, DSGVO-nah — aber Trainingsdaten nicht vollständig offen |
-| Microsoft Phi | 🇺🇸 USA | MIT | ✅ Stabil | ⚠️ US-Unternehmen, CLOUD Act, offene Lizenz |
-| Meta Llama | 🇺🇸 USA | Llama CL | ✅ Stabil | ⚠️ US-Unternehmen, eingeschränkte Lizenz, kein OSI-Standard |
-| Google Gemma | 🇺🇸 USA | Gemma (prop.) | ⚠️ Unklar | ⚠️ US-Unternehmen, proprietäre Lizenz, Gating |
-| NVIDIA Nemotron | 🇺🇸 USA | NVIDIA (prop.) | ⚠️ Unklar | ⚠️ US-Unternehmen, proprietäre Lizenz, zusätzliche Framework-Bindung (NeMo) |
-| Alibaba Qwen | 🇨🇳 China | Apache 2.0 / Qwen CL | ❌ Hohes Risiko — Qwen 3.6 Plus bereits Closed-Source | ❌ Chinesisches Unternehmen, nachgewiesene Lizenzänderung |
-| DeepSeek | 🇨🇳 China | MIT | ⚠️ Unklar | ❌ Chinesisches Unternehmen, geopolitische Abhängigkeit |
-| MiniMax | 🇨🇳 China | Modified MIT | ❌ Hohes Risiko — kommerzielle Nutzung genehmigungspflichtig | ❌ Chinesisches Unternehmen, nachgewiesene Lizenzänderung |
 
 ---
 
