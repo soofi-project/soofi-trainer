@@ -170,7 +170,7 @@ def get_client() -> weaviate.WeaviateClient:
 @mcp.tool()
 def search_documents(
     query: str,
-    filters: dict[str, str] | None = None,
+    filters: dict[str, str] | str | None = None,
     limit: int = 5,
 ) -> dict[str, Any]:
     """

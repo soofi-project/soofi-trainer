@@ -14,16 +14,20 @@ echo "========================================"
 echo ""
 
 # Stop containers (optionally remove volumes)
+# Pass every known profile so services started under --profile are included.
+# Docker Compose has no wildcard; unused profiles are harmless.
+PROFILES="--profile local --profile domain"
+
 if [ "$1" == "--clean" ]; then
     echo "[INFO] Stopping containers and removing volumes..."
-    docker compose --profile "*" down -v
+    docker compose $PROFILES down -v --remove-orphans
 elif [ -n "$1" ]; then
     echo "[ERROR] Unknown option: $1"
     echo "Usage: ./down.sh [--clean]"
     exit 1
 else
     echo "[INFO] Stopping containers..."
-    docker compose --profile "*" down
+    docker compose $PROFILES down --remove-orphans
 fi
 
 echo ""

@@ -1036,7 +1036,6 @@ class SoofiChat extends SignalWatcher(LitElement) {
   @state() private isRecording = false;
   @state() private searching = false;
   @state() private searchStatusLabel = "";
-  private _pendingRagSources: RagSource[] = [];
   @state() private flowState: FlowState = "idle";
   @state() private datasetMcpTarget = "";
   private _flowTimer: ReturnType<typeof setTimeout> | null = null;
@@ -1640,7 +1639,6 @@ class SoofiChat extends SignalWatcher(LitElement) {
     this.#processor.clearSurfaces();
     this.surfaceEntries = [];
     this.dashboardEmbed = null;
-    this._pendingRagSources = [];
 
     // Cancel any queued/playing TTS from the previous response
     this.ttsGeneration++;
@@ -1742,7 +1740,6 @@ class SoofiChat extends SignalWatcher(LitElement) {
         if (this._flowTimer) clearTimeout(this._flowTimer);
         this.searching = true;
         this.searchStatusLabel = "";
-        this._pendingRagSources = [];
         if (event.tool === "ask_training_agent_tool") {
           this.flowState = "asking-training-agent";
         } else if (event.tool === "ask_advisor_tool") {
@@ -1756,21 +1753,6 @@ class SoofiChat extends SignalWatcher(LitElement) {
       case "TOOL_CALL_END":
         this.searching = false;
         this.searchStatusLabel = "";
-        // Attach buffered RAG sources to the last assistant message
-        if (this._pendingRagSources.length > 0) {
-          const msgs = [...this.messages];
-          const last = msgs[msgs.length - 1];
-          if (last?.role === "assistant") {
-            last.ragSources = this._pendingRagSources;
-            this.messages = msgs;
-          }
-          // Reset doc links to current sources only (not accumulated)
-          this.docLinks = this._pendingRagSources
-            .map(s => s.url)
-            .filter(u => u && u.startsWith("/docs/"));
-          this.docLinksCurrentIdx = -1;
-          this._pendingRagSources = [];
-        }
         // End streaming — the second LLM call is suppressed anyway,
         // so don't make the user wait for it.
         if (event.tool === "ask_advisor_tool" || event.tool === "ask_training_agent_tool" || event.tool === "ask_dataset_agent_tool") {
@@ -1818,10 +1800,25 @@ class SoofiChat extends SignalWatcher(LitElement) {
         // Other tools (show_agent_card, etc.): label shown but no flow animation
         break;
 
-      case "RAG_SOURCES":
-        // Buffer sources — attach to message after the advisor response is fully streamed
-        this._pendingRagSources = (event.sources as RagSource[]) || [];
+      case "RAG_SOURCES": {
+        // Self-contained: attach directly to the current assistant message.
+        // Don't rely on TOOL_CALL_END ordering — the advisor can emit
+        // RAG_SOURCES after it in multi-round ReAct flows.
+        const incoming = (event.sources as RagSource[]) || [];
+        if (incoming.length > 0) {
+          const msgs = [...this.messages];
+          const last = msgs[msgs.length - 1];
+          if (last?.role === "assistant") {
+            last.ragSources = incoming;
+            this.messages = msgs;
+          }
+          this.docLinks = incoming
+            .map(s => s.url)
+            .filter(u => u && u.startsWith("/docs/"));
+          this.docLinksCurrentIdx = -1;
+        }
         break;
+      }
 
       case "SPEECH_TEXT":
         // TTS plays for all responses (text and voice) — intentional: the system always speaks.
@@ -2209,7 +2206,6 @@ class SoofiChat extends SignalWatcher(LitElement) {
     this.streaming = false;
     this.searching = false;
     this.searchStatusLabel = "";
-    this._pendingRagSources = [];
     this.flowState = "idle";
     this.docViewerUrl = null;
     this.docContent = "";

@@ -19,8 +19,16 @@ Soofi Trainer is an agentic system (by DFKI GmbH) that guides users through LLM 
 ```
 
 ### Re-run Knowledge Ingestion
+Re-create the container so the current backend's env vars take effect (plain `docker start` keeps the env from the original create):
 ```bash
-docker start knowledge-ingestion && docker logs -f knowledge-ingestion
+docker compose -f docker-compose.yml [-f docker-compose.<backend>.yml] \
+  up -d --force-recreate knowledge-ingestion
+docker logs -f knowledge-ingestion
+```
+
+When switching embedding models (e.g. chatgpt → vllm), the Weaviate collection must be dropped first — `source_hash` skips unchanged files and leaves old-dim vectors behind, causing mixed-dimension state. Either `./down.sh --clean` first, or drop just the collection:
+```bash
+curl -X DELETE http://localhost:8070/v1/schema/SoofiKnowledge
 ```
 
 ### View Service Logs

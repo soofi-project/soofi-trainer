@@ -152,6 +152,7 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `ADVISOR_MODEL` | `gpt-4o-mini` | LLM model for the advisor agent |
+| `ADVISOR_MIN_SOURCE_SCORE` | `0.2` | Minimum reranker/distance score for a retrieved chunk to be shown as a source citation (0.0 = no filter) |
 | `INTERACTION_MODEL` | `gpt-4o-mini` | LLM model for the interaction agent |
 | `TRAINING_AGENT_MODEL` | `gpt-4o-mini` | LLM model for the training agent |
 | `DATASET_AGENT_MODEL` | `gpt-4o-mini` | LLM model for the dataset agent |

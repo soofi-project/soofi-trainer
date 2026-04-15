@@ -2,6 +2,7 @@
 
 import json
 import logging
+import os
 import re
 from typing import Callable
 
@@ -22,6 +23,11 @@ _SOOFI_EVENT_KEY = "__soofi_event"
 _EVENT_SEARCH_STATUS = "search_status"
 _EVENT_RAG_SOURCES = "rag_sources"
 _RE_LANG_TAG = re.compile(r"\[LANG:(de|en)\]\s*$")
+
+_min_score_env = os.getenv("ADVISOR_MIN_SOURCE_SCORE")
+if _min_score_env is None:
+    raise RuntimeError("ADVISOR_MIN_SOURCE_SCORE env var required.")
+_MIN_SOURCE_SCORE = float(_min_score_env)
 
 
 class AdvisorAgentExecutor(AgentExecutor):
@@ -133,10 +139,12 @@ class AdvisorAgentExecutor(AgentExecutor):
                     if hasattr(raw_output, "content"):
                         raw_output = raw_output.content
                     if isinstance(raw_output, list):
-                        text_parts = [
-                            p["text"] for p in raw_output
-                            if isinstance(p, dict) and p.get("type") == "text"
-                        ]
+                        text_parts = []
+                        for p in raw_output:
+                            if isinstance(p, dict) and p.get("type") == "text":
+                                text_parts.append(p["text"])
+                            elif hasattr(p, "text"):
+                                text_parts.append(p.text)
                         raw_output = text_parts[0] if text_parts else ""
                     try:
                         tool_result = (
@@ -151,7 +159,7 @@ class AdvisorAgentExecutor(AgentExecutor):
                         sources = []
                         for r in tool_result.get("results", []):
                             score = r.get("reranker_score")
-                            if score is None:
+                            if score is None or score < _MIN_SOURCE_SCORE:
                                 continue
                             file = r.get("source_file", "")
                             section = r.get("section_title", "")
