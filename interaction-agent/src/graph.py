@@ -11,6 +11,7 @@ from typing import Any, Literal
 
 import httpx
 from langchain_core.callbacks import adispatch_custom_event
+from langchain_core.messages import HumanMessage
 from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
 from langgraph.graph import MessagesState, StateGraph
@@ -167,6 +168,18 @@ def _build_vllm_kwargs(prefix: str) -> dict[str, Any]:
 
     return llm_kwargs
 
+
+# Second ChatOpenAI instance — same model/endpoint/sampling as the main agent,
+# but without bind_tools. Used one-shot via ainvoke() to summarize web search
+# results outside the agent's message history, so raw snippets never pollute
+# the main context window.
+_utility_llm = ChatOpenAI(
+    model=model_name,
+    **({"openai_api_base": base_url} if base_url else {}),
+    **_build_vllm_kwargs("INTERACTION"),
+)
+
+
 # Agent registry: parsed from AGENT_REGISTRY env var (comma-separated name=url pairs)
 _raw_registry = os.getenv("AGENT_REGISTRY", "")
 AGENT_REGISTRY: dict[str, str] = {}
@@ -260,6 +273,68 @@ async def _web_search_searxng(query: str, language: Language) -> str:
     if not sections:
         return tr("web_search_no_results", language)
     return "\n\n".join(sections)
+
+
+_SUMMARY_PROMPT_DE = """\
+Beantworte die Nutzerfrage anhand der folgenden Web-Suchergebnisse. Format:
+
+1. Eine kompakte Antwort — **maximal 2 Sätze**, nur die Kernaussage, keine \
+Zitate, keine Quellen im Fließtext.
+2. Danach eine Leerzeile und darunter eine Quellenliste als Markdown-Bulletpoints, \
+gruppiert und ohne Dopplungen, im Format:
+   - [Titel der Seite](URL)
+
+Verwende ausschließlich URLs, die wörtlich in den Ergebnissen vorkommen — keine \
+erfinden, keine kombinieren. Wenn die Treffer keine brauchbare Antwort zulassen, \
+sag das ehrlich in einem Satz und lass die Quellenliste weg.
+
+Nutzerfrage: {query}
+
+Suchergebnisse:
+{results}
+"""
+
+_SUMMARY_PROMPT_EN = """\
+Answer the user's question based on the following web search results. Format:
+
+1. A compact answer — **max 2 sentences**, only the core statement, no inline \
+citations, no sources in the prose.
+2. Then a blank line, followed by a source list as markdown bullet points, \
+grouped and deduplicated, in this format:
+   - [Page title](URL)
+
+Only use URLs that appear verbatim in the results — never invent or combine any. \
+If the results don't support a useful answer, say so honestly in one sentence and \
+omit the source list.
+
+User question: {query}
+
+Search results:
+{results}
+"""
+
+
+async def _summarize_search_results(query: str, raw: str, language: Language) -> str:
+    """One-shot summarization of SearXNG results so the raw snippets never enter
+    the main agent's message history. Runs in-process on the same model as the
+    main agent, but through a separate ChatOpenAI instance without tools and
+    with no history. Emits no SSE events — the existing `web_search_tool`
+    ToolStreamTracker owns the UI status label for the whole duration.
+    """
+    template = _SUMMARY_PROMPT_EN if language == "en" else _SUMMARY_PROMPT_DE
+    prompt = template.replace("{query}", query).replace("{results}", raw)
+    try:
+        response = await _utility_llm.ainvoke([HumanMessage(content=prompt)])
+        summary = response.content.strip() if isinstance(response.content, str) else ""
+        logger.info(
+            "Summarized search: raw=%d bytes → summary=%d bytes",
+            len(raw),
+            len(summary),
+        )
+        return summary or raw
+    except Exception:
+        logger.exception("Search summarization failed, returning raw results")
+        return raw
 
 
 async def _fetch_agent_card(
@@ -507,7 +582,10 @@ async def web_search_tool(query: str) -> str:
     """
     lang = _language.get()
     try:
-        return await _web_search_searxng(query, lang)
+        raw = await _web_search_searxng(query, lang)
+        if raw == tr("web_search_no_results", lang):
+            return raw
+        return await _summarize_search_results(query, raw, lang)
     except Exception:
         logger.exception("Web search failed for query: %s", query)
         return tr("web_search_failed", lang)
