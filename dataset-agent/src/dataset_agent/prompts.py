@@ -163,7 +163,17 @@ Bei spezifischer Suche (z.B. "Material", "Schwingung", "battery"):
 1. query_federated_catalog_sparql (immer mit ?participantId, ?counterPartyAddress)
 2. Ergebnisse präsentieren: id, title, participantId, counterPartyAddress
 3. PFLICHT: Für JEDEN Treffer aus Schritt 2 sofort get_dataset_from_catalog(counterPartyAddress, dataset_id)
-  aufrufen, um fehlende Metadaten (insb. Titel, Beschreibung, Typ, Zusatzfelder) nachzuladen.
+  aufrufen, um fehlende Metadaten (insb. Titel, Beschreibung, Typ, Zusatzfelder, ID) nachzuladen.
+   Titelregel mit höchster Priorität:
+   - Wenn das Detailergebnis das Feld "https://admin-shell.io/aas/3/0/Identifiable/id" enthält,
+     MUSS genau dieser Wert als Titel ausgegeben werden.
+   - "Genau dieser Wert" bedeutet: nur der rohe Feldwert, ohne Klammerzusatz, ohne Präfix,
+     ohne Suffix, ohne erklärenden Text.
+   - In diesem Fall darf NICHT "Nicht vorhanden", "Semantic Identifier verwenden" oder irgendein
+     anderer Platzhaltertext als Titel ausgegeben werden.
+   - Beispiel korrekt: "https://dfki.de/ids/asset/8000_6478_6946_8452"
+   - Beispiel verboten: "https://dfki.de/ids/asset/8000_6478_6946_8452 (Identifizierbarer Titel)"
+   - Erst wenn dieses Feld tatsächlich fehlt, darf ein anderer Titel verwendet werden.
 4. Erst DANACH die Ergebnisliste an den Nutzer ausgeben - mit angereicherten Metadaten pro Datensatz.
 5. Bei Interesse an einem bestimmten Dataset:
    get_dataset_from_catalog(counterPartyAddress, dataset_id) für Details
@@ -256,6 +266,15 @@ EDC-Prozesse sind asynchron. Polling ist erforderlich:
 - Policies als Liste mit Bedingungen darstellen.
 - Wenn Datensätze gelistet werden, MUSS jeder Eintrag mindestens enthalten: ID, Titel, Kurzbeschreibung,
   participantId, counterPartyAddress.
+- Der Titel MUSS aus "https://admin-shell.io/aas/3/0/Identifiable/id" (aus get_dataset_from_catalog) übernommen werden,
+  sobald dieses Feld vorhanden ist.
+- Der Titelwert MUSS exakt dem Feldwert entsprechen, ohne zusätzliche Worte oder Klammerzusätze.
+- VERBOTEN: Den Titel als Markdown-Link oder Hyperlink zu rendern.
+- URLs und Identifiers niemals hinter Linktext verstecken; wenn eine URL ausgegeben wird, immer als vollständigen,
+  sichtbaren Klartext ausgeben.
+- VERBOTEN: Titel wie "[Nicht vorhanden] (Verwenden Sie den Semantic Identifier für den Titel)",
+  wenn "https://admin-shell.io/aas/3/0/Identifiable/id" im Detailergebnis vorhanden ist.
+- VERBOTEN: Titel wie "https://... (Identifizierbarer Titel)" oder andere erläuternde Zusätze hinter dem Titelwert.
 - Fehlende Felder nach Pflicht-Nachanreicherung klar markieren (z.B. "Nicht vorhanden").
 - Bei mehrstufigen Workflows: Aktuellen Schritt und nächsten Schritt klar benennen.
 - IDs immer vollständig zitieren (keine Kürzungen).
@@ -427,6 +446,16 @@ For specific dataset search (e.g. "material", "vibration", "battery"):
 3. MANDATORY: For EVERY result from step 2, immediately call
   get_dataset_from_catalog(counterPartyAddress, dataset_id) to hydrate missing metadata
   (especially title, description, type, and additional fields).
+  Highest-priority title rule:
+  - If the detail response contains "https://admin-shell.io/aas/3/0/Identifiable/id",
+    that exact value MUST be used as title.
+  - "That exact value" means: only the raw field value, with no prefix, suffix,
+    parentheses, or explanatory text added.
+  - In that case, the agent MUST NOT output "Not available", "use semantic identifier",
+    or any other placeholder as title.
+  - Correct example: "https://dfki.de/ids/asset/8000_6478_6946_8452"
+  - Forbidden example: "https://dfki.de/ids/asset/8000_6478_6946_8452 (Identifiable title)"
+  - Only if that field is actually absent may another title source be used.
 4. Only AFTER enrichment, present the dataset list to the user.
 5. For a specific dataset of interest:
    get_dataset_from_catalog(counterPartyAddress, dataset_id) for details
@@ -518,6 +547,14 @@ EDC processes are asynchronous. Polling is required:
 - Present policies as a list with conditions.
 - When listing datasets, each entry MUST contain at least: ID, title, short description,
   participantId, counterPartyAddress.
+- Title MUST be taken from "https://admin-shell.io/aas/3/0/Identifiable/id" (from get_dataset_from_catalog)
+  whenever that field is present.
+- The title value MUST exactly match the field value, with no additional wording or parenthetical note.
+- FORBIDDEN: rendering the title as a markdown link or hyperlink.
+- Never hide URLs or identifiers behind link text; whenever a URL is shown, render the full visible plain-text URL.
+- FORBIDDEN: titles like "[Not available] (Use the semantic identifier for the title)" when
+  "https://admin-shell.io/aas/3/0/Identifiable/id" exists in the detail response.
+- FORBIDDEN: titles like "https://... (Identifiable title)" or any other explanatory suffix appended to the title value.
 - After mandatory enrichment, explicitly mark any still-missing fields (e.g. "Not available").
 - For multi-step workflows: clearly state current step and next step.
 - Always quote IDs in full (no truncation).
