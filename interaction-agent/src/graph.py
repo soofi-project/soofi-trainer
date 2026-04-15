@@ -12,7 +12,6 @@ from typing import Any, Literal
 import httpx
 from langchain_core.callbacks import adispatch_custom_event
 from langchain_core.tools import tool
-from langchain_community.tools import DuckDuckGoSearchResults
 from langchain_community.utilities import SearxSearchWrapper
 from langchain_openai import ChatOpenAI
 from langgraph.graph import MessagesState, StateGraph
@@ -56,8 +55,6 @@ logger = logging.getLogger(__name__)
 _TRUE_VALUES = {"1", "true", "yes", "on"}
 _FALSE_VALUES = {"0", "false", "no", "off"}
 
-_duckduckgo_web_search = DuckDuckGoSearchResults(output_format="list", num_results=5, region="de-de", time="d")
-_OPENAI_API_SEARCH_URL = "https://api.openai.com/v1"
 _DEFAULT_SEARXNG_HOST = "http://searxng:8080"
 
 
@@ -183,26 +180,6 @@ for pair in _raw_registry.split(","):
 logger.info("Agent registry: %s", list(AGENT_REGISTRY.keys()))
 
 
-def _get_openai_web_search_config() -> dict[str, str | None]:
-    """Resolve dedicated config for the OpenAI-backed web-search backend."""
-    model = (
-        os.getenv("INTERACTION_WEB_SEARCH_OPENAI_MODEL") or "gpt-5.4-mini-2026-03-17"
-    ).strip()
-    if not model:
-        model = "gpt-5.4-mini-2026-03-17"
-
-    return {
-        "model": model,
-        # Force the dedicated search client onto OpenAI unless explicitly overridden.
-        "base_url": _OPENAI_API_SEARCH_URL,
-        "api_key": (
-            os.getenv("INTERACTION_WEB_SEARCH_OPENAI_API_KEY")
-            or os.getenv("OPENAI_API_KEY")
-            or None
-        ),
-    }
-
-
 def _get_searxng_web_search_config() -> dict[str, str]:
     """Resolve config for the self-hosted SearXNG-backed web-search backend."""
     host = (os.getenv("INTERACTION_WEB_SEARCH_SEARXNG_HOST") or _DEFAULT_SEARXNG_HOST).strip()
@@ -210,78 +187,6 @@ def _get_searxng_web_search_config() -> dict[str, str]:
         host = _DEFAULT_SEARXNG_HOST
 
     return {"host": host}
-
-
-def _get_openai_web_search_tool() -> dict[str, Any]:
-    """Build the GA OpenAI web-search tool config with an approximate Germany location."""
-    return {
-        "type": "web_search",
-        "user_location": {
-            "type": "approximate",
-            "country": "DE",
-        },
-    }
-
-
-def _extract_openai_web_search_text(response: Any) -> str:
-    """Normalize an OpenAI Responses API result to plain text."""
-    text = getattr(response, "text", None)
-    if isinstance(text, str) and text.strip():
-        return text.strip()
-
-    content = getattr(response, "content", None)
-    if isinstance(content, str) and content.strip():
-        return content.strip()
-    if isinstance(content, list):
-        parts = [
-            part.get("text", "")
-            for part in content
-            if isinstance(part, dict) and part.get("type") == "text" and part.get("text")
-        ]
-        if parts:
-            return "\n".join(parts).strip()
-
-    # Ignore annotations/citations and keep the wrapper contract as plain text.
-    content_blocks = getattr(response, "content_blocks", None)
-    if isinstance(content_blocks, list):
-        parts = [
-            block.get("text", "")
-            for block in content_blocks
-            if isinstance(block, dict) and block.get("type") == "text" and block.get("text")
-        ]
-        if parts:
-            return "\n".join(parts).strip()
-
-    raise ValueError("OpenAI web search returned no text content.")
-
-
-@functools.lru_cache(maxsize=1)
-def _get_openai_web_search_llm() -> Any:
-    """Build the dedicated ChatOpenAI client for built-in web search."""
-    config = _get_openai_web_search_config()
-    if not config["api_key"]:
-        raise RuntimeError(
-            "OpenAI web search requires INTERACTION_WEB_SEARCH_OPENAI_API_KEY or OPENAI_API_KEY."
-        )
-
-    kwargs: dict[str, Any] = {
-        "model": config["model"],
-        "api_key": config["api_key"],
-        # Keep the internal Responses API call from emitting structured streaming
-        # chunks into the outer AG-UI SSE stream.
-        "disable_streaming": True,
-        "use_responses_api": True,
-        "reasoning_effort": "low",
-        "base_url": config["base_url"],
-    }
-
-    logger.info(
-        "Web search backend=openai model=%s base_url=%s",
-        config["model"],
-        config["base_url"],
-    )
-
-    return ChatOpenAI(**kwargs).bind_tools([_get_openai_web_search_tool()])
 
 
 @functools.lru_cache(maxsize=1)
@@ -292,31 +197,9 @@ def _get_searxng_web_search_wrapper() -> SearxSearchWrapper:
     return SearxSearchWrapper(searx_host=config["host"], k=5)
 
 
-def _web_search_duckduckgo(query: str) -> str:
-    """Search the public web with DuckDuckGo."""
-    logger.info("Web search backend=duckduckgo")
-    return _duckduckgo_web_search.run(query)
-
-
 def _web_search_searxng(query: str) -> str:
     """Search the public web with a self-hosted SearXNG instance."""
     return _get_searxng_web_search_wrapper().results(query, num_results=5, categories=["it", "science", "news"], language="de", engines=["google", "bing", "duckduckgo", "brave", "wiki"])
-
-
-def _web_search_openai(query: str) -> str:
-    """Search the public web with ChatOpenAI built-in web search."""
-    response = _get_openai_web_search_llm().invoke(query)
-    return _extract_openai_web_search_text(response)
-
-
-# Manual backend selection for web_search_tool. Keep exactly one assignment active.
-# The SearXNG variant uses INTERACTION_WEB_SEARCH_SEARXNG_HOST and the dedicated
-# self-hosted SearXNG container from the Docker stack.
-# The OpenAI variant uses INTERACTION_WEB_SEARCH_OPENAI_* config and a dedicated
-# Responses API client instead of the main interaction-model endpoint.
-#_active_web_search_backend = _web_search_duckduckgo
-#_active_web_search_backend = _web_search_openai
-_active_web_search_backend = _web_search_searxng
 
 
 async def _fetch_agent_card(
@@ -560,7 +443,7 @@ def web_search_tool(query: str) -> str:
     """
     lang = _language.get()
     try:
-        return _active_web_search_backend(query)
+        return _web_search_searxng(query)
     except Exception:
         logger.exception("Web search failed for query: %s", query)
         return tr("web_search_failed", lang)

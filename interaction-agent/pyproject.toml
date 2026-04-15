@@ -15,7 +15,6 @@ dependencies = [
     "langchain-community>=0.3.31",
     "a2a-sdk>=0.3.0",
     "httpx>=0.28.1",
-    "ddgs>=9.6.1",
 ]
 
 [project.optional-dependencies]
