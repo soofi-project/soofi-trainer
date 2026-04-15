@@ -62,6 +62,10 @@ _STRINGS: dict[str, dict[Language, str]] = {
         "de": "Die Websuche ist fehlgeschlagen. Bitte versuche es erneut oder formuliere die Anfrage genauer.",
         "en": "Web search failed. Please try again or rephrase the request more specifically.",
     },
+    "web_search_no_results": {
+        "de": "Keine Web-Treffer gefunden.",
+        "en": "No web results found.",
+    },
     # SSE error
     "sse_error": {
         "de": "\n\n[Fehler bei der Verarbeitung]",

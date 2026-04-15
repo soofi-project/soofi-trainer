@@ -197,9 +197,20 @@ def _get_searxng_web_search_wrapper() -> SearxSearchWrapper:
     return SearxSearchWrapper(searx_host=config["host"], k=5)
 
 
-def _web_search_searxng(query: str) -> str:
+def _web_search_searxng(query: str, language: Language) -> str:
     """Search the public web with a self-hosted SearXNG instance."""
-    return _get_searxng_web_search_wrapper().results(query, num_results=5, categories=["it", "science", "news"], language="de", engines=["google", "bing", "duckduckgo", "brave", "wiki"])
+    results = _get_searxng_web_search_wrapper().results(
+        query,
+        num_results=5,
+        language=language,
+        engines=["google", "bing", "duckduckgo", "brave", "wiki"],
+    )
+    if not results:
+        return tr("web_search_no_results", language)
+    return "\n\n".join(
+        f"**{r.get('title', '')}** — {r.get('link', '')}\n{r.get('snippet', '')}"
+        for r in results
+    )
 
 
 async def _fetch_agent_card(
@@ -443,7 +454,7 @@ def web_search_tool(query: str) -> str:
     """
     lang = _language.get()
     try:
-        return _web_search_searxng(query)
+        return _web_search_searxng(query, lang)
     except Exception:
         logger.exception("Web search failed for query: %s", query)
         return tr("web_search_failed", lang)
