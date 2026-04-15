@@ -66,6 +66,11 @@ TRACKERS = [
         chunk_key="",
         on_start_label="loading_agent_card",
     ),
+    ToolStreamTracker(
+        tool_name="web_search_tool",
+        chunk_key="",
+        on_start_label="search_web",
+    ),
 ]
 
 # Initialized at startup

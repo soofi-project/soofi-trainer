@@ -3,16 +3,15 @@
 import asyncio
 import collections
 import contextvars
-import functools
 import json
 import logging
 import os
+import re
 from typing import Any, Literal
 
 import httpx
 from langchain_core.callbacks import adispatch_custom_event
 from langchain_core.tools import tool
-from langchain_community.utilities import SearxSearchWrapper
 from langchain_openai import ChatOpenAI
 from langgraph.graph import MessagesState, StateGraph
 from langgraph.graph.state import CompiledStateGraph
@@ -189,28 +188,78 @@ def _get_searxng_web_search_config() -> dict[str, str]:
     return {"host": host}
 
 
-@functools.lru_cache(maxsize=1)
-def _get_searxng_web_search_wrapper() -> SearxSearchWrapper:
-    """Build the dedicated SearXNG client for self-hosted web search."""
-    config = _get_searxng_web_search_config()
-    logger.info("Web search backend=searxng host=%s", config["host"])
-    return SearxSearchWrapper(searx_host=config["host"], k=5)
+_WEB_SEARCH_ENGINES = [
+    "google",
+    "bing",
+    "wikipedia",
+    # "duckduckgo" and "brave" do not reliably honor the `language`
+    # parameter — foreign-language hits leak into the results otherwise.
+    # "duckduckgo",
+    # "brave",
+]
+_WEB_SEARCH_RESULT_LIMIT = 5
+
+# CJK, Hiragana/Katakana, Arabic, Hebrew, Cyrillic. Even Bing's `language=de`
+# filter is only a hint, so hits in these scripts still leak through — we
+# drop them client-side for DE/EN user turns.
+_NON_LATIN_SCRIPT_RE = re.compile(
+    r"[\u0400-\u04ff\u0590-\u05ff\u0600-\u06ff\u3040-\u30ff\u4e00-\u9fff]"
+)
 
 
-def _web_search_searxng(query: str, language: Language) -> str:
-    """Search the public web with a self-hosted SearXNG instance."""
-    results = _get_searxng_web_search_wrapper().results(
-        query,
-        num_results=5,
-        language=language,
-        engines=["google", "bing", "duckduckgo", "brave", "wiki"],
-    )
-    if not results:
+def _looks_non_latin(text: str) -> bool:
+    """True if more than 15% of characters are non-Latin script."""
+    if not text:
+        return False
+    non_latin = len(_NON_LATIN_SCRIPT_RE.findall(text))
+    return non_latin / len(text) > 0.15
+
+
+async def _web_search_searxng(query: str, language: Language) -> str:
+    """Search the public web with a self-hosted SearXNG instance.
+
+    Queries the SearXNG JSON API directly (instead of SearxSearchWrapper) so
+    that both ``results`` (regular hits) and ``infoboxes`` (Wikipedia summary
+    cards) can be surfaced — the wrapper only exposes ``results``.
+    """
+    host = _get_searxng_web_search_config()["host"]
+    logger.info("Web search backend=searxng host=%s", host)
+    params = {
+        "q": query,
+        "format": "json",
+        "language": language,
+        "engines": ",".join(_WEB_SEARCH_ENGINES),
+    }
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        response = await client.get(f"{host.rstrip('/')}/search", params=params)
+        response.raise_for_status()
+        data = response.json()
+
+    sections: list[str] = []
+    kept = 0
+    for r in data.get("results") or []:
+        if kept >= _WEB_SEARCH_RESULT_LIMIT:
+            break
+        title = r.get("title", "")
+        url = r.get("url", "")
+        snippet = r.get("content", "")
+        if _looks_non_latin(title) or _looks_non_latin(snippet):
+            logger.info("Dropping non-Latin web hit: %s", url)
+            continue
+        sections.append(f"**{title}** — {url}\n{snippet}")
+        kept += 1
+
+    for ib in data.get("infoboxes") or []:
+        title = ib.get("infobox", "")
+        url = ib.get("id", "")
+        content = ib.get("content", "")
+        if _looks_non_latin(title) or _looks_non_latin(content):
+            continue
+        sections.append(f"**{title}** — {url}\n{content}")
+
+    if not sections:
         return tr("web_search_no_results", language)
-    return "\n\n".join(
-        f"**{r.get('title', '')}** — {r.get('link', '')}\n{r.get('snippet', '')}"
-        for r in results
-    )
+    return "\n\n".join(sections)
 
 
 async def _fetch_agent_card(
@@ -443,18 +492,22 @@ async def ask_dataset_agent_tool(question: str) -> str:
 
 
 @tool
-def web_search_tool(query: str) -> str:
+async def web_search_tool(query: str) -> str:
     """Search the public web for explicit lookup requests or current public information.
 
     Use this tool when the user explicitly asks to search or browse the web, or asks for
     current/latest/recent public-web information outside the dataset and training flows.
 
+    Keep queries short and natural — plain keywords work best. Avoid quoted phrases,
+    OR-operators, or site:-filters: SearXNG aggregates several engines, most of which
+    handle these operators poorly, which collapses recall to near-zero.
+
     Args:
-        query: The search query to look up on the public web.
+        query: Short, plain-keyword query (e.g. "Wetter Hannover", "Bars Hannover").
     """
     lang = _language.get()
     try:
-        return _web_search_searxng(query, lang)
+        return await _web_search_searxng(query, lang)
     except Exception:
         logger.exception("Web search failed for query: %s", query)
         return tr("web_search_failed", lang)

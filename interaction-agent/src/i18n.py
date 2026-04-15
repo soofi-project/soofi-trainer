@@ -22,6 +22,10 @@ _STRINGS: dict[str, dict[Language, str]] = {
         "de": "Lade Agentenkarte\u2026",
         "en": "Loading agent card\u2026",
     },
+    "search_web": {
+        "de": "Suche im Web\u2026",
+        "en": "Searching the web\u2026",
+    },
     # Tool return labels
     "cards_closed": {"de": "Agentenkarten geschlossen.", "en": "Agent cards closed."},
     "agent_not_found": {
