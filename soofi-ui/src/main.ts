@@ -1878,6 +1878,16 @@ class SoofiChat extends SignalWatcher(LitElement) {
           } else {
             this._dismissSidePanel();
             this.trainingProgressVisible = true;
+            // Panel may already have been visible with stopped polling
+            // (all prior jobs terminal). Force an immediate re-poll so a
+            // freshly started job shows up without the user having to
+            // close/reopen the panel.
+            this.updateComplete.then(() => {
+              const el = this.shadowRoot?.querySelector(
+                "soofi-training-progress",
+              ) as (HTMLElement & { refresh?: () => void }) | null;
+              el?.refresh?.();
+            });
           }
         }
         if (snapshot?.a2ui) {

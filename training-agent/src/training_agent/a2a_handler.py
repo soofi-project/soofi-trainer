@@ -102,6 +102,26 @@ class TrainingAgentExecutor(AgentExecutor):
         system_prompt = SYSTEM_PROMPT_EN if lang == "en" else SYSTEM_PROMPT_DE
         config = {"configurable": {"thread_id": thread_id, "system_prompt": system_prompt}}
         collected: list[str] = []
+        # Buffer agent text per LLM turn so we can drop pre-tool narration.
+        # Flushed on on_chat_model_end when no tool call follows, or dropped
+        # when a tool call is about to execute.
+        agent_text_buffer = ""
+
+        async def _emit_text(text: str) -> None:
+            collected.append(text)
+            await event_queue.enqueue_event(
+                TaskStatusUpdateEvent(
+                    task_id=context.task_id,
+                    context_id=context.context_id,
+                    status=TaskStatus(
+                        state=TaskState.working,
+                        message=new_agent_text_message(
+                            text, context.context_id, context.task_id
+                        ),
+                    ),
+                    final=False,
+                )
+            )
 
         try:
             async for event in graph.astream_events(
@@ -110,6 +130,13 @@ class TrainingAgentExecutor(AgentExecutor):
                 config=config,
             ):
                 if event["event"] == "on_tool_start" and event.get("name") in _MCP_TOOLS:
+                    # Drop any buffered agent text — it was pre-tool narration
+                    if agent_text_buffer:
+                        logger.info(
+                            "Dropping %d chars of pre-tool narration at tool_start",
+                            len(agent_text_buffer),
+                        )
+                        agent_text_buffer = ""
                     status_json = json.dumps(
                         {_SOOFI_EVENT_KEY: _EVENT_SEARCH_STATUS, "text": tr("calling_gateway", lang)},
                         ensure_ascii=False,
@@ -162,23 +189,35 @@ class TrainingAgentExecutor(AgentExecutor):
 
                 elif event["event"] == "on_chat_model_stream":
                     chunk = event["data"]["chunk"]
-                    if isinstance(chunk, AIMessageChunk) and chunk.content:
-                        collected.append(chunk.content)
-                        await event_queue.enqueue_event(
-                            TaskStatusUpdateEvent(
-                                task_id=context.task_id,
-                                context_id=context.context_id,
-                                status=TaskStatus(
-                                    state=TaskState.working,
-                                    message=new_agent_text_message(
-                                        chunk.content,
-                                        context.context_id,
-                                        context.task_id,
-                                    ),
-                                ),
-                                final=False,
+                    if (
+                        isinstance(chunk, AIMessageChunk)
+                        and chunk.content
+                        and not chunk.tool_calls
+                        and not chunk.tool_call_chunks
+                    ):
+                        # Buffer until on_chat_model_end — we don't yet know
+                        # whether a tool call follows this text.
+                        agent_text_buffer += chunk.content
+
+                elif event["event"] == "on_chat_model_end":
+                    output = event.get("data", {}).get("output")
+                    has_tool_call = bool(getattr(output, "tool_calls", None))
+                    buffered = agent_text_buffer
+                    agent_text_buffer = ""
+                    if has_tool_call:
+                        if buffered:
+                            logger.info(
+                                "Dropping %d chars of pre-tool narration at model_end",
+                                len(buffered),
                             )
-                        )
+                    elif buffered:
+                        await _emit_text(buffered)
+
+            # Fallback flush: if the stream ended without on_chat_model_end
+            # (unexpected event order), emit any buffered agent text now.
+            if agent_text_buffer:
+                await _emit_text(agent_text_buffer)
+                agent_text_buffer = ""
         except Exception:
             logger.exception("Error during A2A graph execution")
             await event_queue.enqueue_event(

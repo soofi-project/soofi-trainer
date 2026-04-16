@@ -113,7 +113,7 @@ class SessionLogger:
 
     def log_tool_call(self, tool_name: str, query: str = "") -> None:
         ts = datetime.now().strftime("%H:%M:%S")
-        q = query[:120]
+        q = query[:1000]
         if tool_name == "ask_advisor_tool":
             self._advisor_calls += 1
             self._append(

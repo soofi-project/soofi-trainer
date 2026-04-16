@@ -15,6 +15,38 @@ logger = logging.getLogger(__name__)
 mcp = FastMCP("soofi-training-gateway")
 
 
+_METHOD_ALIASES: dict[str, str] = {
+    "supervised fine-tuning": "sft",
+    "supervised finetuning": "sft",
+    "supervised fine tuning": "sft",
+    "überwachtes feintuning": "sft",
+    "low-rank adaptation": "lora",
+    "low rank adaptation": "lora",
+    "quantized lora": "qlora",
+    "quantisiertes lora": "qlora",
+    "retrieval-augmented generation": "rag",
+    "retrieval augmented generation": "rag",
+    "direct preference optimization": "dpo",
+    "reinforcement learning from human feedback": "rlhf",
+    "knowledge distillation": "distillation",
+    "destillation": "distillation",
+    "continued pretraining": "cpt",
+    "continual pretraining": "cpt",
+    "instruction tuning": "instruction",
+    "instruction-tuning": "instruction",
+}
+
+
+def _normalize_method(method: str) -> str:
+    """Map common synonyms/long-forms to the short enum codes.
+
+    Falls back to the lowercased/stripped input so casing/whitespace variants
+    of the short codes themselves (e.g. ``"SFT"``, ``" sft "``) also match.
+    """
+    key = method.strip().lower()
+    return _METHOD_ALIASES.get(key, key)
+
+
 @mcp.tool()
 async def start_training_job(
     method: str,
@@ -34,6 +66,7 @@ async def start_training_job(
     Returns:
         Job details including the job_id for tracking
     """
+    method = _normalize_method(method)
     try:
         training_method = TrainingMethod(method)
     except ValueError:

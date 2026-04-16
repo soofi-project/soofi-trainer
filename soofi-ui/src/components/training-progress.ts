@@ -38,6 +38,10 @@ export class TrainingProgress extends LitElement {
   @state() private polling = false;
 
   private _pollTimer: ReturnType<typeof setInterval> | null = null;
+  // Consecutive fetches with all jobs terminal. Polling only auto-stops after
+  // a grace period so a newly-submitted job has time to appear in the gateway.
+  private _allTerminalStreak = 0;
+  private static readonly ALL_TERMINAL_STOP_AFTER = 8; // ~24s at 3s interval
 
   static styles = css`
     :host {
@@ -189,9 +193,25 @@ export class TrainingProgress extends LitElement {
     }
   }
 
+  /** Force an immediate re-poll — call when a new job may have just started
+   *  while the panel is already visible (polling may have stopped after all
+   *  prior jobs reached a terminal state). */
+  public refresh(): void {
+    if (!this.visible) return;
+    // Reset grace period — a user/agent action just opened or refreshed the
+    // panel, so a new job may be imminent. Give it time to materialize.
+    this._allTerminalStreak = 0;
+    if (this._pollTimer) {
+      this._fetchJobs();
+    } else {
+      this._startPolling();
+    }
+  }
+
   private _startPolling(): void {
     if (this._pollTimer) return;
     this.polling = true;
+    this._allTerminalStreak = 0;
     this._fetchJobs();
     this._pollTimer = setInterval(() => this._fetchJobs(), 3000);
   }
@@ -218,9 +238,18 @@ export class TrainingProgress extends LitElement {
         return now - updatedAt < RECENT_THRESHOLD_MS;
       });
 
-      // Stop polling once all jobs have reached a terminal state
-      if (allJobs.length > 0 && allJobs.every((j) => TERMINAL_STATUSES.has(j.status))) {
-        this._stopPolling();
+      // Stop polling only after several consecutive all-terminal fetches —
+      // otherwise a freshly-submitted job (not yet in the DB at first poll)
+      // would be missed because polling stopped on the first empty/terminal
+      // fetch before the gateway created the record.
+      const anyActive = allJobs.some((j) => !TERMINAL_STATUSES.has(j.status));
+      if (anyActive) {
+        this._allTerminalStreak = 0;
+      } else {
+        this._allTerminalStreak += 1;
+        if (this._allTerminalStreak >= TrainingProgress.ALL_TERMINAL_STOP_AFTER) {
+          this._stopPolling();
+        }
       }
     } catch {
       // Silently ignore fetch errors — gateway may be down

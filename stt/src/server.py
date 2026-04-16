@@ -1,10 +1,14 @@
+import logging
 import os
+import re
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Literal
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 from openai import AsyncOpenAI
+
+log = logging.getLogger("soofi-stt")
 
 STT_PROVIDER = os.getenv("STT_PROVIDER")
 if STT_PROVIDER != "openai":
@@ -49,6 +53,49 @@ _PHANTOM_PREFIXES = (
 )
 
 STT_BASE_URL = os.getenv("STT_BASE_URL")  # None → api.openai.com, set → local endpoint
+
+
+# Whole-word replacements applied to the transcript per language. Needed because
+# Whisper occasionally normalizes proper nouns to more common spellings (e.g.
+# "Soofi" → "Sofi") even when the WHISPER_PROMPT lists the intended spelling.
+# Two env vars per language, pipe-separated, aligned 1:1:
+#   STT_DE_REPLACEMENTS_KEYS=Sofi | Sofie
+#   STT_DE_REPLACEMENTS_VALUES=Soofi | Soofi
+# Matching is case-insensitive with word boundaries, so "Sofia" is not touched.
+def _parse_replacements(lang: str) -> list[tuple[re.Pattern[str], str]]:
+    keys_raw = os.getenv(f"STT_{lang.upper()}_REPLACEMENTS_KEYS", "")
+    vals_raw = os.getenv(f"STT_{lang.upper()}_REPLACEMENTS_VALUES", "")
+    if not keys_raw or not vals_raw:
+        return []
+    keys = [k.strip() for k in keys_raw.split("|")]
+    vals = [v.strip() for v in vals_raw.split("|")]
+    if len(keys) != len(vals):
+        log.warning(
+            "STT_%s_REPLACEMENTS_KEYS has %d entries but VALUES has %d — disabled",
+            lang.upper(), len(keys), len(vals),
+        )
+        return []
+    compiled: list[tuple[re.Pattern[str], str]] = []
+    for k, v in zip(keys, vals):
+        if not k or not v:
+            continue
+        compiled.append((re.compile(rf"\b{re.escape(k)}\b", re.IGNORECASE), v))
+    return compiled
+
+
+_STT_REPLACEMENTS: dict[str, list[tuple[re.Pattern[str], str]]] = {
+    "de": _parse_replacements("de"),
+    "en": _parse_replacements("en"),
+}
+for _lang, _rules in _STT_REPLACEMENTS.items():
+    if _rules:
+        log.info("Loaded %d STT transcript replacements for %s", len(_rules), _lang)
+
+
+def _apply_replacements(text: str, language: str) -> str:
+    for pattern, replacement in _STT_REPLACEMENTS.get(language, []):
+        text = pattern.sub(replacement, text)
+    return text
 
 _client: AsyncOpenAI | None = None
 
@@ -100,4 +147,5 @@ async def transcribe(
     text = transcription.text.strip()
     if text.startswith(_PHANTOM_PREFIXES):
         text = ""
+    text = _apply_replacements(text, lang)
     return JSONResponse({"text": text})
