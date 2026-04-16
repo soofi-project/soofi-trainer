@@ -26,7 +26,7 @@ from .constants import (
 )
 from .i18n import Language, tr
 from .session_logger import SessionLogger
-from .speech import RE_SENTENCE_END, generate_speech_text
+from .speech import generate_speech_text
 
 logger = logging.getLogger(__name__)
 
@@ -246,7 +246,6 @@ class SSEStream:
                 self._response_text,
                 has_search_results=self._has_search_results(),
                 lang=self._language,
-                is_final=True,
             )
             if speech:
                 yield _sse({"type": "SPEECH_TEXT", "text": speech})
@@ -484,8 +483,6 @@ class SSEStream:
 
     def _maybe_emit_speech(self) -> list[str]:
         if self._speech_emitted:
-            return []
-        if not RE_SENTENCE_END.search(self._response_text):
             return []
         speech = generate_speech_text(
             self._response_text,

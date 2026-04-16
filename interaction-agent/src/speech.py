@@ -9,16 +9,16 @@ _RE_MD_FORMAT = re.compile(r"[*_`]+")
 _RE_WHITESPACE = re.compile(r"\s+")
 _SPEECH_MIN_CHARS = 15  # don't speak trivially short responses
 _SPEECH_MIN_RESULT_CHARS = 25  # don't emit speech for filler-only first sentences
-RE_SENTENCE_END = re.compile(r"(?<![A-Z0-9])[.!?]\s")  # sentence boundary for early TTS trigger
 # Lines that start a structured markdown block — stop collecting intro before these
 _RE_STRUCTURE_LINE = re.compile(r"^\s*(?:#{1,6}\s|[-*]\s|\d+\.\s)")
-_SPEECH_MAX_CHARS = 200  # upper limit to avoid reading very long intros
 # Filler opener sentences — stripped before speaking so TTS never plays "Perfekt!" alone.
 # Matches a whole short opener sentence (up to ~4 words) ending in .!? — case insensitive.
 _RE_FILLER_OPENER = re.compile(
     r"^(?:"
     r"perfekt|gerne|gut|sehr gut|super|okay|ok|klar|alles klar|verstanden|"
-    r"perfect|great|sure|alright|all right|got it|understood|awesome|nice"
+    r"hallo|hi|hey|hallöchen|guten tag|guten morgen|guten abend|grüß dich|servus|"
+    r"perfect|great|sure|alright|all right|got it|understood|awesome|nice|"
+    r"hello|good morning|good afternoon|good evening|greetings"
     r")[!.?]+\s*",
     re.IGNORECASE,
 )
@@ -59,14 +59,13 @@ def generate_speech_text(
     *,
     has_search_results: bool = False,
     lang: Language = "de",
-    is_final: bool = False,
 ) -> str:
-    """Extract speakable intro prose from a Markdown response for TTS.
+    """Extract the first speakable sentence from a Markdown response for TTS.
 
     - Collects lines up to the first structural element (header, bullet, list)
     - If the whole response is structural, returns a static fallback phrase
-    - Reads all intro sentences; stops and converts a colon-ending sentence
-      (which would introduce a list) to a period so it sounds natural
+    - Returns only the first complete sentence; a colon-ending sentence is
+      converted to a period (list follow-ups are not spoken)
     """
     # Collect only the intro lines before any structural markdown
     intro_lines: list[str] = []
@@ -102,34 +101,34 @@ def generate_speech_text(
     # Split glued sentences like "eins.zwei" — abbreviations are already masked
     intro = _normalize_sentence_spacing(intro)
 
-    # Collect sentences; rules:
-    # - Only include sentences that end with proper punctuation (.!?) — trailing
-    #   fragments without punctuation are incomplete (early-emission artifact)
-    # - When a sentence ends with ":" it introduces a list: replace colon with
-    #   "." and stop so list items are not read out
+    # Speak only the first complete sentence. Rules:
+    # - Sentence must end with proper punctuation (.!?) — incomplete fragments
+    #   without punctuation are early-emission artifacts; return empty and let
+    #   the caller retry once more text has streamed in.
+    # - A sentence ending in ":" introduces a list: swap ":" for "." and speak.
     sentences = re.split(r"(?<=[.!?])\s+", intro)
-    result: list[str] = []
+    first: str | None = None
     for sentence in sentences:
         s = sentence.strip()
         if not s:
             continue
         if s.endswith(":"):
-            result.append(s[:-1] + ".")
+            first = s[:-1] + "."
             break
         if not re.search(r"[.!?]$", s):
-            break  # incomplete fragment — stop here
-        result.append(s)
-        if sum(len(x) for x in result) >= _SPEECH_MAX_CHARS:
             break
+        first = s
+        break
 
-    joined = _unmask_abbreviations(" ".join(result).strip())
-    # Hold back speech until we have enough content — avoids emitting single
-    # short openers while longer sentences are still streaming.
+    if not first:
+        return ""
+    joined = _unmask_abbreviations(first)
+    # Hold back speech if the first sentence is too short — avoids emitting a
+    # trivial opener while the informative follow-up is still streaming.
     if len(joined) < _SPEECH_MIN_RESULT_CHARS:
         return ""
-    # During streaming (not final), also require ≥ 2 complete sentences so we
-    # don't speak just the first short sentence while the informative follow-up
-    # is still streaming in. At end-of-stream a single sentence is fine.
-    if not is_final and len(result) < 2:
-        return ""
+    # Strip a trailing period — TTS produces a softer cadence without the hard
+    # stop. "!" and "?" are kept because they carry intonation.
+    if joined.endswith("."):
+        joined = joined[:-1]
     return joined

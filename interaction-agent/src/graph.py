@@ -122,6 +122,13 @@ class SlotState(BaseModel):
         return None
 
 
+# Per-request slot snapshot — set in run_tools before tool execution so tools
+# can check the user's workflow intent without needing access to graph state.
+_slots: contextvars.ContextVar[SlotState | None] = contextvars.ContextVar(
+    "_slots", default=None
+)
+
+
 class SoofiState(TypedDict):
     """Graph state: messages plus extracted slot state."""
 
@@ -398,6 +405,16 @@ async def ask_training_agent_tool(question: str) -> str:
     lang = _language.get()
     full_text = ""
     lang_tag = f" [LANG:{lang}]"
+
+    # Belt-and-suspenders: if this is a training-start (all 4 slots filled and
+    # workflow_intent=True), open the view up front so the user sees the panel
+    # immediately — independent of whether the job_started envelope arrives.
+    slots = _slots.get()
+    if slots and slots.workflow_intent and slots.next_missing() is None:
+        logger.info("All slots filled — pre-opening training view on tool entry")
+        await adispatch_custom_event(
+            TRAINING_VIEW_EVENT, {TRAINING_VIEW_KEY: {"action": "open"}}
+        )
 
     try:
         async for chunk in _stream_training_agent(question + lang_tag, context_id=None):
@@ -700,7 +717,11 @@ def build_graph() -> CompiledStateGraph:
         return {"messages": [response]}
 
     async def run_tools(state: SoofiState) -> dict[str, Any]:
-        result = await tool_node.ainvoke(state)
+        token = _slots.set(state.get("slots") or SlotState())
+        try:
+            result = await tool_node.ainvoke(state)
+        finally:
+            _slots.reset(token)
         for msg in result["messages"]:
             logger.info("Tool result (%s): %s", msg.name, str(msg.content)[:500])
         return result
