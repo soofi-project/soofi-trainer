@@ -145,15 +145,21 @@ _TRANSITIONS: dict[Language, dict[str, str]] = {
     "de": {
         "use_case": "Für welchen Anwendungsfall möchten Sie ein Modell spezialisieren?",
         "dataset": "Soll ich dazu passende Datensätze suchen?",
+        "dataset_searched": "Welchen dieser Datensätze möchtest du verwenden?",
         "base_model": "Soll ich ein passendes Basismodell empfehlen?",
+        "base_model_recommended": "Welches dieser Modelle möchtest du verwenden?",
         "method": "Soll ich eine Spezialisierungsmethode empfehlen?",
+        "method_recommended": "Welche dieser Methoden möchtest du verwenden?",
         "ready": "Soll ich das Training jetzt starten?",
     },
     "en": {
         "use_case": "Which use case would you like to specialize a model for?",
         "dataset": "Should I search for suitable datasets?",
+        "dataset_searched": "Which of these datasets would you like to use?",
         "base_model": "Should I recommend a suitable base model?",
+        "base_model_recommended": "Which of these models would you like to use?",
         "method": "Should I recommend a specialization method?",
+        "method_recommended": "Which of these methods would you like to use?",
         "ready": "Should I start the training now?",
     },
 }
@@ -491,23 +497,14 @@ async def show_agent_card(
 
 
 
-@tool
-async def ask_advisor_tool(question: str) -> str:
-    """Ask the Advisor agent a domain question via A2A.
-
-    Use this tool for domain questions about LLM specialization,
-    RAG, LoRA, fine-tuning, use-case analysis, etc.
-
-    Args:
-        question: The domain question to send to the Advisor.
-    """
+async def _call_advisor(question: str) -> str:
+    """Shared streaming logic for all advisor-backed tools."""
     lang = _language.get()
     full_text = ""
     lang_tag = f" [LANG:{lang}]"
 
     try:
         async for chunk in _stream_advisor(question + lang_tag, context_id=None):
-            # Detect special event envelopes from the advisor
             try:
                 parsed = json.loads(chunk)
                 event_type = parsed.get(SOOFI_EVENT_KEY) if isinstance(parsed, dict) else None
@@ -522,7 +519,6 @@ async def ask_advisor_tool(question: str) -> str:
                 await adispatch_custom_event(
                     ADVISOR_EVENT, {ADVISOR_KEY_RAG_SOURCES: parsed["sources"]}
                 )
-                # Store source URLs so control_doc_viewer can reference them
                 urls = [
                     s.get("url", "") for s in parsed.get("sources", [])
                     if s.get("url")
@@ -542,14 +538,53 @@ async def ask_advisor_tool(question: str) -> str:
         if not full_text:
             logger.warning("Falling back to blocking ask_advisor call")
             full_text = await _ask_advisor(question, context_id=None)
-        # Partial content already streamed — return what we have to avoid duplicates
 
-    # Fallback if streaming completed but yielded no text (e.g. only status events)
     if not full_text:
         logger.warning("Advisor streaming yielded no content, falling back to blocking call")
         full_text = await _ask_advisor(question, context_id=None)
 
     return full_text
+
+
+@tool
+async def ask_advisor_tool(question: str) -> str:
+    """Ask the Advisor agent a general domain question via A2A.
+
+    Use this tool for general knowledge questions about LLM specialization,
+    RAG, LoRA, fine-tuning, use-case analysis, the Soofi project, and related topics.
+    Do NOT use this for slot-driven base-model or method recommendations —
+    use recommend_base_model_tool or recommend_method_tool instead.
+
+    Args:
+        question: The domain question to send to the Advisor.
+    """
+    return await _call_advisor(question)
+
+
+@tool
+async def recommend_base_model_tool(question: str) -> str:
+    """Ask the Advisor agent to recommend a base model for the current use case and dataset.
+
+    Use this tool exclusively when the user needs a base model recommendation
+    as part of the training workflow (use case and dataset are already known).
+
+    Args:
+        question: The recommendation request, including use case and dataset context.
+    """
+    return await _call_advisor(question)
+
+
+@tool
+async def recommend_method_tool(question: str) -> str:
+    """Ask the Advisor agent to recommend a specialization method (LoRA, QLoRA, SFT, DPO, RAG).
+
+    Use this tool exclusively when the user needs a method recommendation
+    as part of the training workflow (use case, dataset, and base model are already known).
+
+    Args:
+        question: The recommendation request, including all known slot context.
+    """
+    return await _call_advisor(question)
 
 
 @tool
@@ -775,10 +810,24 @@ _STREAMING_TOOLS: set[str] = {
     "ask_advisor_tool",
     "ask_training_agent_tool",
     "ask_dataset_agent_tool",
+    "recommend_base_model_tool",
+    "recommend_method_tool",
 }
 # Streaming tools that should be followed by a template transition question.
 # Training agent handles its own follow-ups, so it's excluded.
-_TRANSITION_TOOLS: set[str] = {"ask_advisor_tool", "ask_dataset_agent_tool"}
+_TRANSITION_TOOLS: set[str] = {
+    "ask_advisor_tool",
+    "ask_dataset_agent_tool",
+    "recommend_base_model_tool",
+    "recommend_method_tool",
+}
+
+# Maps tool name → _TRANSITIONS key override (for tools with unambiguous intent).
+_TOOL_TRANSITION_KEY: dict[str, str] = {
+    "ask_dataset_agent_tool": "dataset_searched",
+    "recommend_base_model_tool": "base_model_recommended",
+    "recommend_method_tool": "method_recommended",
+}
 
 # Narration triggers — phrases that announce or claim an action (search/ask/
 # check/start) but belong in a tool call, not user-facing text. If the agent
@@ -787,6 +836,10 @@ _NARRATION_TRIGGERS: tuple[str, ...] = (
     # German — announcing
     "ich suche", "ich frage", "ich prüfe", "ich schaue", "ich recherchiere",
     "ich werde suchen", "ich werde fragen", "ich werde prüfen",
+    "ich beginne mit", "ich starte die suche", "ich leite die suche",
+    "einen moment bitte", "einen moment noch",
+    "der nächste schritt besteht", "als nächstes suche",
+    "ich habe bereits deinen", "ich habe bereits den anwendungsfall",
     "lass mich", "lassen sie mich",
     "hier sind die ergebnisse", "hier ist meine suche",
     "die suche hat ergeben", "die suche ergab",
@@ -831,6 +884,8 @@ def build_graph() -> CompiledStateGraph:
     """Build the LangGraph ReAct agent for the Interaction Agent."""
     tools = [
         ask_advisor_tool,
+        recommend_base_model_tool,
+        recommend_method_tool,
         ask_training_agent_tool,
         ask_dataset_agent_tool,
         web_search_tool,
@@ -919,7 +974,18 @@ def build_graph() -> CompiledStateGraph:
             return {}
         lang = _language.get()
         next_slot = slots.next_missing() or "ready"
-        text = _TRANSITIONS[lang].get(next_slot)
+        key = next_slot
+        # Tools with unambiguous intent override the slot-derived key directly.
+        for msg in reversed(state["messages"]):
+            if hasattr(msg, "tool_calls"):
+                break
+            last_tool = getattr(msg, "name", None)
+            if last_tool in _TOOL_TRANSITION_KEY:
+                key = _TOOL_TRANSITION_KEY[last_tool]
+                break
+            if last_tool is not None:
+                break
+        text = _TRANSITIONS[lang].get(key)
         if not text:
             return {}
         await adispatch_custom_event(TRANSITION_EVENT, {TRANSITION_KEY: "\n\n" + text})

@@ -120,6 +120,18 @@ class SessionLogger:
                 f'<!-- type:tool_call tool:ask_advisor ts:{ts} query:"{q}" -->\n'
                 f'**[{ts}] → Advisor** *(query: "{q}")*\n\n'
             )
+        elif tool_name == "recommend_base_model_tool":
+            self._advisor_calls += 1
+            self._append(
+                f'<!-- type:tool_call tool:recommend_base_model ts:{ts} query:"{q}" -->\n'
+                f'**[{ts}] → Advisor (Modellempfehlung)** *(query: "{q}")*\n\n'
+            )
+        elif tool_name == "recommend_method_tool":
+            self._advisor_calls += 1
+            self._append(
+                f'<!-- type:tool_call tool:recommend_method ts:{ts} query:"{q}" -->\n'
+                f'**[{ts}] → Advisor (Methodenempfehlung)** *(query: "{q}")*\n\n'
+            )
         elif tool_name == "ask_training_agent_tool":
             self._training_calls += 1
             self._append(
@@ -172,6 +184,15 @@ class SessionLogger:
                 self._recommendation = "lora_finetuning"
             elif "rag" in text_lower or "retrieval" in text_lower:
                 self._recommendation = "rag"
+
+    def log_side_panel(self, kind: str, action: str, detail: str = "") -> None:
+        """Log side-panel visibility changes (agent cards, training view, doc viewer)."""
+        ts = datetime.now().strftime("%H:%M:%S")
+        suffix = f" — {detail}" if detail else ""
+        self._append(
+            f"<!-- type:side_panel kind:{kind} action:{action} ts:{ts} -->\n"
+            f"**[{ts}] Side panel:** {kind} {action}{suffix}\n\n"
+        )
 
     def log_training_started(self, job_id: str) -> None:
         self._training_started = True

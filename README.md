@@ -298,7 +298,6 @@ soofi-trainer/
 ├── knowledge-ingestion/    # One-shot ingestion container (local build)
 ├── advisor/                # LangGraph advisor agent (local build)
 ├── dataset-agent/          # LangGraph dataset search agent (local build)
-├── huggingface-mcp/        # HuggingFace MCP server (local build)
 ├── vector-mcp/             # Vector MCP server (local build)
 ├── soofi-ui/               # A2UI Lit frontend (local build)
 ├── interaction-agent/      # LangGraph ReAct agent, AG-UI SSE, A2A orchestrator (local build)

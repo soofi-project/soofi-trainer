@@ -168,6 +168,10 @@ class SSEStream:
         # we defer emission until after tail compensation so a late tool tail
         # (missed trailing chars) lands before the follow-up question.
         self._pending_transition = ""
+        # Buffer for agent-node text chunks. We only know at on_chat_model_end
+        # whether a tool call follows — if so, the text was pre-tool narration
+        # and must be dropped; otherwise it is the direct response and we flush.
+        self._agent_text_buffer = ""
 
     # -- public entry point --------------------------------------------------
 
@@ -183,6 +187,7 @@ class SSEStream:
         self._speech_emitted = False
         self._result_messages = []
         self._pending_transition = ""
+        self._agent_text_buffer = ""
 
         for t in self._trackers.values():
             t.reset()
@@ -209,6 +214,9 @@ class SSEStream:
                 elif kind == "on_chat_model_stream":
                     async for sse in self._handle_chat_stream(event):
                         yield sse
+                elif kind == "on_chat_model_end":
+                    async for sse in self._handle_chat_model_end(event):
+                        yield sse
                 elif kind == "on_chain_end":
                     output = event.get("data", {}).get("output", {})
                     if isinstance(output, dict) and "messages" in output:
@@ -222,6 +230,13 @@ class SSEStream:
                     "delta": tr("sse_error", self._language),
                 }
             )
+
+        # Fallback flush: if no tool was called and on_chat_model_end didn't
+        # flush (unexpected event order), emit the buffered agent text now.
+        if self._agent_text_buffer:
+            async for sse in self._emit_text(self._agent_text_buffer):
+                yield sse
+            self._agent_text_buffer = ""
 
         # Flush any buffered partial URL
         for sse in self._flush_buffer():
@@ -281,6 +296,13 @@ class SSEStream:
 
     async def _handle_tool_start(self, event: dict[str, Any]) -> AsyncGenerator[str, None]:
         tool_name = event.get("name")
+        # Any buffered agent text was pre-tool narration — drop it.
+        if self._agent_text_buffer:
+            logger.info(
+                "Dropping %d chars of pre-tool narration at tool_start",
+                len(self._agent_text_buffer),
+            )
+            self._agent_text_buffer = ""
         tracker = self._trackers.get(tool_name) if tool_name else None
         if tracker and not tracker.searching:
             tracker.searching = True
@@ -307,6 +329,12 @@ class SSEStream:
                     yield _sse({"type": "TOOL_CALL_END", "tool": "show_agent_card"})
                 logger.info("Emitting AGENT_CARD event: %s", card_cmd.get("action"))
                 yield _sse({"type": "AGENT_CARD", **card_cmd})
+                if self._session_logger:
+                    action = card_cmd.get("action", "")
+                    cards = card_cmd.get("cards") or []
+                    names = [c[0] for c in cards if isinstance(c, (list, tuple)) and c]
+                    detail = ", ".join(names) if names else ""
+                    self._session_logger.log_side_panel("agent_cards", action, detail)
             return
 
         # Transition event — deterministic follow-up question appended after a
@@ -324,6 +352,8 @@ class SSEStream:
             if view_cmd:
                 action = view_cmd.get("action", "open")
                 logger.info("Emitting STATE_SNAPSHOT training-progress action=%s", action)
+                if self._session_logger:
+                    self._session_logger.log_side_panel("training_view", action)
                 yield _sse(
                     {
                         "type": "STATE_SNAPSHOT",
@@ -393,6 +423,11 @@ class SSEStream:
                 if doc_cmd:
                     logger.info("Emitting DOC_VIEWER event: %s", doc_cmd)
                     yield _sse({"type": "DOC_VIEWER", **doc_cmd})
+                    if self._session_logger:
+                        action = doc_cmd.get("action", "")
+                        idx = doc_cmd.get("index")
+                        detail = f"index={idx}" if action == "open" and idx else ""
+                        self._session_logger.log_side_panel("doc_viewer", action, detail)
             except (json.JSONDecodeError, TypeError):
                 logger.warning("Failed to parse DOC_VIEWER content: %s", content[:200])
             return
@@ -424,11 +459,27 @@ class SSEStream:
         ):
             return
         # Suppress direct-LLM output while a tool is actively streaming (not yet finished).
-        # Once all tools are finished, allow through — e.g. for transition questions
-        # appended by the interaction agent after advisor/dataset responses.
         if any(t.streamed and not t.finished for t in self._trackers.values()):
             return
-        async for sse in self._emit_text(chunk.content):
+        # Buffer agent text until on_chat_model_end — by then we know whether
+        # a tool call follows (→ drop as pre-tool narration) or not (→ flush).
+        self._agent_text_buffer += chunk.content
+        return
+        yield  # pragma: no cover — generator marker
+
+    async def _handle_chat_model_end(self, event: dict[str, Any]) -> AsyncGenerator[str, None]:
+        metadata = event.get("metadata", {})
+        if metadata.get("langgraph_node") != "agent":
+            return
+        output = event.get("data", {}).get("output")
+        has_tool_call = bool(getattr(output, "tool_calls", None))
+        buffered = self._agent_text_buffer
+        self._agent_text_buffer = ""
+        if has_tool_call or not buffered:
+            if has_tool_call and buffered:
+                logger.info("Dropping %d chars of pre-tool narration", len(buffered))
+            return
+        async for sse in self._emit_text(buffered):
             yield sse
         await asyncio.sleep(STREAM_DELAY)
 
