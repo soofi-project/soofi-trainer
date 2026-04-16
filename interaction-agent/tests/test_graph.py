@@ -12,15 +12,22 @@ import pytest
 # Inline copy of after_tools logic (avoids importing graph.py with all its deps)
 # ---------------------------------------------------------------------------
 
+# Advisor and dataset agent run a template transition after streaming;
+# training agent ends directly; UI tools go back to the agent for confirmation.
 _STREAMING_TOOLS = {"ask_advisor_tool", "ask_training_agent_tool", "ask_dataset_agent_tool"}
+_TRANSITION_TOOLS = {"ask_advisor_tool", "ask_dataset_agent_tool"}
 
 
 def after_tools(state: dict) -> str:
-    """Skip the second LLM call if a streaming tool already delivered the response."""
+    """Route by last tool kind — transition for advisor/dataset, end for training,
+    agent (second LLM call) for UI tools."""
     for msg in reversed(state["messages"]):
         if hasattr(msg, "tool_calls"):
             break
-        if hasattr(msg, "name") and msg.name in _STREAMING_TOOLS:
+        name = getattr(msg, "name", None)
+        if name in _TRANSITION_TOOLS:
+            return "transition"
+        if name in _STREAMING_TOOLS:
             return "__end__"
     return "agent"
 
@@ -31,22 +38,22 @@ def after_tools(state: dict) -> str:
 
 
 class TestAfterTools:
-    """Tests for after_tools — short-circuit second LLM call for streaming tools."""
+    """Tests for after_tools — route by tool kind after a tool call."""
 
-    def test_advisor_tool_skips(self) -> None:
+    def test_advisor_tool_goes_to_transition(self) -> None:
         tool_msg = SimpleNamespace(name="ask_advisor_tool")
         ai_msg = SimpleNamespace(tool_calls=[{"name": "ask_advisor_tool"}])
-        assert after_tools({"messages": [ai_msg, tool_msg]}) == "__end__"
+        assert after_tools({"messages": [ai_msg, tool_msg]}) == "transition"
 
-    def test_training_tool_skips(self) -> None:
+    def test_training_tool_ends(self) -> None:
         tool_msg = SimpleNamespace(name="ask_training_agent_tool")
         ai_msg = SimpleNamespace(tool_calls=[{"name": "ask_training_agent_tool"}])
         assert after_tools({"messages": [ai_msg, tool_msg]}) == "__end__"
 
-    def test_dataset_agent_tool_skips(self) -> None:
+    def test_dataset_agent_tool_goes_to_transition(self) -> None:
         tool_msg = SimpleNamespace(name="ask_dataset_agent_tool")
         ai_msg = SimpleNamespace(tool_calls=[{"name": "ask_dataset_agent_tool"}])
-        assert after_tools({"messages": [ai_msg, tool_msg]}) == "__end__"
+        assert after_tools({"messages": [ai_msg, tool_msg]}) == "transition"
 
     def test_non_streaming_tool_continues(self) -> None:
         tool_msg = SimpleNamespace(name="show_agent_card")
@@ -61,24 +68,32 @@ class TestAfterTools:
     def test_empty_messages(self) -> None:
         assert after_tools({"messages": []}) == "agent"
 
-    def test_multiple_tool_results_streaming_wins(self) -> None:
-        """When multiple tools are called, streaming tool should still skip."""
+    def test_multiple_tool_results_advisor_last(self) -> None:
+        """When advisor is last, route to transition."""
         ai_msg = SimpleNamespace(
             tool_calls=[{"name": "show_agent_card"}, {"name": "ask_advisor_tool"}]
         )
         tool1 = SimpleNamespace(name="show_agent_card")
         tool2 = SimpleNamespace(name="ask_advisor_tool")
-        # tool2 is last → found first in reverse scan
-        assert after_tools({"messages": [ai_msg, tool1, tool2]}) == "__end__"
+        assert after_tools({"messages": [ai_msg, tool1, tool2]}) == "transition"
 
-    def test_multiple_tool_results_reversed_order(self) -> None:
-        """Streaming tool first, non-streaming last — must still skip."""
+    def test_multiple_tool_results_advisor_first(self) -> None:
+        """Advisor first, non-streaming last — scan continues past the non-streaming tool."""
         ai_msg = SimpleNamespace(
             tool_calls=[{"name": "ask_advisor_tool"}, {"name": "show_agent_card"}]
         )
         tool1 = SimpleNamespace(name="ask_advisor_tool")
         tool2 = SimpleNamespace(name="show_agent_card")
-        # tool2 (non-streaming) is last in reverse scan — must still find tool1
+        # Reverse scan: tool2 (no match, continue) → tool1 (advisor → transition)
+        assert after_tools({"messages": [ai_msg, tool1, tool2]}) == "transition"
+
+    def test_multiple_tool_results_training_first(self) -> None:
+        """Training tool first, non-streaming last — scan continues past and returns __end__."""
+        ai_msg = SimpleNamespace(
+            tool_calls=[{"name": "ask_training_agent_tool"}, {"name": "show_agent_card"}]
+        )
+        tool1 = SimpleNamespace(name="ask_training_agent_tool")
+        tool2 = SimpleNamespace(name="show_agent_card")
         assert after_tools({"messages": [ai_msg, tool1, tool2]}) == "__end__"
 
 

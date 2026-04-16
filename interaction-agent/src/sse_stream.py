@@ -21,6 +21,8 @@ from .constants import (
     DOC_VIEWER_KEY,
     TRAINING_VIEW_EVENT,
     TRAINING_VIEW_KEY,
+    TRANSITION_EVENT,
+    TRANSITION_KEY,
 )
 from .i18n import Language, tr
 from .session_logger import SessionLogger
@@ -162,6 +164,10 @@ class SSEStream:
         self._speech_emitted = False
         self._result_messages: list[Any] = []
         self._session_logger = session_logger
+        # Transition text is dispatched by the graph during tool finalization;
+        # we defer emission until after tail compensation so a late tool tail
+        # (missed trailing chars) lands before the follow-up question.
+        self._pending_transition = ""
 
     # -- public entry point --------------------------------------------------
 
@@ -176,6 +182,7 @@ class SSEStream:
         self._chunk_buffer = ""
         self._speech_emitted = False
         self._result_messages = []
+        self._pending_transition = ""
 
         for t in self._trackers.values():
             t.reset()
@@ -222,6 +229,15 @@ class SSEStream:
         for sse in self._emit_tails():
             yield sse
 
+        # Emit any buffered transition text — placed after tail so a missed
+        # trailing chunk from the tool arrives before the follow-up question.
+        if self._pending_transition:
+            async for sse in self._emit_text(self._pending_transition):
+                yield sse
+            self._pending_transition = ""
+            for sse in self._flush_buffer():
+                yield sse
+
         yield _sse({"type": "TEXT_MESSAGE_END", "messageId": self._msg_id})
 
         # Fallback speech if no sentence boundary was hit during streaming
@@ -230,6 +246,7 @@ class SSEStream:
                 self._response_text,
                 has_search_results=self._has_search_results(),
                 lang=self._language,
+                is_final=True,
             )
             if speech:
                 yield _sse({"type": "SPEECH_TEXT", "text": speech})
@@ -291,12 +308,21 @@ class SSEStream:
                 yield _sse({"type": "AGENT_CARD", **card_cmd})
             return
 
+        # Transition event — deterministic follow-up question appended after a
+        # streaming sub-agent response. Buffered so it emits after tail compensation.
+        if event.get("name") == TRANSITION_EVENT:
+            text = event.get("data", {}).get(TRANSITION_KEY)
+            if text:
+                self._pending_transition += text
+            return
+
         # Training view events — dispatched from control_training_view tool
         if event.get("name") == TRAINING_VIEW_EVENT:
             view_data = event.get("data", {})
             view_cmd = view_data.get(TRAINING_VIEW_KEY)
             if view_cmd:
                 action = view_cmd.get("action", "open")
+                logger.info("Emitting STATE_SNAPSHOT training-progress action=%s", action)
                 yield _sse(
                     {
                         "type": "STATE_SNAPSHOT",
@@ -383,6 +409,11 @@ class SSEStream:
             yield _sse({"type": "TOOL_CALL_END", "tool": tracker.tool_name})
 
     async def _handle_chat_stream(self, event: dict[str, Any]) -> AsyncGenerator[str, None]:
+        # Internal nodes (e.g. slot extraction) also emit on_chat_model_stream —
+        # their JSON output must never reach the user.
+        metadata = event.get("metadata", {})
+        if metadata.get("langgraph_node") != "agent":
+            return
         chunk = event["data"]["chunk"]
         if not (
             isinstance(chunk, AIMessageChunk)

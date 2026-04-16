@@ -1753,8 +1753,9 @@ class SoofiChat extends SignalWatcher(LitElement) {
       case "TOOL_CALL_END":
         this.searching = false;
         this.searchStatusLabel = "";
-        // All streaming sub-agents allow a second LLM call for transition questions/guidance.
-        // streaming ends at RUN_FINISHED — not here — so the user can't type before it appears.
+        // Advisor and dataset agent stream a deterministic template transition question
+        // after TOOL_CALL_END; input stays locked until the HTTP stream closes so the
+        // user doesn't type before the follow-up question appears.
         if (this._flowTimer) clearTimeout(this._flowTimer);
         if (this.flowState === "asking-training-agent" || this.flowState === "training-searching"
             || this.flowState === "training-mcp-returning" || this.flowState === "ta-returning") {
@@ -1784,18 +1785,34 @@ class SoofiChat extends SignalWatcher(LitElement) {
         // Other tools (show_agent_card, show_dashboard, etc.): no flow animation
         break;
 
-      case "SEARCH_STATUS":
+      case "SEARCH_STATUS": {
         this.searchStatusLabel = (event.label as string) || "";
-        if (this.flowState === "asking-training-agent") {
+        // A SEARCH_STATUS mid-stream means the tool is still doing work (e.g. the
+        // dataset agent runs multiple MCP searches interleaved with text). Cancel
+        // any pending returning-animation timer and re-enter the searching state.
+        if (this._flowTimer) { clearTimeout(this._flowTimer); this._flowTimer = null; }
+        const trainingStates = [
+          "asking-training-agent", "training-searching",
+          "training-mcp-returning", "ta-returning",
+        ];
+        const advisorStates = [
+          "asking-advisor", "searching", "mcp-returning", "a2a-returning",
+        ];
+        const datasetStates = [
+          "asking-dataset-agent", "dataset-searching",
+          "dataset-mcp-returning", "da-returning",
+        ];
+        if (trainingStates.includes(this.flowState)) {
           this.flowState = "training-searching";
-        } else if (this.flowState === "asking-advisor") {
+        } else if (advisorStates.includes(this.flowState)) {
           this.flowState = "searching";
-        } else if (this.flowState === "asking-dataset-agent" || this.flowState === "dataset-searching") {
+        } else if (datasetStates.includes(this.flowState)) {
           this.flowState = "dataset-searching";
           if (event.mcpTool) this.datasetMcpTarget = event.mcpTool as string;
         }
         // Other tools (show_agent_card, etc.): label shown but no flow animation
         break;
+      }
 
       case "RAG_SOURCES": {
         // Self-contained: attach directly to the current assistant message.

@@ -41,3 +41,8 @@ SOOFI_EVENT_JOB_STARTED = "job_started"
 
 # Key for RAG sources forwarded from advisor to SSE stream
 ADVISOR_KEY_RAG_SOURCES = "advisor_rag_sources"
+
+# Transition event — deterministic follow-up question appended after a streaming
+# sub-agent response, generated from the slot state (no LLM call).
+TRANSITION_EVENT = "transition_event"
+TRANSITION_KEY = "transition_text"
