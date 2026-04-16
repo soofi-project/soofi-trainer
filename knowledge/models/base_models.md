@@ -23,7 +23,8 @@ Deployment-Ziel, Anwendungsfälle, Lizenz, Herkunft und Souveränitätseigenscha
 
 > **Souveränitätsbetrachtung:** Strategische Risiken, Auditierbarkeits-Kriterien und der
 > Vergleich der Anbieter hinsichtlich digitaler Souveränität sind in
-> [`sovereignty.md`](sovereignty.md) dokumentiert.
+> [`sovereignty/grundlagen.md`](../sovereignty/grundlagen.md) und
+> [`sovereignty/anbieter_vergleich.md`](../sovereignty/anbieter_vergleich.md) dokumentiert.
 
 ---
 
@@ -35,9 +36,9 @@ Deployment-Ziel, Anwendungsfälle, Lizenz, Herkunft und Souveränitätseigenscha
 | **Koordination** | KI-Bundesverband |
 | **Land** | Deutschland 🇩🇪 / EU 🇪🇺 |
 | **Förderung** | Bundesministerium für Wirtschaft und Energie (BMWE), IPCEI-CIS, 8ra-Initiative |
-| **Lizenz** | Vollständig Open Source (Gewichte + Code) |
-| **Offenheit** | Höchste Stufe — Open Weights + offene Lizenz + europäische Governance-Struktur verhindert einseitige Lizenzänderungen |
-| **Souveränität** | Maximale digitale Souveränität: vollständig in Europa entwickelt, trainiert und betrieben. Als einzige Modelle dieser Liste werden Gewichte, Trainingscode **und** Trainingsdaten vollständig offengelegt — vollständig auditierbar und EU-AI-Act-konform. Keine geopolitische Abhängigkeit von US- oder chinesischen Anbietern. DSGVO-konform by design. Kein Vendor-Lock-in durch Konsortiumsstruktur. Empfohlene Basis für alle souveränitätskritischen Anwendungen in Industrie, Behörden und Forschung. |
+| **Lizenz** | Vollständig Open Source (Gewichte + Code + Trainingsdaten) |
+| **Offenheit** | Höchste Stufe — vollständig auditierbar, europäische Governance verhindert einseitige Lizenzänderungen |
+| **Souveränität** | Maximale digitale Souveränität — einzige Modellfamilie dieser Liste mit vollständig offengelegten Trainingsdaten. Details und Anbietervergleich siehe [`sovereignty/grundlagen.md`](../sovereignty/grundlagen.md) und [`sovereignty/anbieter_vergleich.md`](../sovereignty/anbieter_vergleich.md). |
 
 ### Geplante Modell-Releases (Stand April 2025)
 
@@ -47,7 +48,7 @@ Deployment-Ziel, Anwendungsfälle, Lizenz, Herkunft und Souveränitätseigenscha
 | Soofi 30B | 30B | MoE | Cloud | Ende Mai 2025 | Komplexes Reasoning, Dokumentenanalyse, mehrsprachiges Q&A, Zusammenfassung, Domänenadaption |
 | Soofi 120B | 120B | MoE | Cloud (Multi-GPU) | Ende Juli 2025 | High-Quality-Generierung, wissenschaftliche Texte, komplexe mehrstufige Aufgaben, industrielle Expertensysteme |
 
-> Modellnamen sind vorläufig. Alle Release-Termine unter Vorbehalt (???).
+> Modellnamen sind vorläufig. Alle Release-Termine unter Vorbehalt.
 
 ---
 
@@ -301,19 +302,6 @@ Deployment-Ziel, Anwendungsfälle, Lizenz, Herkunft und Souveränitätseigenscha
 
 ---
 
-## Anwendungsfall-Übersicht
+## Empfehlungen pro Aufgabentyp
 
-| Anwendungsfall | Empfohlene Modelle (Edge) | Empfohlene Modelle (Cloud) |
-|---------------|--------------------------|---------------------------|
-| Textklassifikation | Qwen3 4B, Phi-4-mini, Llama 3.2 3B | Qwen3 14B, Mistral Small 24B |
-| NER / Extraktion | Qwen2.5 7B, Llama 3.2 3B | Qwen3 14B, Llama 3.3 70B |
-| Zusammenfassung | Qwen3 8B, Mistral 7B | Mistral Nemo 12B, Qwen3 32B |
-| Q&A / Chatbot | Qwen3 8B, Llama 3.1 8B, Phi-4-mini | Llama 3.3 70B, Qwen3 32B |
-| Reasoning / Mathematik | Phi-4-mini, DeepSeek-R1-Distill 7B, Qwen3 4B | DeepSeek-R1-Distill 32B, Qwen3 32B |
-| Code-Generierung | Qwen3 8B | Qwen3 32B, Llama 3.3 70B |
-| Domänenadaption | Qwen2.5 7B, Llama 3.1 8B | Mistral Small 24B, Qwen2.5 32B |
-| Mehrsprachig (inkl. Deutsch) | Qwen3 8B, Mistral 7B | Mistral Nemo 12B, Qwen2.5 72B |
-| Wissenschaftliche Texte | Phi-4-mini | Phi-4 14B, DeepSeek-R1-Distill 32B |
-| Synthetische Datengenerierung | — | Nemotron-4 340B, DeepSeek-V3 |
-| Souverän (EU-Präferenz) | Soofi 8B, Mistral 7B | Soofi 30B, Soofi 120B, Mistral Nemo 12B |
-| Industrielle Anwendungen (DE) | Soofi 8B | Soofi 30B, Soofi 120B |
+Siehe [`model_selection_guide.md`](model_selection_guide.md) für die Empfehlungstabelle pro Aufgabentyp (Klassifikation, NER, Reasoning, Code etc.) mit Edge- und Cloud-Modellen.

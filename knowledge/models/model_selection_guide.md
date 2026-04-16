@@ -1,15 +1,11 @@
 # Modellauswahl nach Anwendungsfall
 
 Übersicht empfohlener Basismodelle für häufige Aufgabentypen. Für Details zu Lizenz,
-Souveränität und verfügbaren Varianten siehe die jeweilige Modellfamilien-Dokumentation.
+Souveränität und verfügbaren Varianten siehe die jeweilige Modellfamilien-Dokumentation
+in [`base_models.md`](base_models.md).
 
-## Deployment-Kategorien
-
-- **Edge** — lokales Deployment ohne Cloud-Anbindung. Consumer-GPUs (z.B. RTX 4090, 24 GB)
-  eignen sich für Modelle bis ~13B; kompakte Edge-Server wie NVIDIA DGX Spark (128 GB) können
-  Modelle bis ~70B lokal betreiben.
-- **Cloud** — dedizierte GPU-Server-Infrastruktur (z.B. H100/H200); typischerweise ab 13B.
-- **Cloud (Multi-GPU/Node)** — mehrere GPUs oder Server; typischerweise ab ~70B (dense).
+> **Deployment-Kategorien** (Edge / Cloud / Cloud Multi-GPU) und die Hardware-Grenzen pro Kategorie
+> sind in [`base_models.md`](base_models.md) dokumentiert.
 
 ## Empfehlungen nach Aufgabentyp
 
@@ -28,12 +24,8 @@ Souveränität und verfügbaren Varianten siehe die jeweilige Modellfamilien-Dok
 | Souverän (EU-Präferenz) | Soofi 8B, Mistral 7B | Soofi 30B, Soofi 120B, Mistral Nemo 12B |
 | Industrielle Anwendungen (DE) | Soofi 8B | Soofi 30B, Soofi 120B |
 
-## Souveränitäts-Empfehlung
+## Souveränitäts-Hinweis
 
-Für Anwendungen mit DSGVO, EU AI Act oder langfristiger Planungssicherheit:
-
-1. **Soofi / 8ra** — maximale Souveränität, vollständig auditierbar, europäische Governance
-2. **Mistral AI** — europäisch, stabile Apache-2.0-Lizenz, DSGVO-nah
-3. **Microsoft Phi / Meta Llama** — US-rechtliche Abhängigkeit, aber etablierte Ökosysteme
-4. **Alibaba Qwen / DeepSeek** — technisch stark, aber geopolitische Abhängigkeit und
-   Lizenz-Instabilitätsrisiko; für sensitive Anwendungen nicht empfohlen
+Für Anwendungen mit Anforderungen an digitale Souveränität, DSGVO-Konformität oder
+langfristige Planungssicherheit siehe die Priorisierung in
+[`../sovereignty/anbieter_vergleich.md`](../sovereignty/anbieter_vergleich.md).
