@@ -7,11 +7,11 @@ import json
 import logging
 import os
 import re
-from typing import Any, Literal
+from typing import Annotated, Any, Literal, TypedDict
 
 import httpx
 from langchain_core.callbacks import adispatch_custom_event
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import AnyMessage, HumanMessage, SystemMessage
 from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph
