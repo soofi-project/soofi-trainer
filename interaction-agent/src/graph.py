@@ -7,16 +7,18 @@ import json
 import logging
 import os
 import re
-from typing import Any, Literal
+from typing import Annotated, Any, Literal, TypedDict
 
 import httpx
 from langchain_core.callbacks import adispatch_custom_event
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import AnyMessage, HumanMessage, SystemMessage
 from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
-from langgraph.graph import MessagesState, StateGraph
+from langgraph.graph import StateGraph
+from langgraph.graph.message import add_messages
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import ToolNode
+from pydantic import BaseModel, Field
 
 from .a2a_client import ask_advisor as _ask_advisor
 from .a2a_client import ask_dataset_agent as _ask_dataset_agent
@@ -46,9 +48,11 @@ from .constants import (
     TRAINING_EVENT,
     TRAINING_VIEW_EVENT,
     TRAINING_VIEW_KEY,
+    TRANSITION_EVENT,
+    TRANSITION_KEY,
 )
 from .i18n import Language, tr
-from .prompts import get_system_prompt
+from .prompts import get_slot_extraction_prompt, get_system_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -58,21 +62,107 @@ _FALSE_VALUES = {"0", "false", "no", "off"}
 _DEFAULT_SEARXNG_HOST = "http://searxng:8080"
 
 
-# Context variables to pass the A2A context_id into tools per-request
+# Context variable to pass the advisor context_id per-request (used for RAG URL store)
 _advisor_context_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "_advisor_context_id", default=None
-)
-_training_context_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
-    "_training_context_id", default=None
-)
-_dataset_context_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
-    "_dataset_context_id", default=None
 )
 _language: contextvars.ContextVar[Language] = contextvars.ContextVar("_language", default="de")
 # RAG source URLs per conversation — persisted across requests via advisor context_id.
 # LRU-bounded to prevent unbounded memory growth from long-running processes.
 _RAG_URLS_MAX = 256
 _rag_urls_store: collections.OrderedDict[str, list[str]] = collections.OrderedDict()
+
+
+# ---------------------------------------------------------------------------
+# Typed state — slots carry the 4 training parameters derived from history.
+# ---------------------------------------------------------------------------
+
+
+class SlotState(BaseModel):
+    """The 4 parameters needed to start a training job, plus a workflow flag."""
+
+    use_case: str | None = Field(
+        None,
+        description=(
+            "The user's target application/domain (e.g. 'Compliance', "
+            "'Wissensmanagement', 'Predictive Maintenance'). None if not yet chosen."
+        ),
+    )
+    dataset: str | None = Field(
+        None,
+        description=(
+            "A concrete dataset the user has selected (e.g. 'medical-de-v1', "
+            "'HuggingFace: foo/bar'). None if not yet chosen."
+        ),
+    )
+    base_model: str | None = Field(
+        None,
+        description="Base model (e.g. 'Llama-3.1-8B', 'Mistral-7B'). None if not yet chosen.",
+    )
+    method: str | None = Field(
+        None,
+        description="Specialization method (RAG, LoRA, QLoRA, SFT, DPO). None if not yet chosen.",
+    )
+    workflow_intent: bool = Field(
+        False,
+        description=(
+            "True if the user is actively working toward starting a training job "
+            "(exploring use cases, datasets, models, methods). False for purely "
+            "factual/exploratory questions like 'What is LoRA?'."
+        ),
+    )
+
+    def next_missing(self) -> str | None:
+        """Return the key of the next missing slot, or None if all filled."""
+        if not self.use_case:
+            return "use_case"
+        if not self.dataset:
+            return "dataset"
+        if not self.base_model:
+            return "base_model"
+        if not self.method:
+            return "method"
+        return None
+
+
+# Per-request slot snapshot — set in run_tools before tool execution so tools
+# can check the user's workflow intent without needing access to graph state.
+_slots: contextvars.ContextVar[SlotState | None] = contextvars.ContextVar(
+    "_slots", default=None
+)
+
+
+class SoofiState(TypedDict):
+    """Graph state: messages plus extracted slot state."""
+
+    messages: Annotated[list[AnyMessage], add_messages]
+    slots: SlotState
+
+
+# Deterministic transition templates — appended by transition_node based on
+# the next missing slot. Keeps the interaction prompt short and responses predictable.
+_TRANSITIONS: dict[Language, dict[str, str]] = {
+    "de": {
+        "use_case": "Für welchen Anwendungsfall möchten Sie ein Modell spezialisieren?",
+        "dataset": "Soll ich dazu passende Datensätze suchen?",
+        "dataset_searched": "Welchen dieser Datensätze möchtest du verwenden?",
+        "base_model": "Soll ich ein passendes Basismodell empfehlen?",
+        "base_model_recommended": "Welches dieser Modelle möchtest du verwenden?",
+        "method": "Soll ich eine Spezialisierungsmethode empfehlen?",
+        "method_recommended": "Welche dieser Methoden möchtest du verwenden?",
+        "ready": "Soll ich das Training jetzt starten?",
+    },
+    "en": {
+        "use_case": "Which use case would you like to specialize a model for?",
+        "dataset": "Should I search for suitable datasets?",
+        "dataset_searched": "Which of these datasets would you like to use?",
+        "base_model": "Should I recommend a suitable base model?",
+        "base_model_recommended": "Which of these models would you like to use?",
+        "method": "Should I recommend a specialization method?",
+        "method_recommended": "Which of these methods would you like to use?",
+        "ready": "Should I start the training now?",
+    },
+}
 
 base_url = os.getenv("OPENAI_BASE_URL") or None
 model_name = os.getenv("INTERACTION_MODEL")
@@ -407,24 +497,14 @@ async def show_agent_card(
 
 
 
-@tool
-async def ask_advisor_tool(question: str) -> str:
-    """Ask the Advisor agent a domain question via A2A.
-
-    Use this tool for domain questions about LLM specialization,
-    RAG, LoRA, fine-tuning, use-case analysis, etc.
-
-    Args:
-        question: The domain question to send to the Advisor.
-    """
-    ctx_id = _advisor_context_id.get()
+async def _call_advisor(question: str) -> str:
+    """Shared streaming logic for all advisor-backed tools."""
     lang = _language.get()
     full_text = ""
     lang_tag = f" [LANG:{lang}]"
 
     try:
-        async for chunk in _stream_advisor(question + lang_tag, context_id=ctx_id):
-            # Detect special event envelopes from the advisor
+        async for chunk in _stream_advisor(question + lang_tag, context_id=None):
             try:
                 parsed = json.loads(chunk)
                 event_type = parsed.get(SOOFI_EVENT_KEY) if isinstance(parsed, dict) else None
@@ -439,7 +519,6 @@ async def ask_advisor_tool(question: str) -> str:
                 await adispatch_custom_event(
                     ADVISOR_EVENT, {ADVISOR_KEY_RAG_SOURCES: parsed["sources"]}
                 )
-                # Store source URLs so control_doc_viewer can reference them
                 urls = [
                     s.get("url", "") for s in parsed.get("sources", [])
                     if s.get("url")
@@ -458,15 +537,54 @@ async def ask_advisor_tool(question: str) -> str:
         logger.exception("Advisor streaming failed after %d chars", len(full_text))
         if not full_text:
             logger.warning("Falling back to blocking ask_advisor call")
-            full_text = await _ask_advisor(question, context_id=ctx_id)
-        # Partial content already streamed — return what we have to avoid duplicates
+            full_text = await _ask_advisor(question, context_id=None)
 
-    # Fallback if streaming completed but yielded no text (e.g. only status events)
     if not full_text:
         logger.warning("Advisor streaming yielded no content, falling back to blocking call")
-        full_text = await _ask_advisor(question, context_id=ctx_id)
+        full_text = await _ask_advisor(question, context_id=None)
 
     return full_text
+
+
+@tool
+async def ask_advisor_tool(question: str) -> str:
+    """Ask the Advisor agent a general domain question via A2A.
+
+    Use this tool for general knowledge questions about LLM specialization,
+    RAG, LoRA, fine-tuning, use-case analysis, the Soofi project, and related topics.
+    Do NOT use this for slot-driven base-model or method recommendations —
+    use recommend_base_model_tool or recommend_method_tool instead.
+
+    Args:
+        question: The domain question to send to the Advisor.
+    """
+    return await _call_advisor(question)
+
+
+@tool
+async def recommend_base_model_tool(question: str) -> str:
+    """Ask the Advisor agent to recommend a base model for the current use case and dataset.
+
+    Use this tool exclusively when the user needs a base model recommendation
+    as part of the training workflow (use case and dataset are already known).
+
+    Args:
+        question: The recommendation request, including use case and dataset context.
+    """
+    return await _call_advisor(question)
+
+
+@tool
+async def recommend_method_tool(question: str) -> str:
+    """Ask the Advisor agent to recommend a specialization method (LoRA, QLoRA, SFT, DPO, RAG).
+
+    Use this tool exclusively when the user needs a method recommendation
+    as part of the training workflow (use case, dataset, and base model are already known).
+
+    Args:
+        question: The recommendation request, including all known slot context.
+    """
+    return await _call_advisor(question)
 
 
 @tool
@@ -479,13 +597,22 @@ async def ask_training_agent_tool(question: str) -> str:
     Args:
         question: The training request to send to the Training Agent.
     """
-    ctx_id = _training_context_id.get()
     lang = _language.get()
     full_text = ""
     lang_tag = f" [LANG:{lang}]"
 
+    # Belt-and-suspenders: if this is a training-start (all 4 slots filled and
+    # workflow_intent=True), open the view up front so the user sees the panel
+    # immediately — independent of whether the job_started envelope arrives.
+    slots = _slots.get()
+    if slots and slots.workflow_intent and slots.next_missing() is None:
+        logger.info("All slots filled — pre-opening training view on tool entry")
+        await adispatch_custom_event(
+            TRAINING_VIEW_EVENT, {TRAINING_VIEW_KEY: {"action": "open"}}
+        )
+
     try:
-        async for chunk in _stream_training_agent(question + lang_tag, context_id=ctx_id):
+        async for chunk in _stream_training_agent(question + lang_tag, context_id=None):
             # Detect special event envelopes from the training agent
             try:
                 parsed = json.loads(chunk)
@@ -494,8 +621,15 @@ async def ask_training_agent_tool(question: str) -> str:
                 event_type = None
 
             if event_type == SOOFI_EVENT_JOB_STARTED:
+                job_id = parsed.get("job_id", "")
+                logger.info("Training job started (id=%s) — auto-opening training view", job_id)
                 await adispatch_custom_event(
-                    TRAINING_EVENT, {TRAINING_AGENT_KEY_JOB_STARTED: parsed.get("job_id", "")}
+                    TRAINING_EVENT, {TRAINING_AGENT_KEY_JOB_STARTED: job_id}
+                )
+                # Auto-open the training view on successful job start — deterministic
+                # so it does not depend on the LLM emitting a parallel tool call.
+                await adispatch_custom_event(
+                    TRAINING_VIEW_EVENT, {TRAINING_VIEW_KEY: {"action": "open"}}
                 )
             elif event_type == SOOFI_EVENT_SEARCH_STATUS:
                 await adispatch_custom_event(
@@ -510,11 +644,11 @@ async def ask_training_agent_tool(question: str) -> str:
         logger.exception("Training agent streaming failed after %d chars", len(full_text))
         if not full_text:
             logger.warning("Falling back to blocking ask_training_agent call")
-            full_text = await _ask_training_agent(question, context_id=ctx_id)
+            full_text = await _ask_training_agent(question, context_id=None)
 
     if not full_text:
         logger.warning("Training agent streaming yielded no content, falling back to blocking call")
-        full_text = await _ask_training_agent(question, context_id=ctx_id)
+        full_text = await _ask_training_agent(question, context_id=None)
 
     return full_text
 
@@ -529,13 +663,12 @@ async def ask_dataset_agent_tool(question: str) -> str:
     Args:
         question: The dataset search request to send to the Dataset Agent.
     """
-    ctx_id = _dataset_context_id.get()
     lang = _language.get()
     full_text = ""
     lang_tag = f" [LANG:{lang}]"
 
     try:
-        async for chunk in _stream_dataset_agent(question + lang_tag, context_id=ctx_id):
+        async for chunk in _stream_dataset_agent(question + lang_tag, context_id=None):
             try:
                 parsed = json.loads(chunk)
                 event_type = parsed.get(SOOFI_EVENT_KEY) if isinstance(parsed, dict) else None
@@ -557,11 +690,11 @@ async def ask_dataset_agent_tool(question: str) -> str:
         logger.exception("Dataset agent streaming failed after %d chars", len(full_text))
         if not full_text:
             logger.warning("Falling back to blocking ask_dataset_agent call")
-            full_text = await _ask_dataset_agent(question, context_id=ctx_id)
+            full_text = await _ask_dataset_agent(question, context_id=None)
 
     if not full_text:
         logger.warning("Dataset agent streaming yielded no content, falling back to blocking call")
-        full_text = await _ask_dataset_agent(question, context_id=ctx_id)
+        full_text = await _ask_dataset_agent(question, context_id=None)
 
     return full_text
 
@@ -645,10 +778,114 @@ def control_doc_viewer(action: str, index: int = 1) -> str:
     )
 
 
+def _format_slot_hint(slots: SlotState, lang: Language) -> str:
+    """Compact snapshot of slot state injected into the system prompt."""
+
+    def mark(value: str | None) -> str:
+        return value if value else "—"
+
+    if lang == "en":
+        return (
+            "## Current slots (derived from history)\n"
+            f"- use_case: {mark(slots.use_case)}\n"
+            f"- dataset: {mark(slots.dataset)}\n"
+            f"- base_model: {mark(slots.base_model)}\n"
+            f"- method: {mark(slots.method)}\n"
+            f"- workflow_intent: {slots.workflow_intent}"
+        )
+    return (
+        "## Aktueller Slot-Status (aus dem Verlauf)\n"
+        f"- Anwendungsfall: {mark(slots.use_case)}\n"
+        f"- Datensatz: {mark(slots.dataset)}\n"
+        f"- Basismodell: {mark(slots.base_model)}\n"
+        f"- Methode: {mark(slots.method)}\n"
+        f"- Workflow-Intent: {slots.workflow_intent}"
+    )
+
+
+# Streaming sub-agents whose response is passed through directly — no second
+# LLM call follows. Transition text (if any) is emitted by transition_node
+# from a template, not generated by the LLM.
+_STREAMING_TOOLS: set[str] = {
+    "ask_advisor_tool",
+    "ask_training_agent_tool",
+    "ask_dataset_agent_tool",
+    "recommend_base_model_tool",
+    "recommend_method_tool",
+}
+# Streaming tools that should be followed by a template transition question.
+# Training agent handles its own follow-ups, so it's excluded.
+_TRANSITION_TOOLS: set[str] = {
+    "ask_advisor_tool",
+    "ask_dataset_agent_tool",
+    "recommend_base_model_tool",
+    "recommend_method_tool",
+}
+
+# Maps tool name → _TRANSITIONS key override (for tools with unambiguous intent).
+_TOOL_TRANSITION_KEY: dict[str, str] = {
+    "ask_dataset_agent_tool": "dataset_searched",
+    "recommend_base_model_tool": "base_model_recommended",
+    "recommend_method_tool": "method_recommended",
+}
+
+# Narration triggers — phrases that announce or claim an action (search/ask/
+# check/start) but belong in a tool call, not user-facing text. If the agent
+# emits any of these WITHOUT a tool call, we retry once with forced tool_choice.
+_NARRATION_TRIGGERS: tuple[str, ...] = (
+    # German — announcing
+    "ich suche", "ich frage", "ich prüfe", "ich schaue", "ich recherchiere",
+    "ich werde suchen", "ich werde fragen", "ich werde prüfen",
+    "ich beginne mit", "ich starte die suche", "ich leite die suche",
+    "einen moment bitte", "einen moment noch",
+    "der nächste schritt besteht", "als nächstes suche",
+    "ich habe bereits deinen", "ich habe bereits den anwendungsfall",
+    "lass mich", "lassen sie mich",
+    "hier sind die ergebnisse", "hier ist meine suche",
+    "die suche hat ergeben", "die suche ergab",
+    "ich habe folgende", "ich habe die folgende",
+    "dataset agent", "advisor", "training agent",
+    # German — claiming completed action (training/job)
+    "wurde erfolgreich gestartet", "wurde gestartet", "ist gestartet",
+    "trainingsjob wurde", "training wurde", "job wurde erstellt",
+    "habe den job gestartet", "habe das training gestartet",
+    # English — announcing
+    "i'll search", "i will search", "i'm searching",
+    "i'll ask", "i will ask", "i'm asking",
+    "i'll check", "i will check", "i'm checking",
+    "let me search", "let me ask", "let me check",
+    "here are the results", "the search yielded", "the search returned",
+    "i found the following", "i have found",
+    # English — claiming completed action
+    "has been started", "has been successfully started", "job has been created",
+    "training has started", "i've started the training", "i have started the",
+)
+
+
+def _contains_narration_triggers(text: str) -> bool:
+    if not text:
+        return False
+    lowered = text.lower()
+    return any(trigger in lowered for trigger in _NARRATION_TRIGGERS)
+
+
+_RETRY_HINT_DE = (
+    "Dein letzter Output war Narration ohne Tool-Call. "
+    "Rufe JETZT SOFORT das passende Tool auf — ohne weiteren Text, "
+    "ohne Plan-Ansage, ohne Erklärung."
+)
+_RETRY_HINT_EN = (
+    "Your last output narrated an action without calling the tool. "
+    "Call the correct tool RIGHT NOW — no more text, no plan, no explanation."
+)
+
+
 def build_graph() -> CompiledStateGraph:
     """Build the LangGraph ReAct agent for the Interaction Agent."""
     tools = [
         ask_advisor_tool,
+        recommend_base_model_tool,
+        recommend_method_tool,
         ask_training_agent_tool,
         ask_dataset_agent_tool,
         web_search_tool,
@@ -660,29 +897,101 @@ def build_graph() -> CompiledStateGraph:
         model=model_name,
         **({"openai_api_base": base_url} if base_url else {}),
         **_build_vllm_kwargs("INTERACTION"),
-    ).bind_tools(
+    )
+    llm_with_tools = llm.bind_tools(
         tools, **({"parallel_tool_calls": False} if not base_url else {})
     )
+    slot_extractor = llm.with_structured_output(SlotState)
     tool_node = ToolNode(tools)
 
-    async def agent(state: MessagesState) -> MessagesState:
-        system = {"role": "system", "content": get_system_prompt(_language.get())}
-        response = await llm.ainvoke([system] + state["messages"])
-        if hasattr(response, "tool_calls") and response.tool_calls:
+    async def extract_slots(state: SoofiState) -> dict[str, Any]:
+        """Derive slot state from the full conversation history."""
+        lang = _language.get()
+        system = SystemMessage(content=get_slot_extraction_prompt(lang))
+        try:
+            slots = await slot_extractor.ainvoke([system] + list(state["messages"]))
+        except Exception:
+            logger.exception("Slot extraction failed — defaulting to empty slots")
+            slots = SlotState()
+        logger.info(
+            "Slots: use_case=%s dataset=%s base_model=%s method=%s intent=%s",
+            slots.use_case, slots.dataset, slots.base_model, slots.method,
+            slots.workflow_intent,
+        )
+        return {"slots": slots}
+
+    async def agent(state: SoofiState) -> dict[str, Any]:
+        lang = _language.get()
+        slots = state.get("slots") or SlotState()
+        system_content = get_system_prompt(lang) + "\n\n" + _format_slot_hint(slots, lang)
+        system = SystemMessage(content=system_content)
+        messages = [system] + list(state["messages"])
+        response = await llm_with_tools.ainvoke(messages)
+
+        # Safety net: detect narration-without-tool-call and force a retry.
+        # Triggered when the agent claims or announces an action but made no
+        # tool call. Fires regardless of slot state — covers both "search now"
+        # (slot missing) and "training started" (all slots filled) hallucinations.
+        has_tool_call = bool(getattr(response, "tool_calls", None))
+        if (
+            not has_tool_call
+            and slots.workflow_intent
+            and _contains_narration_triggers(str(getattr(response, "content", "")))
+        ):
+            logger.warning(
+                "Agent narrated without tool call — retrying with tool_choice=required"
+            )
+            hint = _RETRY_HINT_EN if lang == "en" else _RETRY_HINT_DE
+            try:
+                forced = llm.bind_tools(
+                    tools,
+                    tool_choice="required",
+                    **({"parallel_tool_calls": False} if not base_url else {}),
+                )
+                response = await forced.ainvoke(messages + [SystemMessage(content=hint)])
+            except Exception:
+                logger.exception("Forced-tool retry failed — keeping original response")
+
+        if getattr(response, "tool_calls", None):
             for tc in response.tool_calls:
                 logger.info("Tool call: %s(%s)", tc["name"], tc["args"])
         return {"messages": [response]}
 
-    async def run_tools(state: MessagesState) -> MessagesState:
-        result = await tool_node.ainvoke(state)
+    async def run_tools(state: SoofiState) -> dict[str, Any]:
+        token = _slots.set(state.get("slots") or SlotState())
+        try:
+            result = await tool_node.ainvoke(state)
+        finally:
+            _slots.reset(token)
         for msg in result["messages"]:
             logger.info("Tool result (%s): %s", msg.name, str(msg.content)[:500])
         return result
 
-    # Tools whose responses are already streamed to the user — no second LLM call needed
-    _STREAMING_TOOLS = {"ask_advisor_tool", "ask_training_agent_tool", "ask_dataset_agent_tool"}
+    async def transition(state: SoofiState) -> dict[str, Any]:
+        """Append a deterministic transition question based on slot state."""
+        slots = state.get("slots") or SlotState()
+        if not slots.workflow_intent:
+            return {}
+        lang = _language.get()
+        next_slot = slots.next_missing() or "ready"
+        key = next_slot
+        # Tools with unambiguous intent override the slot-derived key directly.
+        for msg in reversed(state["messages"]):
+            if hasattr(msg, "tool_calls"):
+                break
+            last_tool = getattr(msg, "name", None)
+            if last_tool in _TOOL_TRANSITION_KEY:
+                key = _TOOL_TRANSITION_KEY[last_tool]
+                break
+            if last_tool is not None:
+                break
+        text = _TRANSITIONS[lang].get(key)
+        if not text:
+            return {}
+        await adispatch_custom_event(TRANSITION_EVENT, {TRANSITION_KEY: "\n\n" + text})
+        return {}
 
-    def should_continue(state: MessagesState) -> str:
+    def should_continue(state: SoofiState) -> str:
         if not state["messages"]:
             return "__end__"
         last = state["messages"][-1]
@@ -690,43 +999,42 @@ def build_graph() -> CompiledStateGraph:
             return "tools"
         return "__end__"
 
-    def after_tools(state: MessagesState) -> str:
-        """Skip the second LLM call if a streaming tool already delivered the response."""
+    def after_tools(state: SoofiState) -> str:
+        """Route by last tool kind: transition for advisor/dataset, end for training,
+        second agent call for UI tools (so it can confirm the action)."""
         for msg in reversed(state["messages"]):
-            # Stop at the last AI message — don't look further back
             if hasattr(msg, "tool_calls"):
                 break
-            if hasattr(msg, "name") and msg.name in _STREAMING_TOOLS:
+            name = getattr(msg, "name", None)
+            if name in _TRANSITION_TOOLS:
+                return "transition"
+            if name in _STREAMING_TOOLS:
                 return "__end__"
         return "agent"
 
-    graph_builder = StateGraph(MessagesState)
+    graph_builder = StateGraph(SoofiState)
+    graph_builder.add_node("extract_slots", extract_slots)
     graph_builder.add_node("agent", agent)
     graph_builder.add_node("tools", run_tools)
-    graph_builder.set_entry_point("agent")
+    graph_builder.add_node("transition", transition)
+    graph_builder.set_entry_point("extract_slots")
+    graph_builder.add_edge("extract_slots", "agent")
     graph_builder.add_conditional_edges(
         "agent", should_continue, {"tools": "tools", "__end__": "__end__"}
     )
     graph_builder.add_conditional_edges(
-        "tools", after_tools, {"agent": "agent", "__end__": "__end__"}
+        "tools",
+        after_tools,
+        {"agent": "agent", "transition": "transition", "__end__": "__end__"},
     )
+    graph_builder.add_edge("transition", "__end__")
 
     return graph_builder.compile()
 
 
 def set_advisor_context_id(context_id: str | None) -> None:
-    """Set the A2A context_id for the current request (used by ask_advisor_tool)."""
+    """Set the advisor context_id for the current request (used for RAG URL store keying)."""
     _advisor_context_id.set(context_id)
-
-
-def set_training_context_id(context_id: str | None) -> None:
-    """Set the A2A context_id for the current request (used by ask_training_agent_tool)."""
-    _training_context_id.set(context_id)
-
-
-def set_dataset_context_id(context_id: str | None) -> None:
-    """Set the A2A context_id for the current request (used by ask_dataset_agent_tool)."""
-    _dataset_context_id.set(context_id)
 
 
 def set_language(lang: Language) -> None:

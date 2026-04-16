@@ -1,0 +1,3 @@
+# IPCEI-CIS
+
+IPCEI-CIS steht für Important Project of Common European Interest on Next Generation Cloud Infrastructure and Services. Es ist das erste IPCEI im Bereich Cloud und Edge Computing und soll ein interoperables, offen zugängliches europäisches Datenverarbeitungs-Ökosystem aufbauen – also eine föderierte Cloud-to-Edge-Infrastruktur über mehrere Anbieter hinweg. Ziel sind unter anderem Interoperabilität, Datensouveränität, Energieeffizienz und eine geringere Abhängigkeit von außereuropäischen Plattformen. Die EU-Kommission hat das Vorhaben im Dezember 2023 beihilferechtlich genehmigt.

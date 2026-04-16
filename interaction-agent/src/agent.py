@@ -23,9 +23,7 @@ from .constants import (
 from .graph import (
     build_graph,
     set_advisor_context_id,
-    set_dataset_context_id,
     set_language,
-    set_training_context_id,
 )
 from .i18n import Language
 from .session_logger import get_or_create_logger
@@ -134,8 +132,6 @@ async def agent_endpoint(request: Request) -> StreamingResponse:
     if lang not in ("de", "en"):
         lang = "de"
     set_advisor_context_id(session_id)
-    set_training_context_id(session_id)
-    set_dataset_context_id(session_id)
     set_language(lang)
 
     sl = get_or_create_logger(session_id or "", lang)
