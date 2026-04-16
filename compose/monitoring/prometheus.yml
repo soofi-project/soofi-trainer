@@ -3,7 +3,15 @@ global:
   evaluation_interval: 30s
 
 scrape_configs:
-  - job_name: vllm
+  - job_name: qwen35
     static_configs:
       - targets: ['10.2.10.33:4000']
     metrics_path: /vllm-metrics/qwen35-122b-fp8
+  - job_name: embedding
+    static_configs:
+      - targets: ['10.2.10.33:4000']
+    metrics_path: /vllm-metrics/qwen3-embedding-8b
+  - job_name: reranker
+    static_configs:
+      - targets: ['10.2.10.33:8003']
+    metrics_path: /metrics

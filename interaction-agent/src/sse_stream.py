@@ -192,7 +192,9 @@ class SSEStream:
 
         try:
             async for event in self._graph.astream_events(
-                {"messages": messages}, version="v2"
+                {"messages": messages},
+                version="v2",
+                config={"recursion_limit": 40},
             ):
                 kind = event["event"]
                 if kind == "on_tool_start":
