@@ -2,9 +2,10 @@
 
 import logging
 import os
-from typing import Any
+import re
+from typing import Any, Sequence
 
-from langchain_core.messages import ToolMessage
+from langchain_core.messages import BaseMessage, ToolMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool
 from langchain_openai import ChatOpenAI
@@ -19,6 +20,87 @@ logger = logging.getLogger(__name__)
 
 _TRUE_VALUES = {"1", "true", "yes", "on"}
 _FALSE_VALUES = {"0", "false", "no", "off"}
+
+_SPARQL_TOOL_NAME = "query_federated_catalog_sparql"
+_FILTER_RE = re.compile(r"\bFILTER\s*\(", re.IGNORECASE)
+_EMPTY_BINDINGS_MARKERS = (
+    '"bindings": []',
+    '"bindings":[]',
+    '\\"bindings\\": []',
+    '\\"bindings\\":[]',
+)
+_SPARQL_FALLBACK_BLOCK_MSG_DE = (
+    "Blockiert durch Dataset-Agent-Guard: ungefilterte SPARQL-Katalogabfrage nach einer "
+    "Filter-Suche mit 0 Treffern ist verboten. Die spezifische Suche lieferte keinen "
+    "thematisch passenden Datensatz. Antworte dem Nutzer jetzt direkt mit einer klaren "
+    "Negativantwort: \"Im Dataspace wurde kein thematisch passender Datensatz gefunden.\" "
+    "Zeige KEINEN Datensatz — auch nicht als 'allgemein', 'verwandt' oder 'moeglicherweise "
+    "relevant'. Schlage konkrete Verfeinerungen oder HuggingFace als Alternative vor."
+)
+
+
+def _sparql_query_has_filter(query: str | None) -> bool:
+    return bool(query) and bool(_FILTER_RE.search(query))
+
+
+def _tool_message_empty_bindings(content: object) -> bool:
+    text = str(content)
+    return any(marker in text for marker in _EMPTY_BINDINGS_MARKERS)
+
+
+def _check_sparql_fallback_guard(
+    messages: Sequence[BaseMessage],
+    current_tool_calls: list[dict[str, Any]],
+) -> list[ToolMessage] | None:
+    """If all current calls are unfiltered SPARQL catalog queries AND a prior
+    filtered SPARQL query in this thread returned empty bindings, return
+    ToolMessages that block the fallback and instruct the LLM to answer negatively.
+    Return None to let the tool node proceed normally."""
+    sparql_unfiltered_calls = []
+    for tc in current_tool_calls:
+        if tc.get("name") != _SPARQL_TOOL_NAME:
+            return None
+        if _sparql_query_has_filter(tc.get("args", {}).get("query")):
+            return None
+        sparql_unfiltered_calls.append(tc)
+    if not sparql_unfiltered_calls:
+        return None
+
+    tool_msgs_by_id: dict[str, ToolMessage] = {}
+    for msg in messages:
+        if isinstance(msg, ToolMessage) and msg.tool_call_id:
+            tool_msgs_by_id[msg.tool_call_id] = msg
+
+    prior_filter_returned_empty = False
+    for msg in messages[:-1]:
+        tool_calls = getattr(msg, "tool_calls", None)
+        if not tool_calls:
+            continue
+        for tc in tool_calls:
+            if tc.get("name") != _SPARQL_TOOL_NAME:
+                continue
+            if not _sparql_query_has_filter(tc.get("args", {}).get("query")):
+                continue
+            result_msg = tool_msgs_by_id.get(tc.get("id"))
+            if result_msg is None:
+                continue
+            if _tool_message_empty_bindings(result_msg.content):
+                prior_filter_returned_empty = True
+                break
+        if prior_filter_returned_empty:
+            break
+
+    if not prior_filter_returned_empty:
+        return None
+
+    return [
+        ToolMessage(
+            content=_SPARQL_FALLBACK_BLOCK_MSG_DE,
+            tool_call_id=tc["id"],
+            name=tc["name"],
+        )
+        for tc in sparql_unfiltered_calls
+    ]
 
 model = os.getenv("DATASET_AGENT_MODEL")
 if not model:
@@ -135,6 +217,16 @@ def build_graph(tools: list[BaseTool]) -> CompiledStateGraph:
         return {"messages": [response]}
 
     async def log_tool_results(state: MessagesState) -> MessagesState:
+        last = state["messages"][-1]
+        tool_calls = getattr(last, "tool_calls", None) or []
+        if tool_calls:
+            guard_msgs = _check_sparql_fallback_guard(state["messages"], tool_calls)
+            if guard_msgs is not None:
+                logger.info(
+                    "Blocked unfiltered SPARQL catalog fallback after prior 0-hit filter query"
+                )
+                return {"messages": guard_msgs}
+
         try:
             result = await tool_node.ainvoke(state)
             for msg in result["messages"]:
@@ -142,8 +234,7 @@ def build_graph(tools: list[BaseTool]) -> CompiledStateGraph:
             return result
         except Exception as exc:
             logger.exception("Tool execution failed")
-            last = state["messages"][-1]
-            if not (hasattr(last, "tool_calls") and last.tool_calls):
+            if not tool_calls:
                 raise
             return {
                 "messages": [
@@ -152,7 +243,7 @@ def build_graph(tools: list[BaseTool]) -> CompiledStateGraph:
                         tool_call_id=tc["id"],
                         name=tc["name"],
                     )
-                    for tc in last.tool_calls
+                    for tc in tool_calls
                 ]
             }
 
