@@ -22,6 +22,10 @@ _STRINGS: dict[str, dict[Language, str]] = {
         "de": "Lade Agentenkarte\u2026",
         "en": "Loading agent card\u2026",
     },
+    "search_web": {
+        "de": "Suche im Web\u2026",
+        "en": "Searching the web\u2026",
+    },
     # Tool return labels
     "cards_closed": {"de": "Agentenkarten geschlossen.", "en": "Agent cards closed."},
     "agent_not_found": {
@@ -57,6 +61,14 @@ _STRINGS: dict[str, dict[Language, str]] = {
     "training_view_closed": {
         "de": "Trainingsübersicht geschlossen.",
         "en": "Training overview closed.",
+    },
+    "web_search_failed": {
+        "de": "Die Websuche ist fehlgeschlagen. Bitte versuche es erneut oder formuliere die Anfrage genauer.",
+        "en": "Web search failed. Please try again or rephrase the request more specifically.",
+    },
+    "web_search_no_results": {
+        "de": "Keine Web-Treffer gefunden.",
+        "en": "No web results found.",
     },
     # SSE error
     "sse_error": {

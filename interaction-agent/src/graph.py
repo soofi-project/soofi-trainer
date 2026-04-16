@@ -6,10 +6,12 @@ import contextvars
 import json
 import logging
 import os
+import re
 from typing import Any, Literal
 
 import httpx
 from langchain_core.callbacks import adispatch_custom_event
+from langchain_core.messages import HumanMessage
 from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
 from langgraph.graph import MessagesState, StateGraph
@@ -52,6 +54,8 @@ logger = logging.getLogger(__name__)
 
 _TRUE_VALUES = {"1", "true", "yes", "on"}
 _FALSE_VALUES = {"0", "false", "no", "off"}
+
+_DEFAULT_SEARXNG_HOST = "http://searxng:8080"
 
 
 # Context variables to pass the A2A context_id into tools per-request
@@ -164,6 +168,18 @@ def _build_vllm_kwargs(prefix: str) -> dict[str, Any]:
 
     return llm_kwargs
 
+
+# Second ChatOpenAI instance — same model/endpoint/sampling as the main agent,
+# but without bind_tools. Used one-shot via ainvoke() to summarize web search
+# results outside the agent's message history, so raw snippets never pollute
+# the main context window.
+_utility_llm = ChatOpenAI(
+    model=model_name,
+    **({"openai_api_base": base_url} if base_url else {}),
+    **_build_vllm_kwargs("INTERACTION"),
+)
+
+
 # Agent registry: parsed from AGENT_REGISTRY env var (comma-separated name=url pairs)
 _raw_registry = os.getenv("AGENT_REGISTRY", "")
 AGENT_REGISTRY: dict[str, str] = {}
@@ -174,6 +190,151 @@ for pair in _raw_registry.split(","):
         AGENT_REGISTRY[name.strip()] = url.strip()
 
 logger.info("Agent registry: %s", list(AGENT_REGISTRY.keys()))
+
+
+def _get_searxng_web_search_config() -> dict[str, str]:
+    """Resolve config for the self-hosted SearXNG-backed web-search backend."""
+    host = (os.getenv("INTERACTION_WEB_SEARCH_SEARXNG_HOST") or _DEFAULT_SEARXNG_HOST).strip()
+    if not host:
+        host = _DEFAULT_SEARXNG_HOST
+
+    return {"host": host}
+
+
+_WEB_SEARCH_ENGINES = [
+    "google",
+    "bing",
+    "wikipedia",
+    # "duckduckgo" and "brave" do not reliably honor the `language`
+    # parameter — foreign-language hits leak into the results otherwise.
+    # "duckduckgo",
+    # "brave",
+]
+_WEB_SEARCH_RESULT_LIMIT = 5
+
+# CJK, Hiragana/Katakana, Arabic, Hebrew, Cyrillic. Even Bing's `language=de`
+# filter is only a hint, so hits in these scripts still leak through — we
+# drop them client-side for DE/EN user turns.
+_NON_LATIN_SCRIPT_RE = re.compile(
+    r"[\u0400-\u04ff\u0590-\u05ff\u0600-\u06ff\u3040-\u30ff\u4e00-\u9fff]"
+)
+
+
+def _looks_non_latin(text: str) -> bool:
+    """True if more than 15% of characters are non-Latin script."""
+    if not text:
+        return False
+    non_latin = len(_NON_LATIN_SCRIPT_RE.findall(text))
+    return non_latin / len(text) > 0.15
+
+
+async def _web_search_searxng(query: str, language: Language) -> str:
+    """Search the public web with a self-hosted SearXNG instance.
+
+    Queries the SearXNG JSON API directly (instead of SearxSearchWrapper) so
+    that both ``results`` (regular hits) and ``infoboxes`` (Wikipedia summary
+    cards) can be surfaced — the wrapper only exposes ``results``.
+    """
+    host = _get_searxng_web_search_config()["host"]
+    logger.info("Web search backend=searxng host=%s", host)
+    params = {
+        "q": query,
+        "format": "json",
+        "language": language,
+        "engines": ",".join(_WEB_SEARCH_ENGINES),
+    }
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        response = await client.get(f"{host.rstrip('/')}/search", params=params)
+        response.raise_for_status()
+        data = response.json()
+
+    sections: list[str] = []
+    kept = 0
+    for r in data.get("results") or []:
+        if kept >= _WEB_SEARCH_RESULT_LIMIT:
+            break
+        title = r.get("title", "")
+        url = r.get("url", "")
+        snippet = r.get("content", "")
+        if _looks_non_latin(title) or _looks_non_latin(snippet):
+            logger.info("Dropping non-Latin web hit: %s", url)
+            continue
+        sections.append(f"**{title}** — {url}\n{snippet}")
+        kept += 1
+
+    for ib in data.get("infoboxes") or []:
+        title = ib.get("infobox", "")
+        url = ib.get("id", "")
+        content = ib.get("content", "")
+        if _looks_non_latin(title) or _looks_non_latin(content):
+            continue
+        sections.append(f"**{title}** — {url}\n{content}")
+
+    if not sections:
+        return tr("web_search_no_results", language)
+    return "\n\n".join(sections)
+
+
+_SUMMARY_PROMPT_DE = """\
+Beantworte die Nutzerfrage anhand der folgenden Web-Suchergebnisse. Format:
+
+1. Eine kompakte Antwort — **maximal 2 Sätze**, nur die Kernaussage, keine \
+Zitate, keine Quellen im Fließtext.
+2. Danach eine Leerzeile und darunter eine Quellenliste als Markdown-Bulletpoints, \
+gruppiert und ohne Dopplungen, im Format:
+   - [Titel der Seite](URL)
+
+Verwende ausschließlich URLs, die wörtlich in den Ergebnissen vorkommen — keine \
+erfinden, keine kombinieren. Wenn die Treffer keine brauchbare Antwort zulassen, \
+sag das ehrlich in einem Satz und lass die Quellenliste weg.
+
+Nutzerfrage: {query}
+
+Suchergebnisse:
+{results}
+"""
+
+_SUMMARY_PROMPT_EN = """\
+Answer the user's question based on the following web search results. Format:
+
+1. A compact answer — **max 2 sentences**, only the core statement, no inline \
+citations, no sources in the prose.
+2. Then a blank line, followed by a source list as markdown bullet points, \
+grouped and deduplicated, in this format:
+   - [Page title](URL)
+
+Only use URLs that appear verbatim in the results — never invent or combine any. \
+If the results don't support a useful answer, say so honestly in one sentence and \
+omit the source list.
+
+User question: {query}
+
+Search results:
+{results}
+"""
+
+
+async def _summarize_search_results(query: str, raw: str, language: Language) -> str:
+    """One-shot summarization of SearXNG results so the raw snippets never enter
+    the main agent's message history. Runs in-process on the same model as the
+    main agent, but through a separate ChatOpenAI instance without tools and
+    with no history. Emits no SSE events — the existing `web_search_tool`
+    ToolStreamTracker owns the UI status label for the whole duration.
+    """
+    template = _SUMMARY_PROMPT_EN if language == "en" else _SUMMARY_PROMPT_DE
+    prompt = template.replace("{query}", query).replace("{results}", raw)
+    try:
+        response = await _utility_llm.ainvoke([HumanMessage(content=prompt)])
+        summary = response.content.strip() if isinstance(response.content, str) else ""
+        logger.info(
+            "Summarized search: raw=%d bytes → summary=%d bytes",
+            len(raw),
+            len(summary),
+        )
+        return summary or raw
+    except Exception:
+        logger.exception("Search summarization failed, returning raw results")
+        return raw
 
 
 async def _fetch_agent_card(
@@ -406,6 +567,31 @@ async def ask_dataset_agent_tool(question: str) -> str:
 
 
 @tool
+async def web_search_tool(query: str) -> str:
+    """Search the public web for explicit lookup requests or current public information.
+
+    Use this tool when the user explicitly asks to search or browse the web, or asks for
+    current/latest/recent public-web information outside the dataset and training flows.
+
+    Keep queries short and natural — plain keywords work best. Avoid quoted phrases,
+    OR-operators, or site:-filters: SearXNG aggregates several engines, most of which
+    handle these operators poorly, which collapses recall to near-zero.
+
+    Args:
+        query: Short, plain-keyword query (e.g. "Wetter Hannover", "Bars Hannover").
+    """
+    lang = _language.get()
+    try:
+        raw = await _web_search_searxng(query, lang)
+        if raw == tr("web_search_no_results", lang):
+            return raw
+        return await _summarize_search_results(query, raw, lang)
+    except Exception:
+        logger.exception("Web search failed for query: %s", query)
+        return tr("web_search_failed", lang)
+
+
+@tool
 async def control_training_view(action: Literal["open", "close"]) -> str:
     """Open or close the training jobs panel. YOU MUST call this tool — never respond with text only.
 
@@ -465,6 +651,7 @@ def build_graph() -> CompiledStateGraph:
         ask_advisor_tool,
         ask_training_agent_tool,
         ask_dataset_agent_tool,
+        web_search_tool,
         show_agent_card,
         control_doc_viewer,
         control_training_view,
