@@ -79,7 +79,7 @@ EOF
 
 ### 4. Try the Soofi UI
 
-Open https://localhost:3001 and ask the agent about LLM specialization methods (RAG, LoRA, QLoRA, SFT, DPO, …). Push-to-talk: hold **Space** to record, release to send. The agent searches the knowledge base, can search the public web for current information via the switchable `web_search_tool` backends, and streams a spoken response.
+Open https://localhost:3001 and ask the agent about LLM specialization methods (RAG, LoRA, QLoRA, SFT, DPO, …). Push-to-talk: hold **Space** to record, release to send. The agent searches the knowledge base, can search the public web for current information via the stack-local SearXNG-backed `web_search_tool`, shows a single "Searching the web…" status while that tool runs, and streams a spoken response.
 
 ### Stop the stack
 
@@ -161,25 +161,36 @@ All configuration is in `.env` (committed, no secrets). Secrets are loaded from 
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `INTERACTION_DEFAULT_CITY` | `Hannover` | Fallback city for location-based web queries when the user does not provide one |
 | `SEARXNG_VERSION` | `latest` | SearXNG image tag for the self-hosted web-search service |
 | `INTERACTION_WEB_SEARCH_SEARXNG_HOST` | `http://searxng:8080` | Internal SearXNG endpoint used by the interaction agent |
 | `SEARXNG_SECRET` | `dev-stack-searxng-secret` | Secret key for the SearXNG container instance |
 
-The public `web_search_tool` keeps the existing manual backend-switching pattern in `interaction-agent/src/graph.py`. The current default is OpenAI:
+The interaction agent now uses a single SearXNG-backed `web_search_tool`. There is no README-level backend toggle anymore: public-web lookup goes through the stack-local `searxng` service and respects the current UI language (`de` / `en`).
 
-```python
-#_active_web_search_backend = _web_search_duckduckgo
-_active_web_search_backend = _web_search_openai
-#_active_web_search_backend = _web_search_searxng
-```
+Current behavior:
 
-The interaction agent exposes three switchable implementations behind the same public `web_search_tool`:
+- Queries go directly to the SearXNG JSON API with the `google`, `bing`, and `wikipedia` engines.
+- Search is no longer limited to `it` / `science` / `news` categories; it uses SearXNG's broader default category coverage.
+- The tool merges regular search hits with Wikipedia `infoboxes`, keeps up to 5 regular results, and drops obviously off-language hits with high non-Latin script content.
+- Empty searches return a localized "no results" message, and hard failures return a localized retry hint.
 
-- DuckDuckGo (`_web_search_duckduckgo`) for public-web search without a stack-local search service.
-- OpenAI (`_web_search_openai`) via ChatOpenAI built-in web search on a dedicated OpenAI client. It does not use the main interaction-model `OPENAI_BASE_URL`; it uses the dedicated `_OPENAI_API_SEARCH_URL`, which is independent of backend flags such as `./up.sh --vllm`. With `--vllm`, the main interaction model switches to the profile-specific `OPENAI_BASE_URL`, but `_web_search_openai` still talks directly to the OpenAI Responses API and requires `OPENAI_API_KEY` or `INTERACTION_WEB_SEARCH_OPENAI_API_KEY`. The dedicated search client is pinned to `reasoning_effort="high"`, the tool binding uses the GA Responses API `web_search` tool, and it sends Germany (`country: "DE"`) as the approximate user location.
-- SearXNG (`_web_search_searxng`) via the stack-local `searxng` service. The current query profile requests 5 German-language results across the `it`, `science`, and `news` categories and fans out across the `google`, `bing`, `duckduckgo`, `brave`, and `wiki` engines.
+Query and prompt rules:
 
-OpenAI remains the current default, while DuckDuckGo and SearXNG stay available as comment-toggle alternatives.
+- Keep queries short and natural, e.g. `Wetter Hannover` or `bars Hannover`.
+- Avoid quoted phrases, `OR`, and `site:`-style filters; those reduce recall badly with the federated SearXNG setup.
+- For current topics, the prompt tells the model to trust web-search results over stale training knowledge and not to append years to the query.
+- For location-dependent requests without a stated place, the agent uses `INTERACTION_DEFAULT_CITY`.
+- The interaction prompt caps web search at 1-2 calls per user turn to avoid search/rephrase loops.
+
+Result shaping:
+
+- Raw SearXNG output is summarized inside `web_search_tool` with a second in-process `ChatOpenAI` call that reuses the existing `INTERACTION_MODEL` and `OPENAI_BASE_URL` settings.
+- The tool returns a compact answer of at most 2 sentences followed by a deduplicated Markdown source list.
+- If summarization fails, the tool falls back to the raw Markdown search results instead of failing the user-visible response.
+- The UI shows one "Searching the web…" indicator for the full tool duration; there is no separate summarize-status flicker.
+
+Operational note: the SearXNG healthcheck now probes only the Wikipedia engine every 60 seconds, which is enough for liveness without burning upstream search-engine quota.
 
 ### Training
 
