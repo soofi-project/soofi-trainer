@@ -415,3 +415,36 @@ Pro Policy aus `get_policies_for_dataset` einen Block:
 - Fehlende Felder nach Pflicht-Nachanreicherung klar markieren (z.B. "Nicht vorhanden").
 - Bei mehrstufigen Workflows: Aktuellen Schritt und nächsten Schritt klar benennen.
 - Wenn keine Ergebnisse: Konkrete Verfeinerungsvorschläge machen.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+## 9. Trainings-Referenz: Pflichtangabe Source + URI (HTML-Kommentar)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Jeder empfohlene Datensatz MUSS am Ende der Antwort als **HTML-Kommentar**
+maschinenlesbar ausgewiesen sein, damit Downstream-Agents (Interaction-Agent,
+Training-Agent) die `config.datasets`-Einträge für den AAS-Push bauen können.
+HTML-Kommentare werden im Markdown-Renderer des UIs ausgeblendet, bleiben für
+nachgelagerte Agenten aber lesbar.
+
+Pflichtformat (exakt eine Zeile pro Datensatz, direkt am Ende der Antwort,
+keine Leerzeile dazwischen, KEIN Code-Fence drumherum):
+
+```
+<!-- dataset-ref source="<huggingface|edc|kaggle|url>" uri="<kanonische URL bzw. Asset-URI>" -->
+```
+
+Regeln:
+- `huggingface` für alle Treffer aus `hub_repo_search` / `hub_repo_details` —
+  URI ist IMMER `https://huggingface.co/datasets/<repo_id>` (aus `repo_id`
+  konstruiert; das HuggingFace-MCP liefert kein `_source`-Feld).
+- `edc` für alle Treffer aus dem Dataspace — URI ist die Asset-URI
+  (`_uri`-Feld aus `get_dataset_from_catalog`, entspricht dem Identifier
+  `https://admin-shell.io/aas/3/0/Identifiable/id`).
+- `kaggle` / `url` nur, wenn der Nutzer explizit eine externe Quelle nennt.
+- Tool-Results mit `_source: "edc"` (aus dem EDC-MCP) geben die Quelle direkt an;
+  niemals raten.
+- Bei mehreren empfohlenen Datensätzen jeweils einen eigenen
+  `<!-- dataset-ref ... -->`-Kommentar anhängen, untereinander, ein Kommentar
+  pro Zeile.
+- VERBOTEN: die Referenz als sichtbaren Text oder in einem Code-Fence
+  (```) ausgeben. Der HTML-Kommentar ist Pflicht — er ist für den Nutzer
+  unsichtbar, aber für den Orchestrator lesbar.

@@ -17,6 +17,9 @@ def register_catalog_tools(mcp: FastMCP):
             limit (int): The limit for pagination
         Returns:
             Catalog: The data catalog
+            - _source: always "edc" — use this as the dataset source when referencing for training
             - policies: List of policies in the catalog (do not truncate or modify ids)
         """
-        return await api_get_catalog(counter_party_address, offset=offset, limit=limit)
+        result = await api_get_catalog(counter_party_address, offset=offset, limit=limit)
+        result["_source"] = "edc"
+        return result

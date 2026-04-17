@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
@@ -63,12 +64,24 @@ async def webhook_job_phase_transition(payload: PhaseTransitionPayload) -> dict[
 async def webhook_job_completed(payload: CompletedPayload) -> dict[str, Any]:
     """Mark a training job as completed."""
     try:
-        await db.complete_job(job_id=payload.job_id, result=payload.result)
+        job = await db.complete_job(job_id=payload.job_id, result=payload.result)
     except db.JobNotFoundError:
         raise HTTPException(status_code=404, detail=f"Job '{payload.job_id}' not found")
     except db.JobNotRunningError as e:
         raise HTTPException(status_code=409, detail=str(e))
     logger.info("Job %s completed", payload.job_id)
+
+    if os.getenv("AAS_PUSH_ON_COMPLETION", "").lower() == "true" and os.getenv("AAS_HOSTNAME"):
+        from training_gateway.aas_push import push_submodel_to_aas
+
+        try:
+            result = await push_submodel_to_aas(job)
+            await db.update_job_aas_info(job.id, result["submodel_id"])
+            logger.info("Job %s: AAS submodel pushed (%s)", job.id, result["submodel_id"])
+        except Exception as exc:
+            logger.error("AAS push failed for job %s: %s", job.id, exc)
+            await db.update_job_aas_error(job.id, str(exc))
+
     return {"status": "ok", "job_id": payload.job_id}
 
 

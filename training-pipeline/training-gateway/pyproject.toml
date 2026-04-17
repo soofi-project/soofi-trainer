@@ -15,6 +15,7 @@ dependencies = [
     "aiosqlite>=0.21.0",
     "pydantic>=2.10.0",
     "aiodocker>=0.23.0",
+    "httpx>=0.28.0",
 ]
 
 [project.optional-dependencies]

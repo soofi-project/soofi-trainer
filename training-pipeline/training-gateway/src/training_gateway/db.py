@@ -75,12 +75,17 @@ async def init_db() -> None:
         )
     """)
     await db.commit()
-    # Add container_id column if it doesn't exist (migration for existing DBs)
-    try:
-        await db.execute("ALTER TABLE jobs ADD COLUMN container_id TEXT")
-        await db.commit()
-    except Exception:
-        pass  # Column already exists
+    # Migrations: add columns if they don't exist yet
+    for column_def in [
+        "container_id TEXT",
+        "aas_submodel_id TEXT",
+        "aas_push_error TEXT",
+    ]:
+        try:
+            await db.execute(f"ALTER TABLE jobs ADD COLUMN {column_def}")
+            await db.commit()
+        except Exception:
+            pass  # Column already exists
     logger.info("Database initialized at %s", DB_PATH)
 
 
@@ -112,25 +117,30 @@ def _serialize_job(job: Job) -> dict[str, Any]:
         "error": job.error,
         "result": json.dumps(job.result.model_dump()) if job.result else None,
         "container_id": job.container_id,
+        "aas_submodel_id": job.aas_submodel_id,
+        "aas_push_error": job.aas_push_error,
     }
 
 
 def _deserialize_job(row: aiosqlite.Row) -> Job:
     """Deserialize a SQLite row to a Job."""
+    row_dict = dict(row)
     return Job(
-        id=row["id"],
-        method=TrainingMethod(row["method"]),
-        dataset_ref=row["dataset_ref"],
-        base_model=row["base_model"],
-        config=json.loads(row["config"]),
-        status=JobStatus(row["status"]),
-        current_phase=row["current_phase"],
-        phases=[JobPhase(**p) for p in json.loads(row["phases"])],
-        created_at=datetime.fromisoformat(row["created_at"]),
-        updated_at=datetime.fromisoformat(row["updated_at"]),
-        error=row["error"],
-        result=JobResult(**json.loads(row["result"])) if row["result"] else None,
-        container_id=row["container_id"],
+        id=row_dict["id"],
+        method=TrainingMethod(row_dict["method"]),
+        dataset_ref=row_dict["dataset_ref"],
+        base_model=row_dict["base_model"],
+        config=json.loads(row_dict["config"]),
+        status=JobStatus(row_dict["status"]),
+        current_phase=row_dict["current_phase"],
+        phases=[JobPhase(**p) for p in json.loads(row_dict["phases"])],
+        created_at=datetime.fromisoformat(row_dict["created_at"]),
+        updated_at=datetime.fromisoformat(row_dict["updated_at"]),
+        error=row_dict["error"],
+        result=JobResult(**json.loads(row_dict["result"])) if row_dict["result"] else None,
+        container_id=row_dict.get("container_id"),
+        aas_submodel_id=row_dict.get("aas_submodel_id"),
+        aas_push_error=row_dict.get("aas_push_error"),
     )
 
 
@@ -173,10 +183,10 @@ async def create_job(
         """
         INSERT INTO jobs (id, method, dataset_ref, base_model, config, status,
                           current_phase, phases, created_at, updated_at, error, result,
-                          container_id)
+                          container_id, aas_submodel_id, aas_push_error)
         VALUES (:id, :method, :dataset_ref, :base_model, :config, :status,
                 :current_phase, :phases, :created_at, :updated_at, :error, :result,
-                :container_id)
+                :container_id, :aas_submodel_id, :aas_push_error)
         """,
         data,
     )
@@ -374,7 +384,8 @@ async def _save_job(job: Job) -> None:
             method = :method, dataset_ref = :dataset_ref, base_model = :base_model,
             config = :config, status = :status, current_phase = :current_phase,
             phases = :phases, updated_at = :updated_at, error = :error, result = :result,
-            container_id = :container_id
+            container_id = :container_id, aas_submodel_id = :aas_submodel_id,
+            aas_push_error = :aas_push_error
         WHERE id = :id
         """,
         data,
@@ -391,3 +402,27 @@ async def update_job_container_id(job_id: str, container_id: str) -> None:
         (container_id, now.isoformat(), job_id),
     )
     await conn.commit()
+
+
+async def update_job_aas_info(job_id: str, aas_submodel_id: str) -> None:
+    """Store the AAS submodel ID after a successful push."""
+    conn = await get_db()
+    now = _now()
+    await conn.execute(
+        "UPDATE jobs SET aas_submodel_id = ?, aas_push_error = NULL, updated_at = ? WHERE id = ?",
+        (aas_submodel_id, now.isoformat(), job_id),
+    )
+    await conn.commit()
+    logger.info("Job %s: AAS submodel ID saved (%s)", job_id, aas_submodel_id)
+
+
+async def update_job_aas_error(job_id: str, error: str) -> None:
+    """Store an AAS push error without changing the job status."""
+    conn = await get_db()
+    now = _now()
+    await conn.execute(
+        "UPDATE jobs SET aas_push_error = ?, updated_at = ? WHERE id = ?",
+        (error, now.isoformat(), job_id),
+    )
+    await conn.commit()
+    logger.error("Job %s: AAS push error saved: %s", job_id, error)

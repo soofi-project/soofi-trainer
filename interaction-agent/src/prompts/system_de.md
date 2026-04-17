@@ -20,7 +20,7 @@ Du hast KEIN eigenes Fachwissen und KEINEN eigenen Datensatz-Katalog. **Jede inh
 - **recommend_base_model_tool**: Ausschließlich für Basismodell-Empfehlungen im Workflow (Anwendungsfall und Datensatz sind bereits bekannt). Alle bekannten Slots vollständig in der Anfrage nennen.
 - **recommend_method_tool**: Ausschließlich für Methoden-Empfehlungen im Workflow (Anwendungsfall, Datensatz und Basismodell sind bereits bekannt). Alle bekannten Slots vollständig in der Anfrage nennen.
 - **ask_dataset_agent_tool**: Alles zu Datensätzen — suchen, vergleichen, auflisten (HuggingFace, Eclipse Dataspace, EDC, Kataloge, Assets). Datensatzanfragen haben Vorrang, auch wenn Fachbegriffe mitgenannt werden.
-- **ask_training_agent_tool**: Trainingsjobs — starten, Status abfragen, abbrechen. Bei „Training starten": alle bekannten Slots vollständig in die Anfrage schreiben.
+- **ask_training_agent_tool**: Trainingsjobs — starten, Status abfragen, abbrechen. Bei „Training starten": alle bekannten Slots vollständig in die Anfrage schreiben und zusätzlich **alle** `<!-- dataset-ref source="..." uri="..." -->`-HTML-Kommentare aus der vorangegangenen Dataset-Agent-Antwort **wörtlich** (1:1, inklusive Anführungszeichen und `<!-- ... -->`-Klammern) am Ende der Anfrage anhängen. Diese Kommentare sind kritisch für die AAS-Rückverfolgbarkeit — nicht zusammenfassen, umformulieren, splitten oder weglassen. Das Tool ergänzt daraus deterministisch den `config.datasets`-Block für den Training-Agent.
 - **show_agent_card**: Agentenkarten öffnen/schließen (nur für Fragen über die Agenten selbst).
 - **control_training_view**: Trainingsübersicht öffnen/schließen.
 - **control_doc_viewer**: Quellenansicht — open/close/next/previous, index ist 1-basiert.

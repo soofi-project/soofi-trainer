@@ -16,7 +16,7 @@ def register_federated_catalog_tools(mcp: FastMCP):
     """Register all federated catalog tools with the MCP server"""
 
     @mcp.tool()
-    async def query_federated_catalog_sparql(query: str, format: str = "json") -> str:
+    async def query_federated_catalog_sparql(query: str, format: str = "json") -> dict:
         """Execute a SPARQL query against the federated catalog RDF graph.
 
         The federated catalog aggregates datasets from multiple providers into a single
@@ -34,7 +34,9 @@ def register_federated_catalog_tools(mcp: FastMCP):
             format (str): Output format - json, xml, csv, or turtle (default: json)
 
         Returns:
-            str: Query results in the specified format
+            dict with:
+            - _source: always "edc" — all datasets in this catalog originate from the EDC dataspace
+            - results: query results in the specified format (string)
 
         Example to query datasets:
             query_federated_catalog_sparql('''
@@ -54,7 +56,10 @@ def register_federated_catalog_tools(mcp: FastMCP):
                 LIMIT 10
             ''')
         """
-        return await sparql_query(query, format)
+        return {
+            "_source": "edc",
+            "results": await sparql_query(query, format),
+        }
 
     @mcp.tool()
     async def get_federated_catalog_stats() -> dict:

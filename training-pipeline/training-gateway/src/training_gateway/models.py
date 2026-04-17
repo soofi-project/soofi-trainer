@@ -80,6 +80,8 @@ class Job(BaseModel):
     error: str | None = None
     result: JobResult | None = None
     container_id: str | None = None
+    aas_submodel_id: str | None = None
+    aas_push_error: str | None = None
 
 
 # --- Webhook Payload Models ---

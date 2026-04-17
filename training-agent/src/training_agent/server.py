@@ -12,7 +12,6 @@ from a2a.types import AgentCapabilities, AgentCard, AgentSkill
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from langchain_mcp_adapters.tools import load_mcp_tools
 from langgraph.graph.state import CompiledStateGraph
 
 from .a2a_handler import TrainingAgentExecutor
@@ -28,14 +27,18 @@ graph: CompiledStateGraph | None = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """Load MCP tools and build the graph on startup."""
+    """Load MCP tools and build the graph on startup.
+
+    Uses ``get_tools`` (session-per-call) rather than a long-lived session so
+    that every tool invocation re-handshakes with the gateway. This survives
+    gateway restarts that would otherwise invalidate a bound session.
+    """
     global graph
-    async with mcp_client.session("training") as session:
-        tools = await load_mcp_tools(session)
-        logger.info(f"Loaded {len(tools)} MCP tools: {[t.name for t in tools]}")
-        graph = build_graph(tools)
-        logger.info("Training agent graph built successfully")
-        yield
+    tools = await mcp_client.get_tools(server_name="training")
+    logger.info(f"Loaded {len(tools)} MCP tools: {[t.name for t in tools]}")
+    graph = build_graph(tools)
+    logger.info("Training agent graph built successfully")
+    yield
 
 
 app = FastAPI(title="Soofi Training Agent", lifespan=lifespan)
