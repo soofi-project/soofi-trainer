@@ -698,6 +698,16 @@ class SoofiChat extends SignalWatcher(LitElement) {
     .ptt-button.recording svg {
       fill: #fff;
     }
+    .ptt-button.tts-stop {
+      background: var(--color-primary, #1a73e8);
+      border-color: var(--color-primary, #1a73e8);
+    }
+    .ptt-button.tts-stop:hover {
+      background: var(--color-primary-hover, #1557b0);
+    }
+    .ptt-button.tts-stop svg {
+      fill: #fff;
+    }
 
     /* Doc viewer panel */
     .doc-viewer {
@@ -1069,6 +1079,9 @@ class SoofiChat extends SignalWatcher(LitElement) {
   // AudioContext unlocked via user gesture — stays unlocked, bypasses mobile autoplay block
   private audioContext: AudioContext | null = null;
   private currentAudioSource: AudioBufferSourceNode | null = null;
+  // True while at least one TTS clip is queued or playing — flips the mic button into a stop button
+  @state() private ttsPlaying = false;
+  private activePlaybacks = 0;
 
   // Voice Activity Detection — auto-stops recording after sustained silence
   private vadContext: AudioContext | null = null;
@@ -1269,30 +1282,42 @@ class SoofiChat extends SignalWatcher(LitElement) {
           ?disabled=${this.streaming}
         />
         ${voiceControlsVisible
-          ? html`
-              <button
-                class="ptt-button ${this.isRecording ? "recording" : ""}"
-                title=${voiceActivation === "push-to-talk"
-                  ? tr("ptt_hold", this.language)
-                  : tr("ptt_toggle", this.language)}
-                @pointerdown=${voiceActivation === "push-to-talk"
-                  ? this.startRecording
-                  : nothing}
-                @pointerup=${voiceActivation === "push-to-talk"
-                  ? this.stopRecording
-                  : nothing}
-                @pointercancel=${voiceActivation === "push-to-talk"
-                  ? this.stopRecording
-                  : nothing}
-                @click=${voiceActivation === "toggle"
-                  ? this.toggleRecording
-                  : nothing}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/>
-                </svg>
-              </button>
-            `
+          ? this.ttsPlaying
+            ? html`
+                <button
+                  class="ptt-button tts-stop"
+                  title=${tr("tts_stop_title", this.language)}
+                  @click=${this.cancelTts}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                    <rect x="6" y="6" width="12" height="12" rx="1.5"/>
+                  </svg>
+                </button>
+              `
+            : html`
+                <button
+                  class="ptt-button ${this.isRecording ? "recording" : ""}"
+                  title=${voiceActivation === "push-to-talk"
+                    ? tr("ptt_hold", this.language)
+                    : tr("ptt_toggle", this.language)}
+                  @pointerdown=${voiceActivation === "push-to-talk"
+                    ? this.startRecording
+                    : nothing}
+                  @pointerup=${voiceActivation === "push-to-talk"
+                    ? this.stopRecording
+                    : nothing}
+                  @pointercancel=${voiceActivation === "push-to-talk"
+                    ? this.stopRecording
+                    : nothing}
+                  @click=${voiceActivation === "toggle"
+                    ? this.toggleRecording
+                    : nothing}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/>
+                  </svg>
+                </button>
+              `
           : nothing}
         <button
           class="send-btn"
@@ -1641,12 +1666,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
     this.dashboardEmbed = null;
 
     // Cancel any queued/playing TTS from the previous response
-    this.ttsGeneration++;
-    this.currentAudio?.pause();
-    this.currentAudio = null;
-    this.currentAudioSource?.stop();
-    this.currentAudioSource = null;
-    this.audioQueue = Promise.resolve();
+    this.cancelTts();
 
     // Add placeholder assistant message
     this.messages = [...this.messages, { role: "assistant", text: "" }];
@@ -1929,8 +1949,29 @@ class SoofiChat extends SignalWatcher(LitElement) {
   private enqueueTTS(text: string): void {
     if (!text.trim()) return;
     const gen = this.ttsGeneration;
+    this.activePlaybacks++;
+    this.ttsPlaying = true;
     const audioBlobPromise = this.fetchAudio(text);
-    this.audioQueue = this.audioQueue.then(() => this.playBlob(audioBlobPromise, gen));
+    this.audioQueue = this.audioQueue
+      .then(() => this.playBlob(audioBlobPromise, gen))
+      .finally(() => {
+        // Only decrement if the generation still matches — cancelTts() resets the counter directly
+        if (gen === this.ttsGeneration) {
+          this.activePlaybacks = Math.max(0, this.activePlaybacks - 1);
+          this.ttsPlaying = this.activePlaybacks > 0;
+        }
+      });
+  }
+
+  private cancelTts(): void {
+    this.ttsGeneration++;
+    this.currentAudio?.pause();
+    this.currentAudio = null;
+    this.currentAudioSource?.stop();
+    this.currentAudioSource = null;
+    this.audioQueue = Promise.resolve();
+    this.activePlaybacks = 0;
+    this.ttsPlaying = false;
   }
 
   private async fetchAudio(text: string): Promise<Blob | null> {
@@ -2258,14 +2299,7 @@ class SoofiChat extends SignalWatcher(LitElement) {
     // Cancel any in-flight STT fetch
     this.sttGeneration++;
     // Cancel any pending TTS
-    this.ttsGeneration++;
-    this.audioQueue = Promise.resolve();
-    if (this.currentAudio) {
-      this.currentAudio.pause();
-      this.currentAudio = null;
-    }
-    this.currentAudioSource?.stop();
-    this.currentAudioSource = null;
+    this.cancelTts();
   }
 
   private collectDocAnchors(basePath: string): string[] {

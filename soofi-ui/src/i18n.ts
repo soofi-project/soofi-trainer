@@ -11,6 +11,7 @@ const strings: Record<string, Record<Language, string>> = {
   send: { de: "Senden", en: "Send" },
   ptt_hold: { de: "Gedrückt halten zum Sprechen", en: "Hold to speak" },
   ptt_toggle: { de: "Klicken zum Starten/Stoppen", en: "Click to start/stop" },
+  tts_stop_title: { de: "Sprachausgabe stoppen", en: "Stop speech" },
 
   // Status / search bar
   thinking: { de: "Überlege", en: "Thinking" },
