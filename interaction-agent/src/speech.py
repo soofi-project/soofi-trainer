@@ -5,6 +5,10 @@ import re
 from .i18n import Language, tr
 
 _RE_MD_LINK = re.compile(r"\[([^\]]+)\]\([^)]+\)")
+# Bare URLs in parentheses like "(https://hf.co/...)" — strip parens + URL entirely
+_RE_URL_PARENS = re.compile(r"\(\s*https?://[^\s)]+\s*\)")
+# Remaining bare URLs not in parentheses — stop at whitespace
+_RE_URL_BARE = re.compile(r"https?://\S+")
 _RE_MD_FORMAT = re.compile(r"[*_`]+")
 _RE_WHITESPACE = re.compile(r"\s+")
 _SPEECH_MIN_CHARS = 15  # don't speak trivially short responses
@@ -31,6 +35,9 @@ _ABBREVIATIONS = (
     "i.d.R.", "ca.", "ggf.", "etc.", "bzgl.", "sog.", "z.T.", "evtl.",
     "Dr.", "Prof.", "St.", "Jr.", "Sr.", "usw.", "u.v.m.",
     "Abb.", "Tab.", "Nr.", "Mr.", "Mrs.", "Ms.", "vs.", "e.g.", "i.e.",
+    # Version numbers — prevent "4.0" → "4. 0" which would trigger a false sentence split
+    "1.0", "2.0", "3.0", "4.0", "5.0",
+    "1.1", "2.1", "3.1", "4.1",
 )
 
 
@@ -59,6 +66,7 @@ def generate_speech_text(
     *,
     has_search_results: bool = False,
     lang: Language = "de",
+    streaming: bool = True,
 ) -> str:
     """Extract the first speakable sentence from a Markdown response for TTS.
 
@@ -66,6 +74,9 @@ def generate_speech_text(
     - If the whole response is structural, returns a static fallback phrase
     - Returns only the first complete sentence; a colon-ending sentence is
       converted to a period (list follow-ups are not spoken)
+    - streaming=True (default): a period at the very end of the buffer is treated
+      as potentially incomplete (e.g. "4." before "0" arrives) — wait for more text.
+      streaming=False: called after the response is complete, accept period-ending sentences.
     """
     # Collect only the intro lines before any structural markdown
     intro_lines: list[str] = []
@@ -85,8 +96,10 @@ def generate_speech_text(
     if len(intro) < _SPEECH_MIN_CHARS:
         return ""
 
-    # Strip inline markdown
+    # Strip inline markdown and bare URLs
     intro = _RE_MD_LINK.sub(r"\1", intro)
+    intro = _RE_URL_PARENS.sub("", intro)
+    intro = _RE_URL_BARE.sub("", intro)
     intro = _RE_MD_FORMAT.sub("", intro)
     intro = _RE_WHITESPACE.sub(" ", intro).strip()
 
@@ -116,6 +129,12 @@ def generate_speech_text(
             first = s[:-1] + "."
             break
         if not re.search(r"[.!?]$", s):
+            break
+        # During streaming the buffer may end mid-number: "4." could be "4.0" not yet
+        # fully arrived. Only accept a period-ending sentence when confirmed by
+        # following text (i.e. not the last segment in the split).
+        # After streaming ends (streaming=False) this guard is skipped.
+        if streaming and s is sentences[-1] and s.endswith("."):
             break
         first = s
         break

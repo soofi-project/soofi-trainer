@@ -257,12 +257,14 @@ class SSEStream:
 
         yield _sse({"type": "TEXT_MESSAGE_END", "messageId": self._msg_id})
 
-        # Fallback speech if no sentence boundary was hit during streaming
+        # Fallback speech if no sentence boundary was hit during streaming.
+        # streaming=False: response is complete, accept period-ending sentences.
         if self._response_text and not self._speech_emitted:
             speech = generate_speech_text(
                 self._response_text,
                 has_search_results=self._has_search_results(),
                 lang=self._language,
+                streaming=False,
             )
             if speech:
                 yield _sse({"type": "SPEECH_TEXT", "text": speech})
