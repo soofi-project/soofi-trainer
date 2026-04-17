@@ -550,6 +550,11 @@ class SSEStream:
     def _emit_tails(self) -> list[str]:
         result: list[str] = []
         for tracker in self._trackers.values():
+            # Tail compensation only applies to streaming tools. Non-streaming
+            # tools (chunk_key="") return an internal confirmation string that
+            # must never leak into the assistant reply.
+            if not tracker.chunk_key:
+                continue
             tail = _compute_tail(tracker.tool_output, tracker.streamed_text)
             if tail:
                 logger.info(

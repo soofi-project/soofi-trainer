@@ -11,7 +11,6 @@ from a2a.types import AgentCapabilities, AgentCard, AgentSkill
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from langchain_mcp_adapters.tools import load_mcp_tools
 from langgraph.graph.state import CompiledStateGraph
 
 from .a2a_handler import DatasetAgentExecutor
@@ -26,21 +25,24 @@ graph: CompiledStateGraph | None = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """Load MCP tools and build the graph on startup."""
+    """Load MCP tools and build the graph on startup.
+
+    Uses ``get_tools`` (session-per-call) so tool invocations survive EDC or
+    HuggingFace MCP restarts — a bound session would go stale on the other
+    side.
+    """
     global graph
-    async with mcp_client.session("edc") as edc_session:
-        async with mcp_client.session("huggingface") as hf_session:
-            edc_tools = await load_mcp_tools(edc_session)
-            logger.info("Loaded %d EDC MCP tools: %s", len(edc_tools), [t.name for t in edc_tools])
+    edc_tools = await mcp_client.get_tools(server_name="edc")
+    logger.info("Loaded %d EDC MCP tools: %s", len(edc_tools), [t.name for t in edc_tools])
 
-            hf_tools = await load_mcp_tools(hf_session)
-            logger.info(
-                "Loaded %d HuggingFace MCP tools: %s", len(hf_tools), [t.name for t in hf_tools]
-            )
+    hf_tools = await mcp_client.get_tools(server_name="huggingface")
+    logger.info(
+        "Loaded %d HuggingFace MCP tools: %s", len(hf_tools), [t.name for t in hf_tools]
+    )
 
-            graph = build_graph(edc_tools + hf_tools)
-            logger.info("Dataset agent graph built successfully")
-            yield
+    graph = build_graph(edc_tools + hf_tools)
+    logger.info("Dataset agent graph built successfully")
+    yield
 
 
 app = FastAPI(title="Soofi Dataset Agent", lifespan=lifespan)

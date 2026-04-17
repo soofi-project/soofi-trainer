@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from typing import Any
 
 from fastmcp import FastMCP
@@ -59,9 +60,15 @@ async def start_training_job(
 
     Args:
         method: Training method (lora, sft, qlora, rag, distillation, cpt, instruction, dpo, rlhf)
-        dataset_ref: Reference to the training dataset
+        dataset_ref: Primary dataset reference (used as fallback if config.datasets is absent)
         base_model: Base model name (e.g. soofi)
-        config: Optional configuration overrides for the training job
+        config: Optional configuration overrides. Relevant keys:
+            - datasets: list of typed dataset entries for AAS traceability:
+                {"source": "aas",         "submodel_id": "https://dfki.de/ids/asset/..."}
+                {"source": "huggingface", "uri": "https://huggingface.co/datasets/<id>"}
+                {"source": "kaggle",      "uri": "https://www.kaggle.com/datasets/<id>"}
+                {"source": "url",         "uri": "https://..."}
+            - epochs, learning_rate, batch_size: hyperparameters
 
     Returns:
         Job details including the job_id for tracking
@@ -162,6 +169,43 @@ async def list_training_jobs(status: str | None = None) -> dict[str, Any]:
         ],
         "total": len(jobs),
     }
+
+
+@mcp.tool()
+async def push_aas_submodel(job_id: str) -> dict[str, Any]:
+    """
+    Generate an AI Model Nameplate submodel (IDTA 02060) from the metadata of a
+    completed training job and push it to the AAS server.
+
+    Args:
+        job_id: ID of the completed training job
+
+    Returns:
+        { "submodel_id": "...", "aas_url": "...", "status": "published" }
+    """
+    if not os.getenv("AAS_HOSTNAME"):
+        return {"error": "AAS_HOSTNAME not configured — AAS push disabled"}
+
+    job = await db.get_job(job_id)
+    if job is None:
+        return {"error": f"Job '{job_id}' not found"}
+
+    if job.status != JobStatus.completed:
+        return {
+            "error": f"Job '{job_id}' is not completed (status={job.status.value})",
+            "job_id": job_id,
+        }
+
+    from training_gateway.aas_push import push_submodel_to_aas
+
+    try:
+        result = await push_submodel_to_aas(job)
+        await db.update_job_aas_info(job_id, result["submodel_id"])
+        return result
+    except Exception as exc:
+        logger.error("AAS push failed for job %s: %s", job_id, exc)
+        await db.update_job_aas_error(job_id, str(exc))
+        return {"error": f"AAS push failed: {exc}", "job_id": job_id}
 
 
 @mcp.tool()

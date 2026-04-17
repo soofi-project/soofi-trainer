@@ -37,6 +37,9 @@ services:
       # Internal values — not user-configurable
       - TRAINING_GATEWAY_URL=http://training-gateway:8000/webhooks
       - TRAINING_CONTAINER_NETWORK=soofi-trainer_soofi-network
+      # AAS push target: override user-facing AAS_HOSTNAME with internal service name
+      - AAS_HOSTNAME=aas-environment
+      - AAS_ENVIRONMENT_PORT=8081
     volumes:
       - training_gateway_data:/data
       # Mount Docker socket to allow starting training containers on the host daemon
@@ -44,6 +47,7 @@ services:
     networks:
       - soofi-network
       - soofi-training-network
+      - soofi-aas-network
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
       interval: 10s

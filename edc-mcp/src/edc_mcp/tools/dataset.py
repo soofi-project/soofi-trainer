@@ -47,8 +47,13 @@ def register_dataset_tools(mcp: FastMCP):
             dataset_id (str): The unique dataset id
         Returns:
             Dataset: The dataset object
+            - _source: always "edc" — use this as the dataset source when referencing for training
+            - _uri: the dataset_id, use as URI when referencing this dataset for training
         """
-        return await api_get_dataset_from_catalog(counter_party_address, dataset_id)
+        result = await api_get_dataset_from_catalog(counter_party_address, dataset_id)
+        result["_source"] = "edc"
+        result["_uri"] = dataset_id
+        return result
 
     @mcp.tool()
     async def get_thing_description_for_dataset(counter_party_address: str, dataset_id: str) -> dict:
