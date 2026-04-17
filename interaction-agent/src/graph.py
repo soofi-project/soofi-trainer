@@ -991,9 +991,7 @@ def build_graph() -> CompiledStateGraph:
         **({"openai_api_base": base_url} if base_url else {}),
         **_build_vllm_kwargs("INTERACTION"),
     )
-    llm_with_tools = llm.bind_tools(
-        tools, **({"parallel_tool_calls": False} if not base_url else {})
-    )
+    llm_with_tools = llm.bind_tools(tools, parallel_tool_calls=False)
     slot_extractor = llm.with_structured_output(SlotState)
     tool_node = ToolNode(tools)
 
@@ -1041,7 +1039,7 @@ def build_graph() -> CompiledStateGraph:
                     tool_choice="required",
                     **({"parallel_tool_calls": False} if not base_url else {}),
                 )
-                response = await forced.ainvoke(messages + [SystemMessage(content=hint)])
+                response = await forced.ainvoke(messages + [HumanMessage(content=hint)])
             except Exception:
                 logger.exception("Forced-tool retry failed — keeping original response")
 

@@ -18,13 +18,17 @@ TTS_MODEL = os.getenv("TTS_MODEL")
 if not TTS_MODEL:
     raise RuntimeError("TTS_MODEL is not set")
 
-_tts_speed_raw = os.getenv("TTS_SPEED")
-if not _tts_speed_raw:
-    raise RuntimeError("TTS_SPEED is not set")
-try:
-    TTS_SPEED = float(_tts_speed_raw)
-except ValueError:
-    raise RuntimeError(f"TTS_SPEED must be a number, got '{_tts_speed_raw}'")
+def _parse_speed(env_var: str) -> float:
+    raw = os.getenv(env_var)
+    if not raw:
+        raise RuntimeError(f"{env_var} is not set")
+    try:
+        return float(raw)
+    except ValueError:
+        raise RuntimeError(f"{env_var} must be a number, got '{raw}'")
+
+TTS_SPEED_DE = _parse_speed("TTS_SPEED_DE")
+TTS_SPEED_EN = _parse_speed("TTS_SPEED_EN")
 
 TTS_BASE_URL = os.getenv("TTS_BASE_URL")  # None → api.openai.com, set → local endpoint
 
@@ -100,11 +104,12 @@ async def synthesize(req: SynthesizeRequest) -> StreamingResponse:
         raise HTTPException(status_code=503, detail="Service not initialized")
     tts_input = _apply_phonetic(req.text, req.language)
     try:
+        speed = TTS_SPEED_DE if req.language == "de" else TTS_SPEED_EN
         response = await _client.audio.speech.create(
             model=TTS_MODEL,
             voice=req.voice,  # type: ignore[arg-type]
             input=tts_input,
-            speed=TTS_SPEED,
+            speed=speed,
         )
     except Exception as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
