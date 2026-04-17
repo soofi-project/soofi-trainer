@@ -21,6 +21,51 @@ _SOOFI_EVENT_KEY = "__soofi_event"
 _EVENT_SEARCH_STATUS = "search_status"
 _RE_LANG_TAG = re.compile(r"\[LANG:(de|en)\]\s*$")
 
+# HuggingFace listings must be single-line per entry (see system_de.md §8).
+# The LLM regularly ignores this and adds indented sub-bullets ("   - **Beschreibung:**",
+# "   - **Tags:**" etc.). This filter strips them in-flight. Top-level bullets
+# (no indent) stay intact — those are used by EDC listings and HF detail view.
+_RE_FORBIDDEN_HF_SUBBULLET = re.compile(
+    r"^\s{2,}[-*]\s+\*\*(?:"
+    r"Beschreibung|Tags|Autor|Lizenz|License|"
+    r"Erstellungsdatum|Aktualisiert|Datum|"
+    r"Trending[- ]?Score|"
+    r"Task[-_\s]*Kategorien?|Task[-_\s]*Categories|"
+    r"Größe|Groesse|Size|Size[-_\s]*Categor\w*|"
+    r"Sprache|Language|"
+    r"Format|Modalit\w*|"
+    r"Downloads|Likes"
+    r")\b",
+    re.IGNORECASE,
+)
+
+
+class _HfSubBulletFilter:
+    """Line-buffered filter that drops forbidden HuggingFace sub-bullet metadata
+    lines from the streamed dataset-agent response. Buffers until newline so a
+    forbidden line is never partially emitted."""
+
+    def __init__(self) -> None:
+        self._buf = ""
+
+    def feed(self, chunk: str) -> str:
+        if not chunk:
+            return ""
+        self._buf += chunk
+        out: list[str] = []
+        while "\n" in self._buf:
+            line, self._buf = self._buf.split("\n", 1)
+            if not _RE_FORBIDDEN_HF_SUBBULLET.match(line):
+                out.append(line + "\n")
+        return "".join(out)
+
+    def flush(self) -> str:
+        remaining = self._buf
+        self._buf = ""
+        if remaining and _RE_FORBIDDEN_HF_SUBBULLET.match(remaining):
+            return ""
+        return remaining
+
 
 class DatasetAgentExecutor(AgentExecutor):
     """Wraps the LangGraph dataset graph as an A2A AgentExecutor."""
@@ -88,6 +133,7 @@ class DatasetAgentExecutor(AgentExecutor):
         system_prompt = SYSTEM_PROMPT_EN if lang == "en" else SYSTEM_PROMPT_DE
         config = {"configurable": {"thread_id": thread_id, "system_prompt": system_prompt}}
         collected: list[str] = []
+        subbullet_filter = _HfSubBulletFilter()
 
         try:
             async for event in graph.astream_events(
@@ -122,22 +168,29 @@ class DatasetAgentExecutor(AgentExecutor):
                 elif event["event"] == "on_chat_model_stream":
                     chunk = event["data"]["chunk"]
                     if isinstance(chunk, AIMessageChunk) and chunk.content:
-                        collected.append(chunk.content)
-                        await event_queue.enqueue_event(
-                            TaskStatusUpdateEvent(
-                                task_id=context.task_id,
-                                context_id=context.context_id,
-                                status=TaskStatus(
-                                    state=TaskState.working,
-                                    message=new_agent_text_message(
-                                        chunk.content,
-                                        context.context_id,
-                                        context.task_id,
-                                    ),
-                                ),
-                                final=False,
-                            )
+                        raw = (
+                            chunk.content
+                            if isinstance(chunk.content, str)
+                            else str(chunk.content)
                         )
+                        filtered = subbullet_filter.feed(raw)
+                        if filtered:
+                            collected.append(filtered)
+                            await event_queue.enqueue_event(
+                                TaskStatusUpdateEvent(
+                                    task_id=context.task_id,
+                                    context_id=context.context_id,
+                                    status=TaskStatus(
+                                        state=TaskState.working,
+                                        message=new_agent_text_message(
+                                            filtered,
+                                            context.context_id,
+                                            context.task_id,
+                                        ),
+                                    ),
+                                    final=False,
+                                )
+                            )
         except Exception:
             logger.exception("Error during A2A graph execution")
             await event_queue.enqueue_event(
@@ -155,6 +208,25 @@ class DatasetAgentExecutor(AgentExecutor):
                 )
             )
             return
+
+        tail = subbullet_filter.flush()
+        if tail:
+            collected.append(tail)
+            await event_queue.enqueue_event(
+                TaskStatusUpdateEvent(
+                    task_id=context.task_id,
+                    context_id=context.context_id,
+                    status=TaskStatus(
+                        state=TaskState.working,
+                        message=new_agent_text_message(
+                            tail,
+                            context.context_id,
+                            context.task_id,
+                        ),
+                    ),
+                    final=False,
+                )
+            )
 
         response_text = "".join(collected) or tr("no_response", lang)
         logger.info("A2A response: %s", response_text[:200])

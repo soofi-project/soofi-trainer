@@ -829,6 +829,38 @@ _TOOL_TRANSITION_KEY: dict[str, str] = {
     "recommend_method_tool": "method_recommended",
 }
 
+# Markers indicating the dataset agent returned a no-results response.
+# Must stay aligned with the phrasings enforced in
+# dataset-agent/src/dataset_agent/prompts/system_de.md (Workflow A).
+_NO_DATASET_RESULT_MARKERS: tuple[str, ...] = (
+    "kein thematisch passender datensatz",
+    "keine datensätze gefunden",
+    "keinen passenden datensatz",
+    "keine passenden datensätze",
+    "no matching dataset",
+    "no datasets found",
+    "no datasets were found",
+)
+
+
+def _tool_message_text(content: Any) -> str:
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts: list[str] = []
+        for part in content:
+            if isinstance(part, str):
+                parts.append(part)
+            elif isinstance(part, dict) and part.get("type") == "text":
+                parts.append(part.get("text", ""))
+        return " ".join(parts)
+    return str(content)
+
+
+def _looks_like_no_dataset_results(content: Any) -> bool:
+    lowered = _tool_message_text(content).lower()
+    return any(marker in lowered for marker in _NO_DATASET_RESULT_MARKERS)
+
 # Narration triggers — phrases that announce or claim an action (search/ask/
 # check/start) but belong in a tool call, not user-facing text. If the agent
 # emits any of these WITHOUT a tool call, we retry once with forced tool_choice.
@@ -980,6 +1012,15 @@ def build_graph() -> CompiledStateGraph:
             if hasattr(msg, "tool_calls"):
                 break
             last_tool = getattr(msg, "name", None)
+            if last_tool == "ask_dataset_agent_tool" and _looks_like_no_dataset_results(
+                getattr(msg, "content", "")
+            ):
+                # Dataset agent already suggests refinements + HuggingFace alternative
+                # in its response. A deterministic "Welchen möchtest du verwenden?"
+                # on top would be nonsensical, and a HuggingFace follow-up would
+                # duplicate the agent's own hint.
+                logger.info("Dataset search returned no results — skipping transition")
+                return {}
             if last_tool in _TOOL_TRANSITION_KEY:
                 key = _TOOL_TRANSITION_KEY[last_tool]
                 break

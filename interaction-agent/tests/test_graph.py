@@ -102,6 +102,58 @@ class TestAfterTools:
         assert after_tools({"messages": [ai_msg, tool1, tool2]}) == "__end__"
 
 
+_NO_DATASET_RESULT_MARKERS = (
+    "kein thematisch passender datensatz",
+    "keine datensätze gefunden",
+    "keinen passenden datensatz",
+    "keine passenden datensätze",
+    "no matching dataset",
+    "no datasets found",
+    "no datasets were found",
+)
+
+
+def _tool_message_text(content) -> str:
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for part in content:
+            if isinstance(part, str):
+                parts.append(part)
+            elif isinstance(part, dict) and part.get("type") == "text":
+                parts.append(part.get("text", ""))
+        return " ".join(parts)
+    return str(content)
+
+
+def _looks_like_no_dataset_results(content) -> bool:
+    lowered = _tool_message_text(content).lower()
+    return any(marker in lowered for marker in _NO_DATASET_RESULT_MARKERS)
+
+
+class TestNoDatasetResultDetection:
+    """Mirrors _looks_like_no_dataset_results in graph.py."""
+
+    def test_matches_dataspace_no_hit(self) -> None:
+        content = (
+            "Im Dataspace wurde kein thematisch passender Datensatz für "
+            "den Anwendungsfall 'Compliance' gefunden."
+        )
+        assert _looks_like_no_dataset_results(content)
+
+    def test_matches_english_no_match(self) -> None:
+        assert _looks_like_no_dataset_results("No matching dataset was found.")
+
+    def test_does_not_match_hit_list(self) -> None:
+        content = "1. [josephmayo/refusal-compliance-pairs](https://hf.co/...) — 20 ⬇"
+        assert not _looks_like_no_dataset_results(content)
+
+    def test_handles_list_of_parts(self) -> None:
+        content = [{"type": "text", "text": "Keine Datensätze gefunden zum Thema X."}]
+        assert _looks_like_no_dataset_results(content)
+
+
 class TestRagUrlsStoreLRU:
     """Tests for _rag_urls_store LRU eviction behavior."""
 
