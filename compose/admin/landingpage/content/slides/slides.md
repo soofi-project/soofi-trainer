@@ -32,27 +32,17 @@
 
 ---
 
-## Goals
-- An open and scalable model ensemble
-  - **Soofi 8B Dense** (Base, Instruct, Think) 
-  - **Soofi 30B MoE, A3B** (Base, Instruct, Think)
-  - **Soofi 120B MoE, A10B** (Base, Instruct, Think)
-- Systemically integrated and learning agents
-- Adaptability to industrial use cases
+<!-- .slide: data-background-color="#0f1115" data-background-iframe="https://${LANDING_PAGE_HOSTNAME}:${SOOFI_UI_PORT}" data-background-interactive data-preload -->
 
 ---
 
+<!-- .slide: data-background-color="#0f1115" data-background-iframe="https://${LANDING_PAGE_HOSTNAME}:${AAS_WEBUI_PORT}" data-background-interactive data-preload -->
 
-<!-- .slide: data-background-color="#0f1115" data-background-iframe="https://${LANDING_PAGE_HOSTNAME}:${SOOFI_UI_PORT}" data-background-interactive data-preload -->
+---
+
+<!-- .slide: data-background-color="#0f1115" data-background-iframe="https://${LANDING_PAGE_HOSTNAME}:${EDC_PORTAL_PROVIDER_PORT}" data-background-interactive data-preload -->
 
 ---
 
 <!-- .slide: data-background-color="#0f1115" data-background-iframe="https://${LANDING_PAGE_HOSTNAME}:${GRAFANA_PORT}/d/vllm-master-v2-mod/vllm-monitoring-modified?orgId=1&from=now-15m&to=now&timezone=browser&refresh=5s&theme=light" data-background-interactive -->
 
----
-
-## Embedded Image
-
-Path must be relative to `index.html`, not `slides.md`.
-
----
