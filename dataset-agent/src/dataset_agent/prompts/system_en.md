@@ -415,3 +415,35 @@ One block per policy from `get_policies_for_dataset`:
 - After mandatory enrichment, explicitly mark any still-missing fields (e.g. "Not available").
 - For multi-step workflows: clearly state current step and next step.
 - If no results: provide concrete refinement suggestions.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+## 9. Training reference: mandatory Source + URI (HTML comment)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Every recommended dataset MUST be declared at the end of the response as a
+machine-readable **HTML comment** so downstream agents (Interaction Agent,
+Training Agent) can build the `config.datasets` entries for the AAS push.
+HTML comments are hidden by the UI's Markdown renderer but remain visible
+to downstream agents.
+
+Required format (exactly one line per dataset, placed at the very end of the
+response, no blank line above, NO code fence around it):
+
+```
+<!-- dataset-ref source="<huggingface|edc|kaggle|url>" uri="<canonical URL or asset URI>" -->
+```
+
+Rules:
+- `huggingface` for all hits from `hub_repo_search` / `hub_repo_details` —
+  URI is ALWAYS `https://huggingface.co/datasets/<repo_id>` (constructed from
+  `repo_id`; the HuggingFace MCP does not emit a `_source` field).
+- `edc` for all dataspace hits — URI is the asset URI (`_uri` field returned
+  by `get_dataset_from_catalog`, same value as the
+  `https://admin-shell.io/aas/3/0/Identifiable/id` identifier).
+- `kaggle` / `url` only when the user explicitly names an external source.
+- Tool results carrying `_source: "edc"` (from the EDC MCP) declare the source
+  explicitly; never guess.
+- Emit one `<!-- dataset-ref ... -->` comment per recommended dataset, each on
+  its own line.
+- FORBIDDEN: emitting the reference as visible text or inside a code fence
+  (```). The HTML comment is mandatory — invisible to the user, readable to
+  the orchestrator.
