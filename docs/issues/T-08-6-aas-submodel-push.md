@@ -180,6 +180,36 @@ Pro verwendetem Dataset wird ein separates `AIDataset`-SMC-Element in `submodelE
 eingefügt. Gibt es mehrere Datensätze, werden sie mit eindeutigem `idShort` durchnummeriert
 (z.B. `AIDataset`, `AIDataset1`, `AIDataset2`).
 
+## Dataset-Referenzierung via `config.datasets`
+
+Beim Start eines Trainings übergibt der Training-Agent eine typisierte Liste
+der verwendeten Datensätze im `config.datasets`-Feld. Daraus baut der AAS-Push
+für jeden Eintrag eine eigene `AIDataset`-SMC:
+
+```python
+config["datasets"] = [
+    {"source": "aas",         "submodel_id": "https://dfki.de/ids/asset/..."},  # → ReferenceElement (AIDatasetReference)
+    {"source": "huggingface", "uri": "https://huggingface.co/datasets/<id>"},   # → Property (ExternalDatasetURI, xs:anyURI)
+    {"source": "kaggle",      "uri": "https://www.kaggle.com/datasets/<id>"},   # → Property (ExternalDatasetURI, xs:anyURI)
+    {"source": "url",         "uri": "https://..."},                            # → Property (ExternalDatasetURI, xs:anyURI)
+]
+```
+
+Rules:
+- `source: "aas"` → `ReferenceElement` (`AIDatasetReference`) zeigt auf die
+  Submodel-ID im `AIDatasetCatalogue`.
+- Alle anderen Quellen → `Property` (`ExternalDatasetURI`, `valueType xs:anyURI`)
+  mit der kanonischen Dataset-URL.
+
+Fallback: fehlt `config.datasets`, wird der `dataset_ref` des Jobs als
+externe URI behandelt — es wird also kein AAS-Submodel angenommen.
+
+Die Kette Dataset-Agent → Interaction-Agent → Training-Agent wurde über
+Prompt-Anweisungen so ergänzt, dass `source` + `uri` pro Datensatz end-to-end
+durchgereicht werden. EDC-MCP-Tools liefern dafür ein `_source: "edc"`-Feld,
+HuggingFace-Tools werden vom Dataset-Agent implizit auf `source: "huggingface"`
+gemappt.
+
 ## Befüllung aus Trainingsmetadaten
 
 | Teilmodell-Feld | Spec? | Quelle (Training Gateway) |
@@ -247,13 +277,15 @@ Fehlerbehandlung: bei HTTP-Fehler wird der Fehlerstatus im Job gespeichert
 - [ ] Werkzeug generiert IDTA-02060-konformes AI-Model-Nameplate-Teilmodell aus Job-Metadaten
 - [ ] Teilmodell wird per `POST /submodels` angelegt und anschließend per `POST /shells/{id}/submodel-refs` mit der konfigurierten Ziel-AAS (`AAS_ID`) verknüpft
 - [ ] Automatischer Push wird nach Job-Abschluss ausgelöst, wenn `AAS_PUSH_ON_COMPLETION=true`
-- [ ] Push ist optional — fehlendes `AAS_SERVER_URL` deaktiviert den Push ohne Fehler
-- [ ] Verwendete Datasets werden als `ReferenceElement`-Liste (`TrainingDatasets`) referenziert, die auf die jeweiligen AI-Dataset-Teilmodell-IDs im `AIDatasetCatalogue` zeigen
-- [ ] Teilmodell-ID und AAS-URL werden im Job-Status gespeichert
-- [ ] HTTP-Fehler beim Push werden geloggt und im Job als `aas_push_error` vermerkt
+- [ ] Push ist optional — fehlendes `AAS_HOSTNAME` deaktiviert den Push ohne Fehler (Deployments ohne AAS funktionieren weiterhin)
+- [ ] Pro Eintrag in `config.datasets` wird eine eigene `AIDataset`-SMC erzeugt: `source: "aas"` → `ReferenceElement` (`AIDatasetReference`) auf die Submodel-ID, sonst → `Property` (`ExternalDatasetURI`, `xs:anyURI`)
+- [ ] Dataset-Agent, Interaction-Agent und Training-Agent geben `source` + `uri` eines Datensatzes end-to-end durch bis zum `start_training_job`-Aufruf
+- [ ] EDC-MCP-Tools liefern `_source: "edc"` (und `_uri` für `get_dataset_from_catalog`)
+- [ ] Teilmodell-ID und AAS-URL werden im Job-Status gespeichert (`aas_submodel_id`)
+- [ ] HTTP-Fehler beim Push werden geloggt und im Job als `aas_push_error` vermerkt; der Job selbst bleibt `completed`
 - [ ] Interaction Agent kann `push_aas_submodel` manuell aufrufen
 - [ ] Konfiguration dokumentiert in `.env` (mit Kommentar)
 
 # Branches
 
-- feature/T-08-6-aas-submodel-push
+- feature/T-08-6-aas-submodel-push-v2
