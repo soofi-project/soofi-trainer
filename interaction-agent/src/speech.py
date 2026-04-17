@@ -114,19 +114,23 @@ def generate_speech_text(
     # Split glued sentences like "eins.zwei" — abbreviations are already masked
     intro = _normalize_sentence_spacing(intro)
 
-    # Speak only the first complete sentence. Rules:
+    # Speak complete sentences. Rules:
     # - Sentence must end with proper punctuation (.!?) — incomplete fragments
     #   without punctuation are early-emission artifacts; return empty and let
     #   the caller retry once more text has streamed in.
-    # - A sentence ending in ":" introduces a list: swap ":" for "." and speak.
+    # - A sentence ending in ":" introduces a list: swap ":" for "." and stop.
+    # - streaming=True: take only the first sentence (hold-back handles short
+    #   openers by returning ""). streaming=False: keep concatenating until the
+    #   min-length bar is cleared, so short acknowledgements like "Das klingt
+    #   gut!" don't silence the whole response.
     sentences = re.split(r"(?<=[.!?])\s+", intro)
-    first: str | None = None
+    collected: list[str] = []
     for sentence in sentences:
         s = sentence.strip()
         if not s:
             continue
         if s.endswith(":"):
-            first = s[:-1] + "."
+            collected.append(s[:-1] + ".")
             break
         if not re.search(r"[.!?]$", s):
             break
@@ -136,14 +140,17 @@ def generate_speech_text(
         # After streaming ends (streaming=False) this guard is skipped.
         if streaming and s is sentences[-1] and s.endswith("."):
             break
-        first = s
-        break
+        collected.append(s)
+        joined_so_far = _unmask_abbreviations(" ".join(collected))
+        if streaming or len(joined_so_far) >= _SPEECH_MIN_RESULT_CHARS:
+            break
 
-    if not first:
+    if not collected:
         return ""
-    joined = _unmask_abbreviations(first)
-    # Hold back speech if the first sentence is too short — avoids emitting a
-    # trivial opener while the informative follow-up is still streaming.
+    joined = _unmask_abbreviations(" ".join(collected))
+    # Hold back speech if the collected text is too short — during streaming
+    # this avoids a trivial opener while the informative follow-up is still
+    # arriving; after streaming ends it means the whole response was trivial.
     if len(joined) < _SPEECH_MIN_RESULT_CHARS:
         return ""
     # Strip a trailing period — TTS produces a softer cadence without the hard
@@ -151,3 +158,61 @@ def generate_speech_text(
     if joined.endswith("."):
         joined = joined[:-1]
     return joined
+
+
+# Boundary: sentence-ending punctuation followed by whitespace, OR any run of
+# newlines. Used to locate the start of the trailing question across list items
+# and paragraph breaks without collapsing them into one sentence first.
+_RE_TRAILING_BOUNDARY = re.compile(r"[.!?]+\s+|\n+")
+
+
+def generate_trailing_question_speech_text(text: str) -> str:
+    """If the final sentence of ``text`` ends with '?', return a speakable copy.
+
+    The whole response is examined (not just the intro) — this lets us pick up
+    follow-up questions that come after structural markdown (lists, headers).
+    """
+    cleaned = _RE_MD_LINK.sub(r"\1", text)
+    cleaned = _RE_URL_PARENS.sub("", cleaned)
+    cleaned = _RE_URL_BARE.sub("", cleaned)
+    cleaned = _RE_MD_FORMAT.sub("", cleaned).rstrip()
+    if not cleaned.endswith("?"):
+        return ""
+    masked = _mask_abbreviations(cleaned)
+    # Walk all boundaries before the final '?' — the last boundary marks the
+    # start of the trailing question.
+    boundary = 0
+    for match in _RE_TRAILING_BOUNDARY.finditer(masked):
+        if match.end() < len(masked):
+            boundary = match.end()
+    question = masked[boundary:]
+    # Strip leading list markers (e.g. "- ", "* ", "1. ") so TTS doesn't read them
+    question = re.sub(r"^\s*(?:[-*]|\d+\.)\s+", "", question)
+    question = _RE_WHITESPACE.sub(" ", question).strip()
+    if not question.endswith("?"):
+        return ""
+    return _unmask_abbreviations(question)
+
+
+def normalize_speech_for_dedup(text: str) -> str:
+    """Normalize speech text for loose containment checks across clips."""
+    return _RE_WHITESPACE.sub(" ", text.lower()).strip().rstrip("?.!,;:")
+
+
+def generate_transition_speech_text(text: str) -> str:
+    """Speakable version of a transition follow-up question.
+
+    Unlike ``generate_speech_text`` this keeps the full text (no first-sentence
+    split, no filler-opener stripping) — transitions are short and must be
+    spoken completely.
+    """
+    cleaned = _RE_MD_LINK.sub(r"\1", text)
+    cleaned = _RE_URL_PARENS.sub("", cleaned)
+    cleaned = _RE_URL_BARE.sub("", cleaned)
+    cleaned = _RE_MD_FORMAT.sub("", cleaned)
+    cleaned = _RE_WHITESPACE.sub(" ", cleaned).strip()
+    if not cleaned:
+        return ""
+    if cleaned.endswith("."):
+        cleaned = cleaned[:-1]
+    return cleaned

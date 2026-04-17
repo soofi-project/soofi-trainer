@@ -26,7 +26,12 @@ from .constants import (
 )
 from .i18n import Language, tr
 from .session_logger import SessionLogger
-from .speech import generate_speech_text
+from .speech import (
+    generate_speech_text,
+    generate_trailing_question_speech_text,
+    generate_transition_speech_text,
+    normalize_speech_for_dedup,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -162,6 +167,7 @@ class SSEStream:
         self._response_text = ""
         self._chunk_buffer = ""
         self._speech_emitted = False
+        self._emitted_speech_texts: list[str] = []
         self._result_messages: list[Any] = []
         self._session_logger = session_logger
         # Transition text is dispatched by the graph during tool finalization;
@@ -185,6 +191,7 @@ class SSEStream:
         self._response_text = ""
         self._chunk_buffer = ""
         self._speech_emitted = False
+        self._emitted_speech_texts = []
         self._result_messages = []
         self._pending_transition = ""
         self._agent_text_buffer = ""
@@ -248,7 +255,9 @@ class SSEStream:
 
         # Emit any buffered transition text — placed after tail so a missed
         # trailing chunk from the tool arrives before the follow-up question.
+        transition_text = ""
         if self._pending_transition:
+            transition_text = self._pending_transition
             async for sse in self._emit_text(self._pending_transition):
                 yield sse
             self._pending_transition = ""
@@ -267,7 +276,31 @@ class SSEStream:
                 streaming=False,
             )
             if speech:
+                self._emitted_speech_texts.append(speech)
                 yield _sse({"type": "SPEECH_TEXT", "text": speech})
+
+        # Transition follow-up question — spoken in its own clip after the
+        # main response speech, so the user hears the prompt to act.
+        if transition_text:
+            transition_speech = generate_transition_speech_text(transition_text)
+            if transition_speech:
+                self._emitted_speech_texts.append(transition_speech)
+                yield _sse({"type": "SPEECH_TEXT", "text": transition_speech})
+
+        # Trailing question — if the final sentence of the full response is a
+        # question and it wasn't already covered by a previous speech clip,
+        # speak it. Covers cases where the LLM ends with "Soll ich …?" without
+        # a dedicated transition event, regardless of which agent produced it.
+        trailing = generate_trailing_question_speech_text(self._response_text)
+        if trailing:
+            norm_trailing = normalize_speech_for_dedup(trailing)
+            already = any(
+                norm_trailing in normalize_speech_for_dedup(s)
+                for s in self._emitted_speech_texts
+            )
+            if not already:
+                self._emitted_speech_texts.append(trailing)
+                yield _sse({"type": "SPEECH_TEXT", "text": trailing})
 
         # A2UI surface data
         surface = _extract_a2ui_from_tool_results(self._result_messages)
@@ -547,6 +580,7 @@ class SSEStream:
         if not speech:
             return []
         self._speech_emitted = True
+        self._emitted_speech_texts.append(speech)
         return [_sse({"type": "SPEECH_TEXT", "text": speech})]
 
     def _emit_tails(self) -> list[str]:
