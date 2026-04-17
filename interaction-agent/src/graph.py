@@ -587,6 +587,60 @@ async def recommend_method_tool(question: str) -> str:
     return await _call_advisor(question)
 
 
+_DATASET_REF_RE = re.compile(
+    r'<!--\s*dataset-ref\s+source="(?P<source>[^"]+)"\s+uri="(?P<uri>[^"]+)"\s*-->',
+    re.IGNORECASE,
+)
+
+
+def _build_datasets_from_refs(question: str) -> list[dict[str, str]]:
+    """Parse `<!-- dataset-ref source="..." uri="..." -->` markers into typed entries.
+
+    Maps dataset-agent source markers to the schema expected by
+    `start_training_job`'s ``config.datasets``:
+    - ``aas`` → ``{"source": "aas", "submodel_id": <uri>}``
+    - ``edc``/``url``/anything else → ``{"source": "url", "uri": <uri>}``
+    - ``huggingface``/``kaggle`` → pass source through as-is with ``uri``.
+    """
+    datasets: list[dict[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for match in _DATASET_REF_RE.finditer(question):
+        source = match.group("source").strip().lower()
+        uri = match.group("uri").strip()
+        if not uri:
+            continue
+        key = (source, uri)
+        if key in seen:
+            continue
+        seen.add(key)
+        if source == "aas":
+            datasets.append({"source": "aas", "submodel_id": uri})
+        elif source in ("huggingface", "kaggle"):
+            datasets.append({"source": source, "uri": uri})
+        else:
+            datasets.append({"source": "url", "uri": uri})
+    return datasets
+
+
+def _augment_training_query_with_config(question: str) -> str:
+    """Append a deterministic ``config.datasets`` JSON block if references are present.
+
+    Downstream training-agent prompt reads this block verbatim and forwards it
+    to the ``start_training_job`` MCP tool as the ``config`` argument, bypassing
+    fragile free-form extraction of Source/URI lines from natural language.
+    """
+    datasets = _build_datasets_from_refs(question)
+    if not datasets:
+        return question
+    config_block = json.dumps({"datasets": datasets}, ensure_ascii=False, indent=2)
+    directive = (
+        "\n\n[start_training_job.config — vom Orchestrator vorgegeben, "
+        "WÖRTLICH an das Tool übergeben, beliebige weitere Keys ergänzen erlaubt]\n"
+        f"```json\n{config_block}\n```"
+    )
+    return question + directive
+
+
 @tool
 async def ask_training_agent_tool(question: str) -> str:
     """Ask the Training Agent to manage a training job via A2A.
@@ -611,8 +665,15 @@ async def ask_training_agent_tool(question: str) -> str:
             TRAINING_VIEW_EVENT, {TRAINING_VIEW_KEY: {"action": "open"}}
         )
 
+    # Deterministically build config.datasets from dataset-ref HTML comments
+    # in the orchestrator LLM's request. Makes AAS traceability independent of
+    # the training-agent LLM's ability to extract Source/URI from prose.
+    augmented = _augment_training_query_with_config(question)
+    if augmented is not question:
+        logger.info("Injected config.datasets directive into training-agent query")
+
     try:
-        async for chunk in _stream_training_agent(question + lang_tag, context_id=None):
+        async for chunk in _stream_training_agent(augmented + lang_tag, context_id=None):
             # Detect special event envelopes from the training agent
             try:
                 parsed = json.loads(chunk)
@@ -644,11 +705,11 @@ async def ask_training_agent_tool(question: str) -> str:
         logger.exception("Training agent streaming failed after %d chars", len(full_text))
         if not full_text:
             logger.warning("Falling back to blocking ask_training_agent call")
-            full_text = await _ask_training_agent(question, context_id=None)
+            full_text = await _ask_training_agent(augmented, context_id=None)
 
     if not full_text:
         logger.warning("Training agent streaming yielded no content, falling back to blocking call")
-        full_text = await _ask_training_agent(question, context_id=None)
+        full_text = await _ask_training_agent(augmented, context_id=None)
 
     return full_text
 

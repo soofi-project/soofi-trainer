@@ -196,3 +196,108 @@ class TestRagUrlsStoreLRU:
         assert "ctx_1" not in store
         assert "ctx_2" in store
         assert "ctx_3" in store
+
+
+# ---------------------------------------------------------------------------
+# dataset-ref parsing (mirrors _build_datasets_from_refs /
+# _augment_training_query_with_config in graph.py).
+# ---------------------------------------------------------------------------
+
+import json
+import re
+
+_DATASET_REF_RE = re.compile(
+    r'<!--\s*dataset-ref\s+source="(?P<source>[^"]+)"\s+uri="(?P<uri>[^"]+)"\s*-->',
+    re.IGNORECASE,
+)
+
+
+def _build_datasets_from_refs(question: str) -> list[dict[str, str]]:
+    datasets: list[dict[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for match in _DATASET_REF_RE.finditer(question):
+        source = match.group("source").strip().lower()
+        uri = match.group("uri").strip()
+        if not uri:
+            continue
+        key = (source, uri)
+        if key in seen:
+            continue
+        seen.add(key)
+        if source == "aas":
+            datasets.append({"source": "aas", "submodel_id": uri})
+        elif source in ("huggingface", "kaggle"):
+            datasets.append({"source": source, "uri": uri})
+        else:
+            datasets.append({"source": "url", "uri": uri})
+    return datasets
+
+
+def _augment_training_query_with_config(question: str) -> str:
+    datasets = _build_datasets_from_refs(question)
+    if not datasets:
+        return question
+    config_block = json.dumps({"datasets": datasets}, ensure_ascii=False, indent=2)
+    directive = (
+        "\n\n[start_training_job.config — vom Orchestrator vorgegeben, "
+        "WÖRTLICH an das Tool übergeben, beliebige weitere Keys ergänzen erlaubt]\n"
+        f"```json\n{config_block}\n```"
+    )
+    return question + directive
+
+
+class TestDatasetRefParsing:
+    def test_huggingface_extraction(self) -> None:
+        q = (
+            'Starte Training ...\n'
+            '<!-- dataset-ref source="huggingface" uri="https://huggingface.co/datasets/foo/bar" -->'
+        )
+        assert _build_datasets_from_refs(q) == [
+            {"source": "huggingface", "uri": "https://huggingface.co/datasets/foo/bar"}
+        ]
+
+    def test_edc_maps_to_url_source(self) -> None:
+        q = '<!-- dataset-ref source="edc" uri="https://dfki.de/ids/asset/abc" -->'
+        assert _build_datasets_from_refs(q) == [
+            {"source": "url", "uri": "https://dfki.de/ids/asset/abc"}
+        ]
+
+    def test_aas_uses_submodel_id(self) -> None:
+        q = '<!-- dataset-ref source="aas" uri="https://dfki.de/ids/asset/XYZ" -->'
+        assert _build_datasets_from_refs(q) == [
+            {"source": "aas", "submodel_id": "https://dfki.de/ids/asset/XYZ"}
+        ]
+
+    def test_multiple_refs(self) -> None:
+        q = (
+            '<!-- dataset-ref source="huggingface" uri="https://hf.co/datasets/a/b" -->\n'
+            '<!-- dataset-ref source="kaggle" uri="https://www.kaggle.com/datasets/x/y" -->'
+        )
+        result = _build_datasets_from_refs(q)
+        assert result == [
+            {"source": "huggingface", "uri": "https://hf.co/datasets/a/b"},
+            {"source": "kaggle", "uri": "https://www.kaggle.com/datasets/x/y"},
+        ]
+
+    def test_duplicates_deduplicated(self) -> None:
+        q = (
+            '<!-- dataset-ref source="huggingface" uri="https://hf.co/datasets/a/b" -->\n'
+            '<!-- dataset-ref source="huggingface" uri="https://hf.co/datasets/a/b" -->'
+        )
+        assert len(_build_datasets_from_refs(q)) == 1
+
+    def test_missing_refs_returns_empty(self) -> None:
+        assert _build_datasets_from_refs("Starte Training ohne Quelle.") == []
+
+    def test_augment_skipped_without_refs(self) -> None:
+        q = "Starte Training ohne Quelle."
+        assert _augment_training_query_with_config(q) == q
+
+    def test_augment_appends_json_block(self) -> None:
+        q = 'X <!-- dataset-ref source="huggingface" uri="https://hf.co/datasets/a/b" -->'
+        out = _augment_training_query_with_config(q)
+        assert out.startswith(q)
+        assert "[start_training_job.config" in out
+        assert '"datasets"' in out
+        assert '"huggingface"' in out
+        assert "https://hf.co/datasets/a/b" in out
