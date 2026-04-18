@@ -1,0 +1,157 @@
+{
+  "modelType": "Submodel",
+  "id": "https://dfki.de/ids/asset/a1b2_c3d4_e5f6_0002",
+  "idShort": "ProductionInsights",
+  "description": [
+    {
+      "language": "de",
+      "text": "Aggregierte Produktionskennzahlen wie OEE, Durchlaufzeiten und Ausschussraten aus mehreren Schichten und Fertigungslinien, geeignet für analytische und prognostische Modelle. (Stichwörter: engineering, produktion, OEE, durchlaufzeit, ausschussrate, schicht, fertigungslinie, produktionskennzahl, prognose, kapazitätsauslastung, taktzeit)"
+    },
+    {
+      "language": "en",
+      "text": "Aggregated production KPIs such as OEE, cycle times and scrap rates collected across multiple shifts and lines, suitable for analytical and forecasting models. (Keywords: engineering, production, OEE, KPI, cycle-time, scrap-rate, shift, production-line, forecasting, throughput, capacity-utilization)"
+    }
+  ],
+  "kind": "Instance",
+  "semanticId": {
+    "type": "ExternalReference",
+    "keys": [
+      {
+        "type": "GlobalReference",
+        "value": "https://admin-shell.io/idta/SubmodelTemplate/AIDataset/1/0"
+      }
+    ]
+  },
+  "submodelElements": [
+    {
+      "idShort": "Version",
+      "modelType": "Property",
+      "semanticId": {
+        "type": "ExternalReference",
+        "keys": [
+          {
+            "type": "GlobalReference",
+            "value": "0173-1#02-AAS354#002"
+          }
+        ]
+      },
+      "description": [
+        {
+          "language": "de",
+          "text": "Version des Datensatzes"
+        },
+        {
+          "language": "en",
+          "text": "Version of the dataset"
+        }
+      ],
+      "valueType": "xs:string",
+      "value": "2.0.1"
+    },
+    {
+      "idShort": "Storage",
+      "modelType": "Property",
+      "semanticId": {
+        "type": "ExternalReference",
+        "keys": [
+          {
+            "type": "GlobalReference",
+            "value": "https://admin-shell.io/idta/AIDataset/Storage/1/0"
+          }
+        ]
+      },
+      "description": [
+        {
+          "language": "en",
+          "text": "Path to the dataset (e.g. local path, serverpath,...)"
+        }
+      ],
+      "valueType": "xs:string",
+      "value": "s3://soofi-datasets/production-insights/v2.0.1/"
+    },
+    {
+      "idShort": "SizeInformation",
+      "modelType": "SubmodelElementCollection",
+      "semanticId": {
+        "type": "ExternalReference",
+        "keys": [
+          {
+            "type": "GlobalReference",
+            "value": "https://admin-shell.io/idta/AIDataset/SizeInformation/1/0"
+          }
+        ]
+      },
+      "description": [
+        {
+          "language": "en",
+          "text": "Collection about the number of dataset elements in the dataset and subsets"
+        }
+      ],
+      "value": [
+        {
+          "idShort": "CompleteSize",
+          "modelType": "Property",
+          "semanticId": {
+            "type": "ExternalReference",
+            "keys": [
+              {
+                "type": "GlobalReference",
+                "value": "https://admin-shell.io/idta/AIDataset//SizeInformation/CompleteSize/1/0"
+              }
+            ]
+          },
+          "description": [
+            {
+              "language": "en",
+              "text": "Number of all samples in the dataset"
+            }
+          ],
+          "valueType": "xs:string",
+          "value": "480000"
+        }
+      ]
+    },
+    {
+      "idShort": "MetaData",
+      "modelType": "SubmodelElementCollection",
+      "semanticId": {
+        "type": "ExternalReference",
+        "keys": [
+          {
+            "type": "GlobalReference",
+            "value": "https://admin-shell.io/idta/AIDataset/MetaData/1/0"
+          }
+        ]
+      },
+      "description": [
+        {
+          "language": "en",
+          "text": "Collection of meta data information about the dataset"
+        }
+      ],
+      "value": [
+        {
+          "idShort": "FileType",
+          "modelType": "Property",
+          "semanticId": {
+            "type": "ExternalReference",
+            "keys": [
+              {
+                "type": "GlobalReference",
+                "value": "https://admin-shell.io/idta/AIDataset/MetaData/FileType/1/0"
+              }
+            ]
+          },
+          "description": [
+            {
+              "language": "en",
+              "text": "Data type of the dataset elements (e.g. .WAV, .JPEG, ... )"
+            }
+          ],
+          "valueType": "xs:string",
+          "value": ".csv"
+        }
+      ]
+    }
+  ]
+}

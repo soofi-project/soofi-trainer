@@ -1,0 +1,157 @@
+{
+  "modelType": "Submodel",
+  "id": "https://dfki.de/ids/asset/a1b2_c3d4_e5f6_0006",
+  "idShort": "EuroTradeCommons",
+  "description": [
+    {
+      "language": "de",
+      "text": "Gemeinsamer Datenpool zum europäischen Binnenhandel für KMU: Import- und Exportstatistiken, Zolltarife, Warencodes und Markteintrittsbarrieren der EU-Mitgliedstaaten. (Stichwörter: kmu, mittelstand, sme, binnenmarkt, binnenhandel, import, export, zolltarif, warencode, HS-code, markteintritt, EU, europa)"
+    },
+    {
+      "language": "en",
+      "text": "Shared data pool on European single-market trade for SMEs: import and export statistics, customs tariffs, commodity codes and market-entry barriers across EU member states. (Keywords: sme, mittelstand, single-market, intra-eu-trade, import, export, customs-tariff, commodity-code, HS-code, market-entry, EU, europe)"
+    }
+  ],
+  "kind": "Instance",
+  "semanticId": {
+    "type": "ExternalReference",
+    "keys": [
+      {
+        "type": "GlobalReference",
+        "value": "https://admin-shell.io/idta/SubmodelTemplate/AIDataset/1/0"
+      }
+    ]
+  },
+  "submodelElements": [
+    {
+      "idShort": "Version",
+      "modelType": "Property",
+      "semanticId": {
+        "type": "ExternalReference",
+        "keys": [
+          {
+            "type": "GlobalReference",
+            "value": "0173-1#02-AAS354#002"
+          }
+        ]
+      },
+      "description": [
+        {
+          "language": "de",
+          "text": "Version des Datensatzes"
+        },
+        {
+          "language": "en",
+          "text": "Version of the dataset"
+        }
+      ],
+      "valueType": "xs:string",
+      "value": "1.0.0"
+    },
+    {
+      "idShort": "Storage",
+      "modelType": "Property",
+      "semanticId": {
+        "type": "ExternalReference",
+        "keys": [
+          {
+            "type": "GlobalReference",
+            "value": "https://admin-shell.io/idta/AIDataset/Storage/1/0"
+          }
+        ]
+      },
+      "description": [
+        {
+          "language": "en",
+          "text": "Path to the dataset (e.g. local path, serverpath,...)"
+        }
+      ],
+      "valueType": "xs:string",
+      "value": "s3://soofi-datasets/euro-trade-commons/v1.0.0/"
+    },
+    {
+      "idShort": "SizeInformation",
+      "modelType": "SubmodelElementCollection",
+      "semanticId": {
+        "type": "ExternalReference",
+        "keys": [
+          {
+            "type": "GlobalReference",
+            "value": "https://admin-shell.io/idta/AIDataset/SizeInformation/1/0"
+          }
+        ]
+      },
+      "description": [
+        {
+          "language": "en",
+          "text": "Collection about the number of dataset elements in the dataset and subsets"
+        }
+      ],
+      "value": [
+        {
+          "idShort": "CompleteSize",
+          "modelType": "Property",
+          "semanticId": {
+            "type": "ExternalReference",
+            "keys": [
+              {
+                "type": "GlobalReference",
+                "value": "https://admin-shell.io/idta/AIDataset//SizeInformation/CompleteSize/1/0"
+              }
+            ]
+          },
+          "description": [
+            {
+              "language": "en",
+              "text": "Number of all samples in the dataset"
+            }
+          ],
+          "valueType": "xs:string",
+          "value": "520000"
+        }
+      ]
+    },
+    {
+      "idShort": "MetaData",
+      "modelType": "SubmodelElementCollection",
+      "semanticId": {
+        "type": "ExternalReference",
+        "keys": [
+          {
+            "type": "GlobalReference",
+            "value": "https://admin-shell.io/idta/AIDataset/MetaData/1/0"
+          }
+        ]
+      },
+      "description": [
+        {
+          "language": "en",
+          "text": "Collection of meta data information about the dataset"
+        }
+      ],
+      "value": [
+        {
+          "idShort": "FileType",
+          "modelType": "Property",
+          "semanticId": {
+            "type": "ExternalReference",
+            "keys": [
+              {
+                "type": "GlobalReference",
+                "value": "https://admin-shell.io/idta/AIDataset/MetaData/FileType/1/0"
+              }
+            ]
+          },
+          "description": [
+            {
+              "language": "en",
+              "text": "Data type of the dataset elements (e.g. .WAV, .JPEG, ... )"
+            }
+          ],
+          "valueType": "xs:string",
+          "value": ".jsonl"
+        }
+      ]
+    }
+  ]
+}

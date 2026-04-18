@@ -1,0 +1,157 @@
+{
+  "modelType": "Submodel",
+  "id": "https://dfki.de/ids/asset/a1b2_c3d4_e5f6_0009",
+  "idShort": "CollaborationInsights",
+  "description": [
+    {
+      "language": "de",
+      "text": "Kennzahlen und Erkenntnisse aus KMU-Kooperationsprojekten: Projektverläufe, Meilensteinquoten, Netzwerkeffekte und Rentabilität gemeinschaftlicher Initiativen. (Stichwörter: kmu, mittelstand, sme, kollaboration, zusammenarbeit, kooperationsprojekt, meilenstein, netzwerkeffekt, projektrendite, KMU-netzwerk, cluster)"
+    },
+    {
+      "language": "en",
+      "text": "KPIs and insights from SME collaboration projects: project progress, milestone achievement rates, network effects and profitability of joint initiatives. (Keywords: sme, mittelstand, collaboration, cooperation-project, milestone, network-effect, project-return, sme-network, cluster)"
+    }
+  ],
+  "kind": "Instance",
+  "semanticId": {
+    "type": "ExternalReference",
+    "keys": [
+      {
+        "type": "GlobalReference",
+        "value": "https://admin-shell.io/idta/SubmodelTemplate/AIDataset/1/0"
+      }
+    ]
+  },
+  "submodelElements": [
+    {
+      "idShort": "Version",
+      "modelType": "Property",
+      "semanticId": {
+        "type": "ExternalReference",
+        "keys": [
+          {
+            "type": "GlobalReference",
+            "value": "0173-1#02-AAS354#002"
+          }
+        ]
+      },
+      "description": [
+        {
+          "language": "de",
+          "text": "Version des Datensatzes"
+        },
+        {
+          "language": "en",
+          "text": "Version of the dataset"
+        }
+      ],
+      "valueType": "xs:string",
+      "value": "1.3.0"
+    },
+    {
+      "idShort": "Storage",
+      "modelType": "Property",
+      "semanticId": {
+        "type": "ExternalReference",
+        "keys": [
+          {
+            "type": "GlobalReference",
+            "value": "https://admin-shell.io/idta/AIDataset/Storage/1/0"
+          }
+        ]
+      },
+      "description": [
+        {
+          "language": "en",
+          "text": "Path to the dataset (e.g. local path, serverpath,...)"
+        }
+      ],
+      "valueType": "xs:string",
+      "value": "s3://soofi-datasets/collaboration-insights/v1.3.0/"
+    },
+    {
+      "idShort": "SizeInformation",
+      "modelType": "SubmodelElementCollection",
+      "semanticId": {
+        "type": "ExternalReference",
+        "keys": [
+          {
+            "type": "GlobalReference",
+            "value": "https://admin-shell.io/idta/AIDataset/SizeInformation/1/0"
+          }
+        ]
+      },
+      "description": [
+        {
+          "language": "en",
+          "text": "Collection about the number of dataset elements in the dataset and subsets"
+        }
+      ],
+      "value": [
+        {
+          "idShort": "CompleteSize",
+          "modelType": "Property",
+          "semanticId": {
+            "type": "ExternalReference",
+            "keys": [
+              {
+                "type": "GlobalReference",
+                "value": "https://admin-shell.io/idta/AIDataset//SizeInformation/CompleteSize/1/0"
+              }
+            ]
+          },
+          "description": [
+            {
+              "language": "en",
+              "text": "Number of all samples in the dataset"
+            }
+          ],
+          "valueType": "xs:string",
+          "value": "264000"
+        }
+      ]
+    },
+    {
+      "idShort": "MetaData",
+      "modelType": "SubmodelElementCollection",
+      "semanticId": {
+        "type": "ExternalReference",
+        "keys": [
+          {
+            "type": "GlobalReference",
+            "value": "https://admin-shell.io/idta/AIDataset/MetaData/1/0"
+          }
+        ]
+      },
+      "description": [
+        {
+          "language": "en",
+          "text": "Collection of meta data information about the dataset"
+        }
+      ],
+      "value": [
+        {
+          "idShort": "FileType",
+          "modelType": "Property",
+          "semanticId": {
+            "type": "ExternalReference",
+            "keys": [
+              {
+                "type": "GlobalReference",
+                "value": "https://admin-shell.io/idta/AIDataset/MetaData/FileType/1/0"
+              }
+            ]
+          },
+          "description": [
+            {
+              "language": "en",
+              "text": "Data type of the dataset elements (e.g. .WAV, .JPEG, ... )"
+            }
+          ],
+          "valueType": "xs:string",
+          "value": ".csv"
+        }
+      ]
+    }
+  ]
+}

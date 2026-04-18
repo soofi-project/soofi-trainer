@@ -1,0 +1,157 @@
+{
+  "modelType": "Submodel",
+  "id": "https://dfki.de/ids/asset/a1b2_c3d4_e5f6_0004",
+  "idShort": "ProcessLibrary",
+  "description": [
+    {
+      "language": "de",
+      "text": "Kuratierte Sammlung von Prozessbeschreibungen, Standard Operating Procedures und Parametersätzen — als Referenztextkorpus für die Fachberatung und das Feintuning domänenspezifischer Sprachmodelle. (Stichwörter: engineering, prozessbeschreibung, SOP, standard-operating-procedure, verfahrensanweisung, arbeitsanweisung, parametersatz, prozessparameter, prüfanweisung, prozesshandbuch, referenzdokument)"
+    },
+    {
+      "language": "en",
+      "text": "Curated collection of process descriptions, standard operating procedures and parameter sets — intended as a reference text corpus for domain assistance and fine-tuning of specialised language models. (Keywords: engineering, process-description, SOP, standard-operating-procedure, work-instruction, parameter-set, process-parameter, inspection-instruction, process-handbook, reference-document)"
+    }
+  ],
+  "kind": "Instance",
+  "semanticId": {
+    "type": "ExternalReference",
+    "keys": [
+      {
+        "type": "GlobalReference",
+        "value": "https://admin-shell.io/idta/SubmodelTemplate/AIDataset/1/0"
+      }
+    ]
+  },
+  "submodelElements": [
+    {
+      "idShort": "Version",
+      "modelType": "Property",
+      "semanticId": {
+        "type": "ExternalReference",
+        "keys": [
+          {
+            "type": "GlobalReference",
+            "value": "0173-1#02-AAS354#002"
+          }
+        ]
+      },
+      "description": [
+        {
+          "language": "de",
+          "text": "Version des Datensatzes"
+        },
+        {
+          "language": "en",
+          "text": "Version of the dataset"
+        }
+      ],
+      "valueType": "xs:string",
+      "value": "3.1.0"
+    },
+    {
+      "idShort": "Storage",
+      "modelType": "Property",
+      "semanticId": {
+        "type": "ExternalReference",
+        "keys": [
+          {
+            "type": "GlobalReference",
+            "value": "https://admin-shell.io/idta/AIDataset/Storage/1/0"
+          }
+        ]
+      },
+      "description": [
+        {
+          "language": "en",
+          "text": "Path to the dataset (e.g. local path, serverpath,...)"
+        }
+      ],
+      "valueType": "xs:string",
+      "value": "s3://soofi-datasets/process-library/v3.1.0/"
+    },
+    {
+      "idShort": "SizeInformation",
+      "modelType": "SubmodelElementCollection",
+      "semanticId": {
+        "type": "ExternalReference",
+        "keys": [
+          {
+            "type": "GlobalReference",
+            "value": "https://admin-shell.io/idta/AIDataset/SizeInformation/1/0"
+          }
+        ]
+      },
+      "description": [
+        {
+          "language": "en",
+          "text": "Collection about the number of dataset elements in the dataset and subsets"
+        }
+      ],
+      "value": [
+        {
+          "idShort": "CompleteSize",
+          "modelType": "Property",
+          "semanticId": {
+            "type": "ExternalReference",
+            "keys": [
+              {
+                "type": "GlobalReference",
+                "value": "https://admin-shell.io/idta/AIDataset//SizeInformation/CompleteSize/1/0"
+              }
+            ]
+          },
+          "description": [
+            {
+              "language": "en",
+              "text": "Number of all samples in the dataset"
+            }
+          ],
+          "valueType": "xs:string",
+          "value": "86000"
+        }
+      ]
+    },
+    {
+      "idShort": "MetaData",
+      "modelType": "SubmodelElementCollection",
+      "semanticId": {
+        "type": "ExternalReference",
+        "keys": [
+          {
+            "type": "GlobalReference",
+            "value": "https://admin-shell.io/idta/AIDataset/MetaData/1/0"
+          }
+        ]
+      },
+      "description": [
+        {
+          "language": "en",
+          "text": "Collection of meta data information about the dataset"
+        }
+      ],
+      "value": [
+        {
+          "idShort": "FileType",
+          "modelType": "Property",
+          "semanticId": {
+            "type": "ExternalReference",
+            "keys": [
+              {
+                "type": "GlobalReference",
+                "value": "https://admin-shell.io/idta/AIDataset/MetaData/FileType/1/0"
+              }
+            ]
+          },
+          "description": [
+            {
+              "language": "en",
+              "text": "Data type of the dataset elements (e.g. .WAV, .JPEG, ... )"
+            }
+          ],
+          "valueType": "xs:string",
+          "value": ".jsonl"
+        }
+      ]
+    }
+  ]
+}
