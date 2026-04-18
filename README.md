@@ -81,6 +81,15 @@ EOF
 
 Open https://localhost:3001 and ask the agent about LLM specialization methods (RAG, LoRA, QLoRA, SFT, DPO, …). Push-to-talk: hold **Space** to record, release to send. The agent searches the knowledge base, can search the public web for current information via the stack-local SearXNG-backed `web_search_tool`, shows a single "Searching the web…" status while that tool runs, and streams a spoken response.
 
+### 5. Demo / user scripts
+
+Step-by-step walkthroughs of a full demo session — from picking a use case to launching a training job, plus side-question blocks and failure scenarios:
+
+| Language | Markdown | PDF |
+|----------|----------|-----|
+| Deutsch  | [`docs/demo_script_de.md`](docs/demo_script_de.md) | [`docs/demo_script_de.pdf`](docs/demo_script_de.pdf) |
+| English  | [`docs/demo_script_en.md`](docs/demo_script_en.md) | [`docs/demo_script_en.pdf`](docs/demo_script_en.pdf) |
+
 ### Stop the stack
 
 ```bash

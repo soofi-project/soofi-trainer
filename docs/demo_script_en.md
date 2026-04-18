@@ -6,20 +6,96 @@ blocks** that can be inserted at any point in the conversation (agent cards,
 training overview, knowledge content).
 
 All user lines are phrased so they can be spoken or typed directly into the
-Soofi UI (`https://localhost/` or `http://localhost:3001`). Expected agent
-reactions are shown in *italics*.
+Soofi UI. Expected agent reactions are shown in *italics*.
+
+Soofi Trainer is a demonstrator — the suggested methods and models are not
+always the technically optimal choice. That's beside the point for this demo:
+the focus is on showing how effortlessly companies will be able to arrive at
+application-specific, sovereign models built on their own data.
+
+Feel free to play with the system, try your own dialogues and dive in — it's
+absolutely fine if something doesn't work on the first try. **Session logs**
+are written in the background, and we'd be happy to review them with you
+afterwards. These logs are **text-only transcripts** of the dialogue — **no
+voice recordings** are stored.
 
 > **Language note:** The Soofi stack ships with German as the default. Switch
-> the UI to English via the language toggle before running this script (the
-> Interaction Agent loads `system_en.md` / `slot_extraction_en.md` accordingly).
+> the UI to English via the language toggle before running this script.
 
 ---
 
 ## 0. Prerequisites
 
-- Stack is up: `./up.sh` (default backend `chatgpt`, profile `local`).
-- UI reachable at `https://localhost/` (Caddy, self-signed) or `:3001`.
-- Microphone allowed, speakers active (TTS).
+### Backend & access
+
+- The dockerized backend runs on DFKI servers in Saarbrücken.
+- Access requires an active VPN connection. The VPN is already configured on
+  the iPads — when it's up, a **VPN icon** appears in the top-right status
+  bar.
+- For failover, three VMs are running in parallel, differing only in the
+  underlying model:
+
+  | URL                                                       | Model                     |
+  |-----------------------------------------------------------|---------------------------|
+  | [https://soofi-1.mrk40.de](https://soofi-1.mrk40.de)      | local Qwen3.5 122B        |
+  | [https://soofi-2.mrk40.de](https://soofi-2.mrk40.de)      | local Qwen3.5 122B        |
+  | [https://soofi-3.mrk40.de](https://soofi-3.mrk40.de)      | gpt-4o-mini (cloud)       |
+
+- The iPads have matching **app icons on the home screen** — just tap;
+  no need to type a URL manually.
+
+### iPads — usage & return
+
+- **Important:** the iPads are rented and must never be left unattended.
+- Return: the rental company picks up the devices on the **last fair day
+  (Friday) around 15:30**. Since the fair ends at 15:00, only **half an
+  hour** remains to reset the iPads to **factory state**.
+- During the reset flow a **confirmation code** is sent to the
+  registered contact email. Please call the iPad lead in advance so
+  the code can be forwarded without delay.
+
+---
+
+## 0.1 Terminology for newcomers — Dataspace & Asset Administration Shell
+
+**Dataspace.** A Dataspace is a federated, rule-based space in which
+organizations offer and consume data or models without giving up control
+over them. The data stays with the provider; only metadata (catalogs) is
+published, and access is governed through usage contracts (policies). The
+technical foundation is typically the **Eclipse Dataspace Connector (EDC)**
+— an open-source connector based on IDSA standards that standardizes
+catalog exchange, contract negotiation, and data transfer. Typical
+initiatives: Gaia-X, Catena-X, Manufacturing-X, Mobility Data Space, 8ra.
+
+**Asset Administration Shell (AAS, German: "Verwaltungsschale").** The AAS
+is the digital twin of an asset (machine, component, product, software) as
+defined by **Industrie 4.0 / Plattform Industrie 4.0**. It bundles all
+relevant information about an asset — properties, state, documents,
+capabilities — in standardized **submodels** (e.g. Digital Nameplate,
+Technical Data, Documentation) and exposes them via a uniform API (REST,
+OPC UA, MQTT). Here it is implemented with **Eclipse BaSyx**. This makes
+assets machine-readable, vendor-independent, and linkable across Dataspace
+boundaries.
+
+## 0.2 How Soofi Trainer uses them
+
+In Soofi Trainer, the **Dataspace** serves as a sovereign source for
+training datasets. The Dataset Agent first queries the **EDC Consumer**
+(via MCP) and searches the catalog of the connected **EDC Provider** (stack
+for suitable datasets — e.g. for materials research or engineering. Only when the Dataspace yields nothing does it fall back to
+HuggingFace. This demonstrates how a company can feed internal or
+contractually regulated data into LLM training without making it publicly
+available.
+
+The **Asset Administration Shell** provides Soofi with the domain context
+of the assets involved in the use case. The AAS stack (Eclipse BaSyx) hosts
+submodels for typical SME / engineering scenarios
+(machines, components, data sheets). Agents can read this information as
+structured domain knowledge — e.g. to tailor datasets to a specific asset,
+enrich training data with metadata, or later power an Engineering Copilot
+with grounded answers about the real machine. Dataspace and AAS together
+form the bridge between sovereign data exchange and machine-readable asset
+knowledge on which Soofi's training is built.
 
 ---
 
@@ -171,9 +247,8 @@ then returns the catalog entry with `counterPartyAddress`.
 
 ## 4. Reset / new session
 
-- Close the browser tab or reload the page → new session id.
-- Session logs land under `session-logs/YYYY-MM-DD_HH-MM-SS_<id>.md` (if
-  `SESSION_LOG_ENABLED=true`).
+- Press the **reset button** in the Soofi UI → starts a fresh session.
+- Alternatively: close the browser tab or reload the page → new session id.
 
 ---
 
@@ -181,7 +256,4 @@ then returns the catalog entry with `counterPartyAddress`.
 
 - **No Dataspace hit** → "Try HuggingFace" as a fallback.
 - **No HuggingFace hit** → ask for alternative search terms.
-- **Advisor answer is too short** → "Can you elaborate on that?" — the Advisor
-  continues on the existing `advisor_context_id`.
-- **Agent card missing** → `./down.sh && ./up.sh --build` re-checks the A2A
-  registration.
+- **Advisor answer is too short** → "Can you elaborate on that?"

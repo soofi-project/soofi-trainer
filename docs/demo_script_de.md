@@ -6,16 +6,100 @@ enthält es **Zwischenfragen-Blöcke**, die sich jederzeit im Gespräch einschie
 lassen (Agentenkarten, Trainingsübersicht, Wissensinhalte).
 
 Alle User-Sätze sind so formuliert, dass sie per Sprach- oder Texteingabe direkt
-in die Soofi-UI (`https://localhost/` oder `http://localhost:3001`) gegeben
-werden können. Agent-Reaktionen sind als Erwartungen in *kursiv* skizziert.
+in die Soofi-UI gegeben werden können. Agent-Reaktionen sind als Erwartungen in *kursiv* skizziert.
+
+Der Soofi Trainer ist ein Demonstrator — die vorgeschlagenen Methoden und
+Modelle sind nicht immer fachlich optimal. Darauf kommt es in dieser Demo aber
+nicht an: Im Vordergrund steht, wie leichtgängig Unternehmen künftig zu
+anwendungsspezifischen, souveränen Modellen auf Basis eigener Daten gelangen.
+
+Spielt ruhig mit dem System, experimentiert mit eigenen Dialogen und lasst
+euch darauf ein — auch wenn etwas nicht auf Anhieb funktioniert, ist das
+überhaupt nicht schlimm. Im Hintergrund werden **Session-Logs** erstellt, die
+wir im Anschluss gerne gemeinsam auswerten. Dabei handelt es sich
+ausschließlich um **textuelle Protokolle** des Dialogverlaufs — es werden
+**keine Sprachaufzeichnungen** gespeichert.
 
 ---
 
 ## 0. Voraussetzungen
 
-- Stack läuft: `./up.sh` (Default-Backend `chatgpt`, Profil `local`).
-- UI erreichbar unter `https://localhost/` (Caddy, self-signed) bzw. `:3001`.
-- Mikrofon freigegeben, Lautsprecher aktiv (TTS).
+### Backend & Zugang
+
+- Das dockerisierte Backend läuft auf DFKI-Servern in Saarbrücken.
+- Der Zugang erfordert ein aktives VPN. Dieses ist auf den iPads bereits
+  eingerichtet — bei aktiver Verbindung erscheint rechts oben in der
+  Statusleiste ein **VPN-Symbol**.
+- Zur Ausfallsicherheit sind drei VMs parallel aufgesetzt, die sich im
+  verwendeten Modell unterscheiden:
+
+  | URL                                                       | Modell                    |
+  |-----------------------------------------------------------|---------------------------|
+  | [https://soofi-1.mrk40.de](https://soofi-1.mrk40.de)      | lokales Qwen3.5 122B      |
+  | [https://soofi-2.mrk40.de](https://soofi-2.mrk40.de)      | lokales Qwen3.5 122B      |
+  | [https://soofi-3.mrk40.de](https://soofi-3.mrk40.de)      | gpt-4o-mini (Cloud)       |
+
+- Auf den iPads sind entsprechende **App-Icons auf dem Startbildschirm**
+  hinterlegt — einfach antippen, kein manuelles Eingeben der URL nötig.
+
+### iPads — Nutzung & Rückgabe
+
+- **Wichtig:** Die iPads sind gemietet und dürfen zu keinem Zeitpunkt
+  unbeaufsichtigt liegen bleiben.
+- Rückgabe: Der Vermieter sammelt die Geräte am **letzten Messetag (Freitag)
+  gegen 15:30 Uhr** wieder ein. Nach Messeende um 15:00 Uhr bleibt also nur
+  eine halbe Stunde, um die iPads in den **Auslieferungszustand**
+  zurückzusetzen.
+- Im Reset-Prozess wird ein **Bestätigungscode** an die hinterlegte
+  Kontakt-E-Mail geschickt. Den iPad-Verantwortlichen bitte vorab
+  telefonisch verständigen, damit der Code ohne Verzögerung
+  weitergeleitet wird.
+
+---
+
+## 0.1 Begriffe zum Einstieg — Dataspace & Verwaltungsschale
+
+**Dataspace (Datenraum).** Ein Dataspace ist ein föderierter, regelbasierter
+Raum, in dem Organisationen Daten oder Modelle untereinander anbieten und
+beziehen, ohne die Kontrolle darüber aufzugeben. Die Daten bleiben beim
+Anbieter; nur Metadaten (Kataloge) werden veröffentlicht, und der Zugriff
+wird über Nutzungsverträge (Policies) geregelt. Technische Basis ist in der
+Regel der **Eclipse Dataspace Connector (EDC)** — ein Open-Source-Connector
+nach IDSA-Standards, der Katalog, Vertragsverhandlung und Datenübertragung
+standardisiert. Typische Initiativen: Gaia-X, Catena-X, Manufacturing-X,
+Mobility Data Space, 8ra.
+
+**Verwaltungsschale (Asset Administration Shell, AAS).** Die Verwaltungsschale
+ist der digitale Zwilling eines Assets (Maschine, Bauteil, Produkt, Software)
+im Sinne der **Industrie 4.0 / Plattform Industrie 4.0**. Sie bündelt alle
+relevanten Informationen eines Assets — Eigenschaften, Zustand, Dokumente,
+Fähigkeiten — in standardisierten **Submodels** (z.B. Digital Nameplate,
+Technical Data, Documentation) und stellt sie über eine einheitliche API
+(REST, OPC UA, MQTT) bereit. Umgesetzt wird das hier mit **Eclipse BaSyx**.
+Damit werden Assets maschinenlesbar, herstellerübergreifend austauschbar und
+über Dataspace-Grenzen hinweg verknüpfbar.
+
+## 0.2 Nutzung im Soofi Trainer
+
+Im Soofi Trainer dient der **Dataspace** als souveräne Bezugsquelle für
+Trainingsdatensätze. Der Dataset-Agent fragt zuerst den **EDC-Consumer**
+(über MCP) an und durchsucht den Katalog des angebundenen **EDC-Providers**
+nach passenden Datensätzen — z.B. für
+Materialforschung oder Engineering. Erst wenn der Dataspace nichts liefert,
+wird auf HuggingFace ausgewichen. So lässt sich demonstrieren, wie ein
+Unternehmen interne oder vertraglich geregelte Daten ins LLM-Training
+einbringt, ohne sie öffentlich verfügbar zu machen.
+
+Die **Verwaltungsschale** liefert Soofi den fachlichen Kontext der Assets,
+um die es im Anwendungsfall geht. Der AAS-Stack (Eclipse BaSyx) hält Submodels
+zu typischen KMU-/Engineering-Szenarien bereit
+(Maschinen, Bauteile, Datenblätter). Diese Informationen können von Agenten
+als strukturiertes Domänenwissen gelesen werden — etwa um Datensätze
+passgenau auf ein Asset zuzuschneiden, Trainingsdaten um Metadaten
+anzureichern oder später im Engineering-Copilot fundierte Antworten zur
+realen Anlage zu geben. Dataspace + Verwaltungsschale zusammen bilden damit
+die Brücke zwischen souveränem Datenaustausch und maschinenlesbarem
+Asset-Wissen, auf der das Soofi-Training aufsetzt.
 
 ---
 
@@ -168,9 +252,9 @@ Dataset-Agent liefert dann den Katalog-Eintrag mit `counterPartyAddress`.
 
 ## 4. Zurücksetzen / neue Session
 
-- Browser-Tab schließen oder Seite neu laden → neue Session-ID.
-- Sessionlogs landen unter `session-logs/YYYY-MM-DD_HH-MM-SS_<id>.md` (falls
-  `SESSION_LOG_ENABLED=true`).
+- **Zurücksetzen-Button** in der Soofi-UI drücken → startet eine frische
+  Session.
+- Alternativ: Browser-Tab schließen oder Seite neu laden → neue Session-ID.
 
 ---
 
@@ -179,6 +263,4 @@ Dataset-Agent liefert dann den Katalog-Eintrag mit `counterPartyAddress`.
 - **Kein Dataspace-Treffer** → „Such mal auf HuggingFace" als Fallback.
 - **Kein HuggingFace-Treffer** → alternative Begriffe vorschlagen lassen.
 - **Advisor antwortet zu knapp** → „Kannst du das noch ausführlicher
-  erläutern?" — der Advisor hängt an bestehenden `advisor_context_id` an.
-- **Agent-Karte fehlt** → `./down.sh && ./up.sh --build` prüft die
-  A2A-Registrierung neu.
+  erläutern?"
