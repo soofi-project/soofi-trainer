@@ -376,3 +376,10 @@ docker compose restart aas-environment
 ## License
 
 MIT License — see [LICENSE](LICENSE)
+
+## About Soofi
+Soofi website: www.soofi.info
+
+![Förderlogo](Förderlogo.jpg)
+The creation and maintenance of this code is funded through the IPCEI-CIS program. The funding authority is the German Federal Ministry for Economic Affairs and Energy.
+Funding-ID: 13IPC040A
